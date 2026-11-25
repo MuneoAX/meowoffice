@@ -13,7 +13,7 @@ const { ALL_EXTENSIONS } = require("@gltf-transform/extensions");
 
 const [inp, out, keepArg = "0.3"] = process.argv.slice(2);
 const KEEP = +keepArg;
-const CLIPS = new Set(["idle", "hold", "wait", "walk", "raise_hand", "cheer"]); // 서기·걷기 (앉기 sit·sit_type 은 굽힘이 자세의 일부라 그대로)
+const CLIPS = new Set(["idle", "hold", "wait", "walk", "raise_hand"]); // 서기·걷기 (앉기 sit·sit_type 은 굽힘이 자세의 일부라 그대로)
 const BONES = /(^|:)(Spine|Spine1|Spine2|Neck|Head)$/;
 
 const io = new NodeIO().registerExtensions(ALL_EXTENSIONS);

@@ -61,7 +61,7 @@ if (cmd === "upload") {
   }
   console.error("시간 초과"); process.exit(1);
 } else if (cmd === "cat") {
-  // 한 번에: 업로드 → 리깅(v1.0 biped, mixamo 이름) → 동작 10개(5개씩 두 번, 제자리) → 합치기 → 앱 동작 이름으로 → 출력
+  // 한 번에: 업로드 → 리깅(v1.0 biped, mixamo 이름) → 동작 7개(5개·2개 두 번, 제자리; 환호 cheer 는 팔이 머리에 파묻혀 뺌) → 합치기 → 앱 동작 이름으로 → 출력
   //   node scripts/tripo.mjs cat <줄인.glb> <출력.glb>
   const { execFileSync } = await import("node:child_process");
   const tmp = path.join((await import("node:os")).tmpdir(), "meow_tripo_" + path.basename(b, ".glb")); // 앱 폴더 밖(중간 파일)
@@ -81,7 +81,7 @@ if (cmd === "upload") {
   const rig = (await call("POST", "/animations/rig", { input: tok, rig_type: "biped", model: "v1.0-20240301", spec: "mixamo", out_format: "glb" })).task_id;
   await until(rig);
   console.log("리깅 완료", rig);
-  const SETS = [["idle", "walk", "sit", "play_video_game", "wave_goodbye_01"], ["standing_relax", "wait", "cheer"]];
+  const SETS = [["idle", "walk", "sit", "play_video_game", "wave_goodbye_01"], ["standing_relax", "wait"]];
   const files = [];
   for (const [i, set] of SETS.entries()) {
     const id = (await call("POST", "/animations/retarget", { input: rig, animations: set.map((s) => "preset:biped:" + s), out_format: "glb", animate_in_place: true })).task_id;
@@ -99,14 +99,15 @@ if (cmd === "upload") {
   const { NodeIO } = req("@gltf-transform/core"); const { ALL_EXTENSIONS } = req("@gltf-transform/extensions"); const { prune } = req("@gltf-transform/functions");
   const io = new NodeIO().registerExtensions(ALL_EXTENSIONS);
   const doc = await io.read(merged);
-  const REN = { idle: "idle", walk: "walk", sit: "sit", play_video_game: "sit_type", wave_goodbye_01: "raise_hand", cheer: "cheer", standing_relax: "hold", wait: "wait" };
+  const REN = { idle: "idle", walk: "walk", sit: "sit", play_video_game: "sit_type", wave_goodbye_01: "raise_hand", standing_relax: "hold", wait: "wait" };
   for (const an of doc.getRoot().listAnimations()) { const n = REN[an.getName()]; if (n) an.setName(n); else an.dispose(); }
   await doc.transform(prune());
   await io.write(b, doc);
-  // 사람형 리깅 보정: 꼬리를 엉덩이 뼈로(손들 때 말려 올라감 방지), 서기·걷기 굽힘 줄이기(큰 머리가 앞으로 숙음 방지)
+  // 사람형 리깅 보정: 꼬리를 엉덩이 뼈로(손들 때 말려 올라감 방지), 서기·걷기 굽힘 줄이기(큰 머리가 앞으로 숙음 방지), 팔 벌리기
   const here = path.dirname(new URL(import.meta.url).pathname.replace(/^\/(\w:)/, "$1"));
   execFileSync(process.execPath, [path.join(here, "fix-ai-tail.mjs"), b, b], { stdio: "inherit" });
   execFileSync(process.execPath, [path.join(here, "tune-ai-anims.mjs"), b, b, "0.3"], { stdio: "inherit" });
+  execFileSync(process.execPath, [path.join(here, "spread-ai-arms.mjs"), b, b, "45"], { stdio: "inherit" }); // 팔이 둥근 몸통에 파묻히지 않게 45° 이상 벌림
   console.log("완료", b, doc.getRoot().listAnimations().map((x) => x.getName()).join(","));
 } else {
   console.error("명령: upload | rigcheck | rig | retarget | wait | task | cat"); process.exit(1);

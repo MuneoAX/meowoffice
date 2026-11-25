@@ -1410,7 +1410,7 @@ const CatModel = (() => {
       let mk = 0;
       if (cat.act === 'groom') mk = 0.4 + 0.6 * Math.max(0, Math.sin(tt * 3.4)) ** 0.6;
       else if (cat.act === 'eat') mk = 0.25 + 0.55 * Math.max(0, Math.sin(tt * 7));
-      else if (cat.act === 'talk' || cat.act === 'present' || cat.act === 'sign' || cat.act === 'highfive' || m.anim === 'cheer' || m.anim === 'raise_hand') mk = 0.6 * Math.max(0, Math.sin(tt * 5.5)) ** 0.8;
+      else if (cat.act === 'talk' || cat.act === 'present' || cat.act === 'sign' || cat.act === 'highfive' || m.anim === 'raise_hand') mk = 0.6 * Math.max(0, Math.sin(tt * 5.5)) ** 0.8;
       mouthOpen(cat, mk);
     }
     const g = m.groups[m.anim];
