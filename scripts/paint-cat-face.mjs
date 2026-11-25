@@ -56,7 +56,7 @@ function eyeSvg(iris) {
   <defs><radialGradient id="g" cx="50%" cy="70%" r="65%"><stop offset="0" stop-color="${light}"/><stop offset="0.55" stop-color="${iris}"/><stop offset="1" stop-color="${dark}"/></radialGradient></defs>
   <rect width="100" height="100" fill="${rim}"/>
   <ellipse cx="50" cy="50" rx="46" ry="46" fill="url(#g)"/>
-  <ellipse cx="50" cy="48" rx="13" ry="36" fill="#120d0a"/><!-- 고양이 동공: 세로로 긴 타원 -->
+  <ellipse cx="50" cy="48" rx="21" ry="38" fill="#120d0a"/><!-- 고양이 동공: 세로로 긴 타원(너무 가늘면 날카로워 보임) -->
   <ellipse cx="50" cy="50" rx="46" ry="46" fill="none" stroke="${rim}" stroke-width="5"/>
   <ellipse cx="36" cy="31" rx="13" ry="11" fill="#ffffff"/>
   <ellipse cx="64" cy="67" rx="6" ry="5" fill="#ffffff" fill-opacity="0.9"/>
@@ -90,13 +90,27 @@ async function faceInfo(body) {
   });
   const sep = Math.hypot(holes[1].u - holes[0].u, holes[1].v - holes[0].v), mid = (holes[0].u + holes[1].u) / 2;
   const cheeks = holes.map((h) => ({ u: h.u + Math.sign(h.u - mid) * sep * 0.22, v: h.v + sep * 0.30, r: sep * 0.2, dist: h.dist }));
-  return { eyes, cheeks };
+  // 코: 색 띠 어두운 칸을 쓰는 가운데 정점(코 테두리) 중 가장 앞 → 그 자리에 가장 가까운 얼굴 정점 UV 에 분홍(테두리 안을 채움)
+  let tip = -1;
+  for (let i = 0; i < pos.length; i++) if (uv[i][0] > 0.94 && uv[i][1] > 0.88 && Math.abs(pos[i][0]) < 0.04 && (tip < 0 || pos[i][2] > pos[tip][2])) tip = i;
+  let nose = null;
+  if (tip >= 0) {
+    let best = -1, bd = Infinity;
+    for (let i = 0; i < pos.length; i++) {
+      if (uv[i][0] > 0.94) continue;
+      const d = Math.hypot(pos[i][0] - pos[tip][0], pos[i][1] - pos[tip][1], pos[i][2] - pos[tip][2]);
+      if (d < bd) { bd = d; best = i; }
+    }
+    nose = { u: uv[best][0] * SIZE, v: uv[best][1] * SIZE, r: sep * 0.075, dist: bd };
+  }
+  return { eyes, cheeks, nose };
 }
 
-function blushSvg(cheeks) {
+function blushSvg(cheeks, nose) {
   const blobs = cheeks.map((c, i) => `<radialGradient id="b${i}"><stop offset="0" stop-color="#ff8f9c" stop-opacity="0.55"/><stop offset="0.6" stop-color="#ff8f9c" stop-opacity="0.22"/><stop offset="1" stop-color="#ff8f9c" stop-opacity="0"/></radialGradient>
   <ellipse cx="${c.u.toFixed(1)}" cy="${c.v.toFixed(1)}" rx="${(c.r * 1.25).toFixed(1)}" ry="${c.r.toFixed(1)}" fill="url(#b${i})"/>`).join("\n");
-  return Buffer.from(`<svg xmlns="http://www.w3.org/2000/svg" width="${SIZE}" height="${SIZE}"><defs></defs>${blobs}</svg>`);
+  const n = nose ? `<ellipse cx="${nose.u.toFixed(1)}" cy="${nose.v.toFixed(1)}" rx="${nose.r.toFixed(1)}" ry="${(nose.r * 0.8).toFixed(1)}" fill="#f29aa8"/>` : "";
+  return Buffer.from(`<svg xmlns="http://www.w3.org/2000/svg" width="${SIZE}" height="${SIZE}"><defs></defs>${blobs}${n}</svg>`);
 }
 
 const only = process.argv[2];
@@ -108,10 +122,10 @@ for (const breed of Object.keys(BODY)) {
   if (!fs.existsSync(orig)) fs.copyFileSync(file, orig);
   const body = BODY[breed];
   infos[body] ||= await faceInfo(body);
-  const { cheeks } = infos[body];
+  const { cheeks, nose } = infos[body];
   const eye = await sharp(eyeSvg(IRIS[breed] || AMBER)).resize(EYE_RECT.w, EYE_RECT.h).png().toBuffer();
   await sharp(orig)
-    .composite([{ input: blushSvg(cheeks), left: 0, top: 0 }, { input: eye, left: EYE_RECT.x, top: EYE_RECT.y }])
+    .composite([{ input: blushSvg(cheeks, nose), left: 0, top: 0 }, { input: eye, left: EYE_RECT.x, top: EYE_RECT.y }])
     .png().toFile(file + ".tmp");
   fs.renameSync(file + ".tmp", file);
   console.log(breed.padEnd(20), body.padEnd(9), "볼", cheeks.map((c) => `(${c.u.toFixed(0)},${c.v.toFixed(0)}) r${c.r.toFixed(0)} d${c.dist.toFixed(3)}`).join(" "));

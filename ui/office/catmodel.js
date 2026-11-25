@@ -289,6 +289,142 @@ const CatModel = (() => {
   }
   /** 눈 크기 배율(모델 원래 눈 대비)과 가장자리 앞으로 내기(m) — remapEyeUV */
   const EYE_SCALE = 1.3, EYE_LIFT = 0.012;
+  /** 위팔 뼈 좌우 위치 배율(1 = 모델 그대로) — attach 의 어깨 좁히기 */
+  const SHOULDER = 0.82;
+
+  /**
+   * 체형 → 얼굴 정보(모델 공간 = 정점 좌표): 코끝, 입 선(ω) 경로, 혀 뿌리 자리·방향, 크기 기준(눈 너비). faceGeo 가 채우고 makeMouth 가 쓴다.
+   * @type {Object<string, {nose:number[], mouth:number[][], tongueAt:number[], tongueDir:number[], ew:number}>}
+   */
+  const face = {};
+  /**
+   * 코 아래 입 선(ω)·혀 자리를 구해 face[body] 에 둔다(체형마다 한 번, remapEyeUV 다음). 코 안의 분홍은 무늬에 그린다(scripts/paint-cat-face.mjs).
+   * 코 = 색 띠 어두운 칸(u > 0.94, v > 0.88)을 쓰는 정점 중 가운데(|x| < 0.04, 코 테두리) — 바깥쪽 같은 칸 정점은 수염.
+   * 입 선은 코 아래 두 개의 아래 반원(ω)과 코에서 내려오는 짧은 세로선. 점마다 가까운 얼굴 정점의 가장 앞(z)에 살짝 띄워 얼굴 곡면을 따른다.
+   * @param {BABYLON.AbstractMesh} mesh 체형 메시
+   * @param {string} body 체형 키
+   * @returns {void}
+   */
+  function faceGeo(mesh, body) {
+    if (!mesh.getVerticesData) return;
+    const uv = mesh.getVerticesData(BABYLON.VertexBuffer.UVKind), pos = mesh.getVerticesData(BABYLON.VertexBuffer.PositionKind);
+    if (!uv || !pos) return;
+    const n = uv.length / 2, nose = [];
+    let ex0 = Infinity, ex1 = -Infinity;
+    for (let i = 0; i < n; i++) {
+      const u = uv[i * 2], v = uv[i * 2 + 1], x = pos[i * 3];
+      if (u > 0.94 && v > 0.88 && Math.abs(x) < 0.04) nose.push(i);
+      if (u > 0.95 && v * 1024 > EYE_RECT.y - 1 && v * 1024 < EYE_RECT.y + EYE_RECT.h + 1 && x > 0) { ex0 = Math.min(ex0, x); ex1 = Math.max(ex1, x); } // 오른눈 너비(펴 둔 UV 로 찾음)
+    }
+    if (!nose.length) return;
+    let tip = nose[0], ny0 = Infinity;
+    for (const i of nose) {
+      if (pos[i * 3 + 2] > pos[tip * 3 + 2]) tip = i;
+      ny0 = Math.min(ny0, pos[i * 3 + 1]);
+    }
+    const T = [pos[tip * 3], pos[tip * 3 + 1], pos[tip * 3 + 2]];
+    const ew = isFinite(ex1 - ex0) && ex1 > ex0 ? ex1 - ex0 : 0.07;
+    // 얼굴 겉면 높이: (x, y) 근처(반지름 rr) 얼굴 정점 중 가장 앞의 z. 코·눈 조각은 뺀다
+    const rr = ew * 0.09;
+    const zAt = (x, y) => {
+      let z = -Infinity;
+      for (let i = 0; i < n; i++) {
+        if (uv[i * 2] > 0.94) continue;
+        const px = pos[i * 3], py = pos[i * 3 + 1], pz = pos[i * 3 + 2];
+        if (pz < T[2] - 0.08 || Math.abs(px - x) > rr || Math.abs(py - y) > rr) continue;
+        if (pz > z) z = pz;
+      }
+      return isFinite(z) ? z : T[2] - 0.01;
+    };
+    const r = ew * 0.17, y0 = ny0 - ew * 0.24; // ω 반원 반지름, 반원 윗줄 높이(코 밑에서 조금 아래)
+    // ω: 왼끝(-2r) → 가운데(0) → 오른끝(+2r). 반원마다 가운데가 아래로 처진다(a: π → 2π 의 sin 은 음수)
+    const omega = [];
+    for (let k = 0; k <= 16; k++) {
+      const s = k <= 8 ? -1 : 1, j = k <= 8 ? k : k - 8; // 왼 반원 0..8, 오른 반원 1..8 (가운데 점 한 번만)
+      const a = Math.PI + (Math.PI * j) / 8;
+      omega.push([s * r + r * Math.cos(a), y0 + r * Math.sin(a), 0]);
+    }
+    const lift = ew * 0.03;
+    const place = (p) => [p[0], p[1], zAt(p[0], p[1]) + lift];
+    face[body] = {
+      nose: T,
+      philtrum: [[0, ny0 - ew * 0.02, 0], [0, y0, 0]].map(place), // 코에서 내려오는 세로선
+      mouth: omega.map(place),
+      tongueAt: [0, y0 - r * 0.6, zAt(0, y0 - r * 0.6) - ew * 0.06],
+      tongueDir: [0, -0.45, 1],
+      ew,
+    };
+  }
+
+  /** 입·혀 재질(모든 고양이 공유) */
+  let mouthMat = null, tongueMat = null;
+  /**
+   * 입 선(ω·세로선)과 혀를 머리 뼈에 붙인다. 혀는 입 안에 숨어 있다가 tongue() 로 내민다.
+   * 위치는 face[body](모델 공간)를 머리 뼈 국소 좌표로 옮겨 놓는다 — 머리를 따라 움직임.
+   * @param {BABYLON.Scene} scene 장면
+   * @param {Cat} cat 고양이
+   * @param {CatModelInfo} model 모델 정보 (model.tongue 가 채워짐)
+   * @param {string} body 체형 키
+   * @returns {void}
+   */
+  function makeMouth(scene, cat, model, body) {
+    const f = face[body], head = model.nodes.head, top = model.top;
+    if (!f || !head || !top) return;
+    const chain = [];
+    for (let nd = head; nd; nd = nd.parent) chain.unshift(nd);
+    for (const nd of chain) nd.computeWorldMatrix(true);
+    const W = top.getWorldMatrix(), Hinv = BABYLON.Matrix.Invert(head.getWorldMatrix());
+    const toHead = (p) => V3.TransformCoordinates(V3.TransformCoordinates(new V3(p[0], p[1], p[2]), W), Hinv);
+    if (!mouthMat) {
+      mouthMat = new BABYLON.StandardMaterial('cat:mouth', scene);
+      mouthMat.diffuseColor = BABYLON.Color3.FromHexString('#3a2523');
+      mouthMat.specularColor = new BABYLON.Color3(0, 0, 0);
+      mouthMat.metadata = { shared: true };
+      tongueMat = new BABYLON.StandardMaterial('cat:tongue', scene);
+      tongueMat.diffuseColor = BABYLON.Color3.FromHexString('#f07f93');
+      tongueMat.specularColor = new BABYLON.Color3(0.25, 0.18, 0.2);
+      tongueMat.metadata = { shared: true };
+    }
+    const rad = f.ew * 0.03;
+    const lines = [f.philtrum, f.mouth].map((pts, i) => {
+      const tube = BABYLON.MeshBuilder.CreateTube(`${cat.id}:mouth${i}`, { path: pts.map(toHead), radius: rad, tessellation: 6, cap: BABYLON.Mesh.CAP_ALL }, scene);
+      tube.material = mouthMat; tube.parent = head; tube.isPickable = false;
+      return tube;
+    });
+    // 혀: 뿌리(root)를 입 안에 두고 앞(+z)으로 뻗는 납작한 타원체. root 의 z 크기로 내밀기
+    const root = new BABYLON.TransformNode(`${cat.id}:tongueRoot`, scene);
+    root.parent = head;
+    root.position = toHead(f.tongueAt);
+    const dir = toHead([f.tongueAt[0] + f.tongueDir[0], f.tongueAt[1] + f.tongueDir[1], f.tongueAt[2] + f.tongueDir[2]]).subtract(root.position).normalize();
+    const base = new Q();
+    Q.FromUnitVectorsToRef(V3.Forward(), dir, base);
+    root.rotationQuaternion = base.clone();
+    const len = f.ew * 0.62, wid = f.ew * 0.42;
+    const tg = BABYLON.MeshBuilder.CreateSphere(`${cat.id}:tongue`, { segments: 10 }, scene);
+    tg.scaling.set(wid, f.ew * 0.11, len);
+    tg.position.z = len * 0.5;
+    tg.parent = root; tg.material = tongueMat; tg.isPickable = false;
+    root.setEnabled(false);
+    model.mouth = lines;
+    model.tongue = { root, base, k: 0 };
+  }
+  /**
+   * 혀 내밀기. k 0(숨김)~1(다 내밂), flick 은 혀끝을 위아래로 튕기는 각도(rad, 핥기).
+   * @param {Cat} cat 고양이 (cat.model.tongue)
+   * @param {number} k 내민 정도 0~1
+   * @param {number} [flick=0] 위(-)·아래(+) 튕김 각도(rad)
+   * @returns {void}
+   */
+  function tongue(cat, k, flick = 0) {
+    const t = cat.model && cat.model.tongue;
+    if (!t) return;
+    t.k = k;
+    const on = k > 0.02;
+    if (t.root.isEnabled() !== on) t.root.setEnabled(on);
+    if (!on) return;
+    t.root.scaling.set(0.7 + 0.3 * k, 1, k);
+    t.root.rotationQuaternion = t.base.multiply(Q.RotationAxis(V3.Right(), flick));
+  }
   async function load(scene, body) {
     try {
       const c = await BABYLON.LoadAssetContainerAsync(DIR + BODIES[body].file, scene);
@@ -299,7 +435,7 @@ const CatModel = (() => {
         }
       }
       for (const me of c.meshes) if (me.skeleton) { const p = fixRumpWeights(me); if (p && !tailRing[body]) tailRing[body] = p; }
-      for (const me of c.meshes) remapEyeUV(me);
+      for (const me of c.meshes) { remapEyeUV(me); faceGeo(me, body); }
       containers[body] = c;
       // 추가 동작(스케이트·발라당): Blender assets/cats/hi3d/extra_actions.py 로 체형마다 만든 뼈대+동작 파일. 꼬리·귀 트랙은 같은 이유로 지운다
       try {
@@ -476,10 +612,24 @@ const CatModel = (() => {
         for (const n of thighs) n.scaling.set(1, k, 1);
       });
     }
+    // 어깨 좁히기(사용자 2026-11-25 "어깨가 너무 넓다"): 위팔 뼈를 몸 가운데 쪽으로 SHOULDER 배. 모델 파일은 그대로.
+    // 동작이 뼈 위치를 쓰는 경우 매 프레임 되돌아오므로 동작 계산 직후에 다시 옮긴다(동작이 안 쓰면 처음 값을 기준으로 — 곱이 쌓이지 않게)
+    const arms = ['upper_arm.L', 'upper_arm.R'].map((k) => nodes[k]).filter(Boolean).map((n) => ({ n, src: n.position.x, last: NaN }));
+    if (arms.length && SHOULDER !== 1) {
+      const ob = scene.onAfterAnimationsObservable.add(() => {
+        if (top.isDisposed()) { scene.onAfterAnimationsObservable.remove(ob); return; }
+        for (const a of arms) {
+          if (a.n.position.x !== a.last) a.src = a.n.position.x; // 동작이 새로 쓴 값
+          a.n.position.x = a.src * SHOULDER;
+          a.last = a.n.position.x;
+        }
+      });
+    }
     model.tailPivot = tailRingOffset(top, nodes, tailRing[body]); // 꼬리 첫 마디가 도는 중심을 뼈 위치 → 꼬리 뿌리 고리로 옮기는 벡터 (animate 에서 씀)
     // 소품: 결재판·상자는 몸 앞, 팻말은 오른손
     model.props = makeProps(scene, cat, model);
     if (breed === 'boss') makeTie(scene, cat, model);
+    makeMouth(scene, cat, model, body);
     return model;
   }
 
@@ -1124,6 +1274,14 @@ const CatModel = (() => {
       m.speed = m.speed == null ? v : m.speed + (v - m.speed) * Math.min(1, dt * 8);
     }
     m.lastPos = { x: p.x, z: p.z };
+    // 혀: 그루밍이면 핥기(내밀었다 들이며 혀끝을 위아래로 튕김), 간식 먹기면 가끔 입맛 다시기
+    if (m.tongue) {
+      const tt = cat.t || 0;
+      let tk = 0, fl = 0;
+      if (cat.act === 'groom') { tk = Math.max(0, Math.sin(tt * 3.4)) ** 0.6; fl = -0.35 * Math.sin(tt * 10.2); }
+      else if (cat.act === 'eat') { const s = Math.sin(tt * 2.2); tk = s > 0.75 ? (s - 0.75) * 2.4 : 0; fl = -0.4 * Math.sin(tt * 12); }
+      if (tk || m.tongue.k) tongue(cat, tk, fl);
+    }
     const g = m.groups[m.anim];
     if (g) {
       const gait = m.cfg.gait[m.anim];
@@ -1172,15 +1330,20 @@ const CatModel = (() => {
     if (m.tie) m.tie.setEnabled(cat.pose !== 'loaf' && cat.pose !== 'walk');
     trackGear(cat, m);
 
-    // 꼬리: 평소 느리게, 주의 필요하면 빠르게 크게, 오류면 꼿꼿이, 기분 나쁘면 작게
+    // 꼬리 좌우 흔들기(기본 패시브, 사용자 설명 2026-11-25): 평소엔 가만히 있다가 가끔 살랑살랑, 기분 좋으면(간식·발라당) 살랑살랑,
+    // 짜증 나거나 힘들면(기분 낮음) 빠르게 크게 휙휙. 주의 필요(결재·질문)면 빠르게, 오류면 꼿꼿이, 자면 거의 안 움직임
     const urgent = cat.signal === 'permission' || cat.signal === 'waiting' || cat.act === 'sign';
     const err = cat.signal === 'error';
     const low = 1 - (cat.mood ?? 1);
     const held = !!cat.held;
-    const treat = cat.act === 'eat' || cat.act === 'roll'; // 간식을 받으면 기분 좋게 살랑살랑
+    const treat = cat.act === 'eat' || cat.act === 'roll';
     const rolling = cat.act === 'roll'; // 발라당 뒹굴 때는 꼬리를 크게 좌우로 흔든다
-    const amp = held ? 0.6 : err ? 0.03 : rolling ? 0.8 : treat ? 0.38 : urgent ? 0.45 : cat.act === 'sleep' || cat.act === 'doze' ? 0.05 : 0.16 * (1 - low * 0.6);
-    const spd = held ? 16 : rolling ? 6 : treat ? 3.2 : urgent ? 6 : cat.pose === 'walk' ? 3 : 1.6; // 들리면 꼬리만 빠르게 좌우로
+    const sleepy = cat.act === 'sleep' || cat.act === 'doze';
+    const cross = low > 0.45; // 짜증·지침
+    if (m.tailSeed == null) m.tailSeed = Math.random() * 6.28;
+    const calm = Math.max(0, Math.sin(cat.t * 0.21 + m.tailSeed)) ** 1.5; // 평소: 0(가만히) ↔ 1(살랑) 을 천천히 오간다
+    const amp = held ? 0.6 : err ? 0.03 : rolling ? 0.8 : treat ? 0.38 : urgent ? 0.45 : sleepy ? 0.05 : cross ? 0.3 + 0.3 * low : 0.2 * calm;
+    const spd = held ? 16 : rolling ? 6 : treat ? 3.2 : urgent ? 6 : cross ? 5 + 6 * low : cat.pose === 'walk' ? 3 : 1.6; // 들리면 꼬리만 빠르게 좌우로
     // 들리지 않을 때: 꼬리는 허리(엉덩이 뼈)에서 등줄기를 이어 뒤로 나와 앞 마디는 곧게, 끝에서 위로 말린다 (마디 방향각 TAIL_POSE)
     // 들리면: 원래 위로 말린 꼬리를 일직선으로 펴서 아래로 축 늘어뜨린다(Blender 에서 맞춘 마디별 각도, 관절 X 음수 = 아래)
     const tailKeys = ['tail_01', 'tail_02', 'tail_03', 'tail_04'];
@@ -1332,5 +1495,5 @@ const CatModel = (() => {
   /**
    * 공개 API: preload, ready, bodies, breeds, breedName, attach, animate, anchor, keyStrikes.
    */
-  return { preload, ready, bodies, breeds, breedName, attach, animate, anchor, keyStrikes };
+  return { preload, ready, bodies, breeds, breedName, attach, animate, anchor, keyStrikes, tongue };
 })();
