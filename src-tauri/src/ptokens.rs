@@ -163,7 +163,7 @@ pub fn build(days: u32, recs: &[Rec], meta: &HashMap<String, Meta>) -> LocalRepo
     if hourly {
         for h in 0..=now_local.hour() {
             let key = format!("{h:02}");
-            trend.push(Bucket { label: format!("{h}시"), total: buckets.get(&key).copied().unwrap_or(0), key });
+            trend.push(Bucket { label: crate::i18n::tf("bucket.hour", &[("h", &h.to_string())]), total: buckets.get(&key).copied().unwrap_or(0), key });
         }
     } else {
         for d in (0..days as i64).rev() {
@@ -182,7 +182,7 @@ pub fn build(days: u32, recs: &[Rec], meta: &HashMap<String, Meta>) -> LocalRepo
             let title: String = m.title.split_whitespace().collect::<Vec<_>>().join(" ").chars().take(120).collect();
             Session {
                 id,
-                title: if title.is_empty() { "(제목 없음)".into() } else { title },
+                title: if title.is_empty() { crate::i18n::t("session.untitled").into() } else { title },
                 project,
                 cwd: m.cwd,
                 model,

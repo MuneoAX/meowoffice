@@ -37,6 +37,7 @@ mod config;
 mod crypto;
 mod exports;
 mod health;
+mod i18n;
 mod hook;
 mod jobobj;
 mod local;
@@ -67,6 +68,8 @@ use tauri::{AppHandle, Emitter, Manager, PhysicalPosition, WebviewWindow, Window
 
 /// 트레이 아이콘 식별자. `TrayIconBuilder::with_id` 로 만들고 `app.tray_by_id` 로 다시 찾는 데 쓴다.
 const TRAY_ID: &str = "main";
+/// 트레이 메뉴 항목(오피스 열기·새로고침·종료) 핸들 — 언어가 바뀌면 `set_lang` 이 글자를 바꾼다.
+static TRAY_MENU: Mutex<Option<(MenuItem<tauri::Wry>, MenuItem<tauri::Wry>, MenuItem<tauri::Wry>)>> = Mutex::new(None);
 /// 표시 이름(트레이 툴팁 첫 줄). tauri.conf.json productName 과 같게.
 /// `update_tray` 가 툴팁 첫 줄로, `main` 이 트레이 초기 툴팁으로 쓴다.
 const APP_NAME: &str = "Meowffice";
@@ -274,11 +277,11 @@ fn agy_turn_done(app: &AppHandle, v: &serde_json::Value) {
     }
     let body = match s("terminationReason") {
         "USER_CANCELED" | "TERMINAL_CUSTOM_HOOK" => return,
-        "ERROR" => "오류로 멈췄습니다. Antigravity 화면을 확인하세요.",
-        "MAX_INVOCATIONS" | "MAX_FORCED_INVOCATIONS" | "MAX_TOKEN_BUDGET_EXCEEDED" => "한도에 걸려 멈췄습니다. Antigravity 화면을 확인하세요.",
+        "ERROR" => i18n::t("alert.agy.error"),
+        "MAX_INVOCATIONS" | "MAX_FORCED_INVOCATIONS" | "MAX_TOKEN_BUDGET_EXCEEDED" => i18n::t("alert.agy.limit"),
         _ => {
             turn_done_treat(app, "Antigravity 작업 완료", "antigravity", id);
-            "응답이 끝났습니다. 다음 입력을 기다립니다."
+            i18n::t("alert.done")
         }
     };
     let cwd = Some(s("cwd")).filter(|c| !c.is_empty()).or_else(|| v.pointer("/workspacePaths/0").and_then(|x| x.as_str())).unwrap_or("");
@@ -372,23 +375,23 @@ fn local_session_event(app: &AppHandle, v: &serde_json::Value) {
             }
             let transcript = Some(s("transcript_path")).filter(|p| !p.is_empty()).map(std::path::Path::new);
             let title = match &agent {
-                Some(a) => format!("에이전트 · {}", transcript.and_then(|t| local::agent_title(t, a)).unwrap_or_else(|| project.clone())),
+                Some(a) => i18n::tf("alert.agent_title", &[("title", &transcript.and_then(|t| local::agent_title(t, a)).unwrap_or_else(|| project.clone()))]),
                 None => transcript.and_then(local::session_title).unwrap_or_else(|| project.clone()),
             };
             let (state_name, body) = match event {
-                "Stop" if agent.is_some() => ("done", "에이전트 작업이 끝났습니다.".to_string()),
+                "Stop" if agent.is_some() => ("done", i18n::t("alert.agent_done").to_string()),
                 "Stop" => match transcript.map(local::running_background_agents).unwrap_or(0) {
-                    0 => ("done", "응답이 끝났습니다. 다음 입력을 기다립니다.".to_string()),
-                    n => ("done", format!("응답이 끝났지만 백그라운드 에이전트 {n}개가 아직 실행 중입니다.")),
+                    0 => ("done", i18n::t("alert.done").to_string()),
+                    n => ("done", i18n::tf("alert.done_bg", &[("n", &n.to_string())])),
                 },
                 _ if permission => (
                     "need_input",
-                    format!(
-                        "Claude 화면에서 직접 수락해야 하는 권한 확인이 있습니다{}",
-                        message.split("permission to use ").nth(1).map(|tool| format!(" ({}).", tool.trim())).unwrap_or_else(|| ".".into())
+                    i18n::tf(
+                        "alert.permission",
+                        &[("tool", &message.split("permission to use ").nth(1).map(|tool| format!(" ({})", tool.trim())).unwrap_or_default())],
                     ),
                 ),
-                _ if message.is_empty() || message.contains("waiting for your input") => ("need_input", "입력을 기다리고 있습니다.".into()),
+                _ if message.is_empty() || message.contains("waiting for your input") => ("need_input", i18n::t("alert.waiting").into()),
                 _ => ("need_input", message.to_string()),
             };
             let now = Utc::now();
@@ -553,17 +556,17 @@ fn until(reset: &Option<String>, with_left: bool) -> String {
         local.format("%-m/%-d %H:%M").to_string()
     };
     if !with_left {
-        return format!(" · {at} 초기화");
+        return i18n::tf("tip.reset", &[("at", &at)]);
     }
     let (h, m) = (d.num_hours(), d.num_minutes() % 60);
     let left = if h >= 24 {
-        format!("{}일 {}시간 후", h / 24, h % 24)
+        i18n::tf("tip.left_dh", &[("d", &(h / 24).to_string()), ("h", &(h % 24).to_string())])
     } else if h > 0 {
-        format!("{h}시간 {m}분 후")
+        i18n::tf("tip.left_hm", &[("h", &h.to_string()), ("m", &m.to_string())])
     } else {
-        format!("{m}분 후")
+        i18n::tf("tip.left_m", &[("m", &m.to_string())])
     };
-    format!(" · {at} 초기화 ({left})")
+    i18n::tf("tip.reset_left", &[("at", &at), ("left", &left)])
 }
 
 /// 트레이 툴팁 글자 수 한도 (Windows 는 127자)
@@ -682,21 +685,21 @@ fn update_tray(app: &AppHandle, snap: &PlanSnap) {
         extras.push(l);
     }
     if n_permits > 0 {
-        extras.push(format!("권한 요청 {n_permits}건"));
+        extras.push(i18n::tf("tip.permits", &[("n", &n_permits.to_string())]));
     }
     if n_unread > 0 {
-        extras.push(format!("읽지 않은 알림 {n_unread}건"));
+        extras.push(i18n::tf("tip.unread", &[("n", &n_unread.to_string())]));
     }
     if let Some(i) = app.state::<AppState>().health.lock().unwrap().current() {
         extras.push(format!("⚠ {}", i.title));
     }
     for (name, label) in PROVIDER_LABELS {
         if app.state::<AppState>().phealth.lock().unwrap().get(name).is_some_and(|h| h.current().is_some()) {
-            extras.push(format!("⚠ {label} 연결"));
+            extras.push(i18n::tf("tip.provider_warn", &[("label", label)]));
         }
     }
     if let Some(u) = app.state::<AppState>().update.lock().unwrap().as_ref() {
-        extras.push(format!("새 버전 {} 사용 가능", u.version));
+        extras.push(i18n::tf("tip.update", &[("v", &u.version)]));
     }
     let tip = fit_tip(claude_tip(true), || claude_tip(false), &extras);
     let _ = tray.set_icon(Some(tray::image(s, w, (n_unread + n_permits) as u32)));
@@ -903,8 +906,8 @@ fn apply_health_card(app: &AppHandle, id: &str, name: &str, page: &str, issue: O
                 alerts.add_local(alerts::Alert {
                     key: format!("{id}-ok@{}", now.timestamp_millis()),
                     id: id.into(),
-                    title: format!("{name} 연결 상태가 복구되었습니다"),
-                    message: "다시 정상적으로 응답하고 있습니다.".into(),
+                    title: i18n::tf("health.recovered.title", &[("name", name)]),
+                    message: i18n::t("health.recovered.message").into(),
                     state: "recovered".into(),
                     env: "status".into(),
                     url: page.into(),
@@ -925,11 +928,11 @@ fn apply_health_card(app: &AppHandle, id: &str, name: &str, page: &str, issue: O
 /// OpenAI 상태 페이지 확인의 마지막 로그 문구(`log_changed` 중복 억제용).
 static PSTATUS_LOG: Mutex<String> = Mutex::new(String::new());
 
-/// 웹 서비스 장애 알림 대상: (설정 id, phealth 키, 카드 id, 표시 이름, 상태 페이지, 확인 주기 tick).
+/// 웹 서비스 장애 알림 대상: (설정 id, phealth 키, 카드 id, 표시 이름 — 문구 키 또는 고유 이름, 상태 페이지, 확인 주기 tick).
 ///
 /// 카드 id `chatgpt-status-web` 은 key 가 `chatgpt-status` 로 시작해 `alerts::provider_of` 가 chatgpt 로고를 준다.
 const WEB_STATUS: [(&str, &str, &str, &str, &str, u64); 2] = [
-    ("chatgpt", "chatgpt-web", "chatgpt-status-web", "ChatGPT 웹", health::OPENAI_STATUS_PAGE, 20), // 5분
+    ("chatgpt", "chatgpt-web", "chatgpt-status-web", "health.web.chatgpt", health::OPENAI_STATUS_PAGE, 20), // 5분
     ("gemini", "gemini-web", "gemini-status", "Gemini", health::GOOGLE_STATUS_PAGE, 60),            // 15분(응답이 큼)
 ];
 /// 웹 서비스 상태 확인의 마지막 로그 문구(`log_changed` 중복 억제용).
@@ -950,7 +953,8 @@ static WEB_STATUS_LOG: Mutex<String> = Mutex::new(String::new());
 fn poll_web_status(app: &AppHandle, tick: u64) {
     let on = config::load().config.web_status_alerts;
     let state = app.state::<AppState>();
-    for (id, key, card, label, page, every) in WEB_STATUS {
+    for (id, key, card, label_key, page, every) in WEB_STATUS {
+        let label = i18n::t(label_key);
         if !on.iter().any(|n| n == id) {
             let had = state.phealth.lock().unwrap().remove(key).is_some();
             if had && state.alerts.lock().unwrap().resolve_local(card) {
@@ -1092,7 +1096,7 @@ fn poll_providers(app: &AppHandle, tick: u64) {
                     key: format!("local:codex:{}@{}", f.id, f.turn),
                     id: format!("codex:{}", f.id),
                     title: if title.is_empty() { "Codex".into() } else { format!("Codex · {title}") },
-                    message: "응답이 끝났습니다. 다음 입력을 기다립니다.".into(),
+                    message: i18n::t("alert.done").into(),
                     state: "done".into(),
                     env: "local".into(),
                     updated_at: now.to_rfc3339_opts(SecondsFormat::Secs, true),
@@ -1330,7 +1334,7 @@ fn answer_permit(app: AppHandle, id: String, allow: bool, answers: Option<serde_
         Ok(())
     } else {
         sync_notify(&app);
-        Err("이미 처리되었거나 시간이 지난 요청입니다".into())
+        Err(i18n::t("err.permit_gone").into())
     }
 }
 
@@ -1410,7 +1414,7 @@ pub(crate) fn chat_turn_done(app: &AppHandle, provider: &str, session: &str, pro
             key: format!("local:{session}@{}", now.timestamp_millis()),
             id: session.to_string(),
             title: if project.is_empty() { "Claude".into() } else { format!("Claude · {project}") },
-            message: "응답이 끝났습니다. 다음 입력을 기다립니다.".into(),
+            message: i18n::t("alert.done").into(),
             state: "done".into(),
             env: "local".into(),
             updated_at: now.to_rfc3339_opts(SecondsFormat::Secs, true),
@@ -1683,7 +1687,7 @@ fn open_alert(app: AppHandle, key: String) -> Result<(), String> {
     }
     let alert = app.state::<AppState>().alerts.lock().unwrap().find(&key);
     let Some(a) = alert else {
-        return Err("이미 처리된 알림".into());
+        return Err(i18n::t("err.alert_gone").into());
     };
     if a.env == "local" {
         // 터미널·IDE 창은 앞으로 가져올 수 없음 — 데스크톱 앱에서 연 세션만 앱으로 이동.
@@ -1718,8 +1722,8 @@ fn preview_alert(app: AppHandle) {
         alerts::Alert {
             key: "preview-1".into(),
             id: "preview-1".into(),
-            title: "(미리보기) 사용량 트레이 앱 개발".into(),
-            message: "src-tauri/src/main.rs 수정을 허용할까요?".into(),
+            title: i18n::t("preview.1.title").into(),
+            message: i18n::t("preview.1.message").into(),
             state: "need_input".into(),
             env: "bridge".into(),
             url: String::new(),
@@ -1729,8 +1733,8 @@ fn preview_alert(app: AppHandle) {
         alerts::Alert {
             key: "preview-2".into(),
             id: "preview-2".into(),
-            title: "(미리보기) 백엔드 리팩터링".into(),
-            message: "검토할 변경 사항이 준비되었습니다.".into(),
+            title: i18n::t("preview.2.title").into(),
+            message: i18n::t("alert.remote.review_ready").into(),
             state: "review_ready".into(),
             env: "cloud".into(),
             url: String::new(),
@@ -1740,8 +1744,8 @@ fn preview_alert(app: AppHandle) {
         alerts::Alert {
             key: "preview-3".into(),
             id: "preview-3".into(),
-            title: "(미리보기) 에이전트 · 실샘플 E2E 검증".into(),
-            message: "muneo-claude-usage-tray · 에이전트 작업이 끝났습니다.".into(),
+            title: i18n::t("preview.3.title").into(),
+            message: i18n::t("preview.3.message").into(),
             state: "done".into(),
             env: "local".into(),
             url: String::new(),
@@ -1758,7 +1762,7 @@ fn preview_alert(app: AppHandle) {
             project: "muneo-claude-usage-tray".into(),
             tool: "Bash".into(),
             detail: "npm run build".into(),
-            description: "(미리보기) 릴리스 빌드 실행".into(),
+            description: i18n::t("preview.permit.desc").into(),
             created_at: at(0),
             questions: serde_json::Value::Null,
             session: String::new(),
@@ -1774,10 +1778,10 @@ fn preview_alert(app: AppHandle) {
             description: String::new(),
             created_at: at(0),
             questions: serde_json::json!([
-                { "header": "진행 방식", "question": "(미리보기) 다음 단계를 어떻게 진행할까요?", "multiSelect": false,
-                  "options": [{ "label": "병렬 진행", "description": "두 작업을 동시에" }, { "label": "순차 유지", "description": "하나씩 차례로" }] },
-                { "header": "검수", "question": "(미리보기) 검수 항목을 고르세요", "multiSelect": true,
-                  "options": [{ "label": "빌드" }, { "label": "테스트" }, { "label": "문서" }] }
+                { "header": i18n::t("preview.q.1.header"), "question": i18n::t("preview.q.1.question"), "multiSelect": false,
+                  "options": [{ "label": i18n::t("preview.q.1.opt1"), "description": i18n::t("preview.q.1.opt1desc") }, { "label": i18n::t("preview.q.1.opt2"), "description": i18n::t("preview.q.1.opt2desc") }] },
+                { "header": i18n::t("preview.q.2.header"), "question": i18n::t("preview.q.2.question"), "multiSelect": true,
+                  "options": [{ "label": i18n::t("preview.q.2.opt1") }, { "label": i18n::t("preview.q.2.opt2") }, { "label": i18n::t("preview.q.2.opt3") }] }
             ]),
             session: String::new(),
             tool_input: serde_json::Value::Null,
@@ -1911,7 +1915,7 @@ async fn get_api_usage(force: bool) -> ApiSnap {
 async fn validate_api_key(key: String) -> Result<(), String> {
     tauri::async_runtime::spawn_blocking(move || {
         let key =
-            if key.trim().is_empty() { config::admin_key(&config::load().config).ok_or("저장된 키가 없습니다")? } else { key };
+            if key.trim().is_empty() { config::admin_key(&config::load().config).ok_or(i18n::t("err.no_saved_key"))? } else { key };
         apicost::validate(key.trim()).map_err(|e| e.to_string())
     })
     .await
@@ -2017,7 +2021,7 @@ fn get_providers_on() -> Option<Vec<String>> {
 #[tauri::command]
 fn set_provider_on(name: String, on: bool) -> Result<(), String> {
     if !matches!(name.as_str(), "chatgpt" | "antigravity") {
-        return Err("알 수 없는 서비스".into());
+        return Err(i18n::t("err.unknown_service").into());
     }
     let loaded = config::load();
     let mut c = loaded.config;
@@ -2129,7 +2133,7 @@ fn get_web_services(app: AppHandle) -> Vec<WebServiceView> {
 #[tauri::command]
 fn set_web_status_alert(name: String, on: bool) -> Result<(), String> {
     if !matches!(name.as_str(), "chatgpt" | "gemini") {
-        return Err("알 수 없는 서비스".into());
+        return Err(i18n::t("err.unknown_service").into());
     }
     let loaded = config::load();
     let mut c = loaded.config;
@@ -2175,7 +2179,7 @@ fn provider_of(name: &str) -> Result<provider_hook::Provider, String> {
     match name {
         "chatgpt" => Ok(provider_hook::Provider::Codex),
         "antigravity" => Ok(provider_hook::Provider::Agy),
-        _ => Err("알 수 없는 서비스".into()),
+        _ => Err(i18n::t("err.unknown_service").into()),
     }
 }
 
@@ -2189,7 +2193,7 @@ fn provider_of(name: &str) -> Result<provider_hook::Provider, String> {
 /// # 참조
 /// `provider_hook::hook_exe`. `provider_hook_state`·`set_provider_hook`·`main` 에서 호출.
 fn exe_string() -> Result<String, String> {
-    let exe = std::env::current_exe().map(|p| p.to_string_lossy().into_owned()).map_err(|e| format!("앱 경로를 알 수 없습니다: {e}"))?;
+    let exe = std::env::current_exe().map(|p| p.to_string_lossy().into_owned()).map_err(|e| i18n::tf("err.app_path", &[("e", &e.to_string())]))?;
     provider_hook::hook_exe(&exe)
 }
 
@@ -2303,17 +2307,17 @@ fn set_provider_hook(name: String, enabled: bool, auto_allow: bool) -> Result<Pr
     }
     let mut warning = None;
     if enabled {
-        let dir = p.dir().ok_or("서비스 설정 폴더를 찾을 수 없습니다")?;
+        let dir = p.dir().ok_or(i18n::t("err.svc_dir_unknown"))?;
         let exe = exe_string()?;
         // 시험용 폴더 재지정(MUNEO_PROVIDER_HOOK_DIR)은 디버그 빌드에서만 폴더 검사를 건너뜀
         let test_dir = cfg!(debug_assertions) && std::env::var_os("MUNEO_PROVIDER_HOOK_DIR").is_some();
         if !dir.exists() && !test_dir {
-            return Err(format!("{} 설정 폴더({})가 없습니다. 서비스를 한 번 실행·로그인한 뒤 다시 켜세요.", p.key(), dir.display()));
+            return Err(i18n::tf("err.svc_dir_missing", &[("svc", p.key()), ("dir", &dir.display().to_string())]));
         }
         let before = provider_hook::installed_command(&dir, p);
         provider_hook::apply(&dir, p, true, &exe, agy_card()).map_err(|e| {
             log::error!("{} 훅 적용 실패: {e}", p.key());
-            format!("훅 파일 수정 실패: {e}")
+            i18n::tf("err.hook_write", &[("e", &e.to_string())])
         })?;
         if before.as_deref().is_some_and(|b| b != wanted_command(p, &exe)) {
             log::warn!("{} 훅 명령이 바뀌어 다시 신뢰(trust)가 필요할 수 있음", p.key());
@@ -2322,7 +2326,7 @@ fn set_provider_hook(name: String, enabled: bool, auto_allow: bool) -> Result<Pr
         // 끄기는 훅 파일이 깨져 있어도 설정을 끈다 — 파일 문제는 알리기만(깨진 JSON 은 덮어쓰지 않음)
         if let Err(e) = provider_hook::apply(&dir, p, false, &exe_string().unwrap_or_default(), false) {
             log::error!("{} 훅 제거 실패(설정은 끔): {e}", p.key());
-            warning = Some(format!("연동을 껐지만 훅 파일({})을 정리하지 못했습니다: {e}. 파일을 직접 확인해 주세요.", dir.join("hooks.json").display()));
+            warning = Some(i18n::tf("warn.hook_cleanup", &[("path", &dir.join("hooks.json").display().to_string()), ("e", &e.to_string())]));
         }
     }
     config::save(&loaded.path, &c).map_err(|e| e.to_string())?;
@@ -2365,12 +2369,12 @@ async fn get_provider(name: String) -> providers::Snapshot {
 #[tauri::command]
 async fn get_provider_tokens(name: String, days: u32) -> Result<local::LocalReport, String> {
     if !provider_on(&name) {
-        return Err("연동이 꺼져 있습니다".into());
+        return Err(i18n::t("err.integration_off").into());
     }
     tauri::async_runtime::spawn_blocking(move || match name.as_str() {
         "chatgpt" => Ok(codex::token_report(days)),
         "antigravity" => Ok(antigravity::token_report(days)),
-        _ => Err("알 수 없는 서비스".to_string()),
+        _ => Err(i18n::t("err.unknown_service").to_string()),
     })
     .await
     .map_err(|e| e.to_string())?
@@ -2409,7 +2413,7 @@ async fn get_provider_image(name: String, id: String) -> Option<String> {
 #[tauri::command]
 fn provider_login(name: String) -> Result<&'static str, String> {
     if !provider_on(&name) {
-        return Err("연동이 꺼져 있습니다".into());
+        return Err(i18n::t("err.integration_off").into());
     }
     match name.as_str() {
         "chatgpt" => {
@@ -2424,7 +2428,7 @@ fn provider_login(name: String) -> Result<&'static str, String> {
             open_link("antigravity://")?;
             Ok("app")
         }
-        _ => Err("알 수 없는 서비스".into()),
+        _ => Err(i18n::t("err.unknown_service").into()),
     }
 }
 
@@ -2552,8 +2556,8 @@ fn os_name() -> String {
             .ok()
             .and_then(|o| String::from_utf8_lossy(&o.stdout).split('.').nth(2).and_then(|b| b.trim().parse::<u32>().ok()));
         return match build {
-            Some(b) if b >= 22000 => format!("Windows 11 (빌드 {b})"),
-            Some(b) => format!("Windows 10 (빌드 {b})"),
+            Some(b) if b >= 22000 => i18n::tf("os.win11", &[("b", &b.to_string())]),
+            Some(b) => i18n::tf("os.win10", &[("b", &b.to_string())]),
             None => "Windows".into(),
         };
     }
@@ -2629,7 +2633,7 @@ fn save_config(
     );
     hook::apply(&config::claude_dir(&c), c.permission_hook, c.hook_port, &c.hook_token).map_err(|e| {
         log::error!("Claude Code 훅 적용 실패: {e}");
-        format!("Claude Code 설정 수정 실패: {e}")
+        i18n::tf("err.claude_settings", &[("e", &e.to_string())])
     })?;
     config::save(&loaded.path, &c).map_err(|e| {
         log::error!("설정 파일 저장 실패: {e}");
@@ -2681,11 +2685,11 @@ async fn refresh_update(app: &AppHandle) -> Result<Option<update::Available>, St
                     && alerts.add_local(alerts::Alert {
                         key,
                         id: UPDATE_ALERT.into(),
-                        title: format!("새 버전 {} 사용 가능", u.version),
+                        title: i18n::tf("update.card.title", &[("v", &u.version)]),
                         message: if u.notes.is_empty() {
-                            "설치하면 앱이 잠시 닫혔다 다시 켜집니다.".into()
+                            i18n::t("update.card.message").into()
                         } else {
-                            format!("{} — 설치하면 앱이 잠시 닫혔다 다시 켜집니다.", u.notes)
+                            i18n::tf("update.card.message_notes", &[("notes", &u.notes)])
                         },
                         state: "update".into(),
                         env: "update".into(),
@@ -2784,17 +2788,17 @@ async fn install_update(app: AppHandle) -> Result<(), String> {
         #[cfg(any(windows, target_os = "macos"))]
         {
             let ok = rfd::AsyncMessageDialog::new()
-                .set_title("업데이트 설치")
-                .set_description(format!("채팅 답변 {running}개가 진행 중입니다. 지금 설치하면 중단됩니다. 계속할까요?"))
+                .set_title(i18n::t("update.dialog.title"))
+                .set_description(i18n::tf("update.dialog.running", &[("n", &running.to_string())]))
                 .set_buttons(rfd::MessageButtons::YesNo)
                 .show()
                 .await;
             if ok != rfd::MessageDialogResult::Yes {
-                return Err("취소됨".into());
+                return Err(i18n::t("update.cancelled").into());
             }
         }
         #[cfg(not(any(windows, target_os = "macos")))]
-        return Err("채팅 답변이 진행 중이라 설치를 보류했습니다".into());
+        return Err(i18n::t("update.deferred").into());
     }
     update::install(&app).await.inspect_err(|e| log::error!("업데이트 설치 실패: {e}"))
 }
@@ -2924,12 +2928,12 @@ fn open_url(url: String) -> Result<(), String> {
     }
     // Codex 대화(codex://threads/<id> — id 는 uuid 꼴만)
     if let Some(id) = url.strip_prefix("codex://threads/") {
-        return if codex::is_uuid_like(id) { open_link(&url) } else { Err("허용되지 않은 링크".into()) };
+        return if codex::is_uuid_like(id) { open_link(&url) } else { Err(i18n::t("err.link_not_allowed").into()) };
     }
     // 웹 바로가기 "https://claude.ai" 는 "/" 붙인 주소로 보고 아래 claude.ai 분기(데스크톱 앱 설정을 따름)로.
     let url = if url == "https://claude.ai" { "https://claude.ai/".to_string() } else { url };
     let Some(path) = url.strip_prefix("https://claude.ai/") else {
-        return Err("허용되지 않은 링크".into());
+        return Err(i18n::t("err.link_not_allowed").into());
     };
     let target = if !path.starts_with("download") && config::load().config.open_in_desktop && desktop_app_installed() {
         format!("claude://claude.ai/{path}")
@@ -3001,7 +3005,7 @@ fn open_link(target: &str) -> Result<(), String> {
 #[tauri::command]
 fn open_local_session(id: String, cwd: String, active: bool) -> Result<&'static str, String> {
     if id.is_empty() || !id.chars().all(|c| c.is_ascii_alphanumeric() || c == '-') {
-        return Err("잘못된 세션 id".into());
+        return Err(i18n::t("err.bad_session_id").into());
     }
     if config::load().config.open_in_desktop && desktop_app_installed() {
         if let Some(local) = desktop_session_for(&id) {
@@ -3077,11 +3081,8 @@ fn claude_login() -> Result<(), String> {
         let exe = find_claude().ok_or("not_installed")?;
         // 경로는 환경변수로 넘겨 인용 문제 회피. 실패했을 때만 창을 남겨 오류를 읽을 수 있게.
         let mut cmd = std::process::Command::new("powershell");
-        cmd.args([
-            "-NoProfile",
-            "-Command",
-            "& $env:MUNEO_CLAUDE auth login --claudeai; if ($LASTEXITCODE) { Read-Host '로그인 실패 - Enter 를 누르면 창이 닫힙니다' }",
-        ])
+        cmd.args(["-NoProfile", "-Command"])
+        .arg(format!("& $env:MUNEO_CLAUDE auth login --claudeai; if ($LASTEXITCODE) {{ Read-Host '{}' }}", i18n::t("login.failed_pause")))
         .env("MUNEO_CLAUDE", &exe)
         .creation_flags(CREATE_NEW_CONSOLE);
         if let Some(d) = &custom_dir {
@@ -3309,6 +3310,50 @@ fn toggle_panel(app: &AppHandle) {
     show_panel(app);
 }
 
+/// 화면이 시작할 때·언어를 바꿀 때 부르는 명령: 본체의 언어를 맞추고 선택값을 저장한다.
+///
+/// `choice` 가 "auto"|"ko"|"en" 이 아니면 "auto" 로 본다. `lang` 이 "ko"|"en" 이 아니면 `choice` 에서 다시 정한다(auto 면 OS 언어).
+/// 선택값이 바뀐 경우에만 설정 파일에 쓴다. 현재 언어가 바뀌면 트레이 메뉴 글자를 바꾸고 툴팁을 다시 그리며,
+/// 한도 조회 문구(라벨·오류)가 새 언어로 나오도록 플랜을 한 번 다시 조회한다(백그라운드).
+///
+/// # 인자
+/// - `choice`: 사용자가 고른 값 "auto" | "ko" | "en"
+/// - `lang`: 화면이 실제로 쓰는 언어 "ko" | "en"
+///
+/// # 참조
+/// `i18n::set`, `config::save`, `redraw_tray`, `refresh_plan`. UI 의 `invoke('set_lang')`(i18n/i18n.js) 가 호출.
+#[tauri::command]
+fn set_lang(app: AppHandle, choice: String, lang: String) {
+    let choice = if matches!(choice.as_str(), "ko" | "en") { choice } else { "auto".to_string() };
+    let new = i18n::Lang::parse(&lang).unwrap_or_else(|| i18n::resolve(&choice));
+    let changed = i18n::lang() != new;
+    i18n::set(new);
+    let loaded = config::load();
+    if loaded.config.lang != choice {
+        let mut c = loaded.config;
+        c.lang = choice;
+        if let Err(e) = config::save(&loaded.path, &c) {
+            log::warn!("언어 설정 저장 실패: {e}");
+        }
+    }
+    if !changed {
+        return;
+    }
+    log::info!("언어 변경: {}", new.code());
+    if let Some((office, refresh, quit)) = TRAY_MENU.lock().unwrap().as_ref() {
+        let _ = office.set_text(i18n::t("tray.office"));
+        let _ = refresh.set_text(i18n::t("tray.refresh"));
+        let _ = quit.set_text(i18n::t("tray.quit"));
+    }
+    if let Some(w) = app.get_webview_window(office::LABEL) {
+        let _ = w.set_title(&office::window_title());
+    }
+    redraw_tray(&app);
+    std::thread::spawn(move || {
+        refresh_plan(&app, true);
+    });
+}
+
 /// 앱 진입점.
 ///
 /// `--hook <codex|agy> <이벤트>` 인자면 창·트레이·로그 없이 `relay::run` 으로 훅을 중계하고 종료한다.
@@ -3332,6 +3377,7 @@ fn main() {
     applog::init();
     // 기동 시 자동시작 자가 치유.
     let mut loaded = config::load();
+    i18n::init(&loaded.config.lang); // 시작 언어(화면이 뜨면 `set_lang` 으로 다시 알려 줌)
     log::info!(
         "시작: {} {} ({} {}) · 설정 {}{}",
         env!("CARGO_PKG_NAME"),
@@ -3457,12 +3503,13 @@ fn main() {
             // macOS: Dock 아이콘 없이 메뉴 막대에만 상주.
             #[cfg(target_os = "macos")]
             app.set_activation_policy(tauri::ActivationPolicy::Accessory);
-            let office_item = MenuItem::with_id(app, "office", "오피스 열기", true, None::<&str>)?;
-            let refresh = MenuItem::with_id(app, "refresh", "새로고침", true, None::<&str>)?;
+            let office_item = MenuItem::with_id(app, "office", i18n::t("tray.office"), true, None::<&str>)?;
+            let refresh = MenuItem::with_id(app, "refresh", i18n::t("tray.refresh"), true, None::<&str>)?;
             set_panel_on_top(app.handle(), loaded.config.panel_on_top);
-            let quit = MenuItem::with_id(app, "quit", "종료", true, None::<&str>)?;
+            let quit = MenuItem::with_id(app, "quit", i18n::t("tray.quit"), true, None::<&str>)?;
             let sep = PredefinedMenuItem::separator(app)?;
             let menu = Menu::with_items(app, &[&office_item, &refresh, &sep, &quit])?;
+            *TRAY_MENU.lock().unwrap() = Some((office_item.clone(), refresh.clone(), quit.clone()));
 
             TrayIconBuilder::with_id(TRAY_ID)
                 .icon(tray::image(None, None, 0))
@@ -3623,6 +3670,7 @@ fn main() {
             _ => {}
         })
         .invoke_handler(tauri::generate_handler![
+            set_lang,
             get_provider,
             get_provider_tokens,
             get_provider_image,

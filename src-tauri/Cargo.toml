@@ -23,6 +23,7 @@ log = { version = "0.4", features = ["std"] }
 base64 = "0.22"
 # 공식 내보내기 파일 리포트: zip 읽기(이미 업데이터가 쓰는 크레이트, deflate 만 켬).
 zip = { version = "4", default-features = false, features = ["deflate-flate2-zlib-rs"] }
+sys-locale = "0.3.2"
 
 [target.'cfg(windows)'.dependencies]
 winreg = "0.55"

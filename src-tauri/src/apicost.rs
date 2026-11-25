@@ -2,6 +2,7 @@
 //! muneo-claude-api-credit-widget 에서 옮김. 남은 선불 잔액을 주는 공개 API 가 없어 월 할당액은 설정에 직접 입력하고,
 //! 사용액만 집계(이번 달 UTC 기준: 총액·모델별·일별). Admin 키(sk-ant-admin…)는 DPAPI 로 암호화해 설정에 저장.
 
+use crate::i18n;
 use chrono::{DateTime, Datelike, SecondsFormat, TimeZone, Utc};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
@@ -44,10 +45,10 @@ impl std::fmt::Display for ApiError {
     /// `std::fmt::Result`.
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            ApiError::Auth => write!(f, "인증 실패 — Admin API 키(sk-ant-admin…)가 아니거나 권한이 없습니다"),
-            ApiError::Http(c) => write!(f, "HTTP 오류 {c}"),
-            ApiError::Network(e) => write!(f, "네트워크 오류: {e}"),
-            ApiError::Parse(e) => write!(f, "응답 해석 오류: {e}"),
+            ApiError::Auth => write!(f, "{}", i18n::t("admin.err.auth")),
+            ApiError::Http(c) => write!(f, "{}", i18n::tf("api.err.http", &[("code", &c.to_string())])),
+            ApiError::Network(e) => write!(f, "{}", i18n::tf("api.err.network", &[("e", e)])),
+            ApiError::Parse(e) => write!(f, "{}", i18n::tf("admin.err.parse", &[("e", e)])),
         }
     }
 }
@@ -216,7 +217,7 @@ fn aggregate(buckets: &[Bucket]) -> (f64, Vec<ModelCost>, Vec<DayCost>) {
             let usd = v / AMOUNT_DIVISOR;
             total += usd;
             day += usd;
-            let name = it.model.clone().or_else(|| it.description.clone()).filter(|s| !s.is_empty()).unwrap_or_else(|| "기타".into());
+            let name = it.model.clone().or_else(|| it.description.clone()).filter(|s| !s.is_empty()).unwrap_or_else(|| i18n::t("admin.other").into());
             *by_model.entry(name).or_insert(0.0) += usd;
         }
         if let Some(s) = &b.starting_at {
@@ -270,7 +271,7 @@ fn fetch_report(key: &str, now: DateTime<Utc>) -> Result<Report, ApiError> {
             }
         }
     }
-    Err(ApiError::Parse("페이지가 너무 많습니다".into()))
+    Err(ApiError::Parse(i18n::t("admin.err.pages").into()))
 }
 
 /// 마지막 `report` 결과 캐시: (키 해시, 저장 시각, 보고서).

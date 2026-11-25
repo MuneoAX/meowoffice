@@ -138,7 +138,7 @@ pub fn snapshot(name: &str) -> Snapshot {
         "antigravity" => crate::antigravity::snapshot(),
         other => {
             let mut s = Snapshot::new(other);
-            s.error = "알 수 없는 제공사".into();
+            s.error = crate::i18n::t("err.unknown_provider").into();
             s
         }
     };

@@ -60,7 +60,7 @@ pub async fn check(app: &AppHandle) -> Result<Option<Available>, String> {
 /// # 참조
 /// `save_notes` 호출. 파일: `update-notes.json` 쓰기.
 pub async fn install(app: &AppHandle) -> Result<(), String> {
-    let update = app.updater().map_err(|e| e.to_string())?.check().await.map_err(|e| e.to_string())?.ok_or("이미 최신 버전입니다")?;
+    let update = app.updater().map_err(|e| e.to_string())?.check().await.map_err(|e| e.to_string())?.ok_or(crate::i18n::t("update.up_to_date"))?;
     log::info!("업데이트 내려받기 시작: {} → {}", update.current_version, update.version);
     save_notes(&Available { version: update.version.clone(), notes: update.body.clone().unwrap_or_default() });
     let mut got = 0usize;

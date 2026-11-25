@@ -232,7 +232,7 @@ pub fn map_notification(method: &str, p: &Value, files: &mut HashMap<String, Vec
                     let paths = change_paths(it);
                     files.insert(id.clone(), paths.clone());
                     let names: Vec<String> = paths.iter().map(|x| x.rsplit(['\\', '/']).next().unwrap_or(x).to_string()).collect();
-                    let title = if names.is_empty() { "파일 수정".to_string() } else { crate::runner::truncate(&names.join(", "), 80) };
+                    let title = if names.is_empty() { crate::i18n::t("chat.file_edit").to_string() } else { crate::runner::truncate(&names.join(", "), 80) };
                     vec![AgentEvent::ToolStart { item: id, kind: ToolKind::File, title, detail: truncate_bytes(&paths.join("\n"), 2048) }]
                 }
                 "mcpToolCall" => vec![AgentEvent::ToolStart {

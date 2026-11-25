@@ -9,6 +9,7 @@
 //! 규칙: 토큰은 메모리에서만 쓰고 출력·로그·오류에 넣지 않는다. ~/.codex 에는 쓰지 않는다 (토큰 갱신도 하지 않음).
 //! 대화 내용은 제목(이미 화면에 보이는 것) 말고는 다루지 않는다.
 
+use crate::i18n;
 use crate::providers::{project_of, Limit, PSession, Snapshot};
 use crate::ptokens::{Meta, Rec};
 use base64::Engine;
@@ -205,7 +206,7 @@ fn window_limit(w: &Value, now: DateTime<Utc>) -> Option<Limit> {
                     .and_then(|d| now.checked_add_signed(d))
             },
         );
-    let (kind, label) = if secs > 0 && secs <= 24 * 3600 { ("session", "5시간 한도") } else { ("weekly", "주간 한도") };
+    let (kind, label) = if secs > 0 && secs <= 24 * 3600 { ("session", i18n::t("limit.codex_session")) } else { ("weekly", i18n::t("limit.codex_weekly")) };
     Some(Limit {
         kind: kind.into(),
         label: label.into(),
@@ -292,7 +293,7 @@ fn fetch_usage(auth: &Auth) -> Result<Value, String> {
         Ok(r) => r,
         Err(ureq::Error::StatusCode(401)) | Err(ureq::Error::StatusCode(403)) => return Err(ERR_AUTH.into()),
         Err(ureq::Error::StatusCode(c)) => return Err(format!("HTTP {c}")),
-        Err(_) => return Err("네트워크 오류".into()),
+        Err(_) => return Err(ERR_NETWORK.into()),
     };
     let body = resp.body_mut().read_to_string().map_err(|_| "응답 읽기 실패".to_string())?;
     serde_json::from_str(&body).map_err(|_| "응답 해석 실패".to_string())
@@ -312,6 +313,8 @@ static NET_FAILS: AtomicU32 = AtomicU32::new(0);
 static NET_LAST_ERR: Mutex<String> = Mutex::new(String::new());
 /// 인증 만료를 뜻하는 오류 문구 (`fetch_usage` 가 만들고 `snapshot` 이 `auth_expired` 판정에 비교).
 const ERR_AUTH: &str = "인증 만료";
+/// 네트워크 오류를 뜻하는 내부 문구 (`fetch_usage` 가 만들고 `note_usage_result` 가 비교 — 화면에는 `usage_net_fails` 가 번역해 내보냄).
+const ERR_NETWORK: &str = "네트워크 오류";
 
 /// 한도 조회 결과를 연결 상태 기록에 반영한다.
 ///
@@ -325,7 +328,7 @@ const ERR_AUTH: &str = "인증 만료";
 fn note_usage_result<T>(r: &Result<T, String>) {
     match r {
         Ok(_) => NET_FAILS.store(0, Ordering::Relaxed),
-        Err(e) if e == "네트워크 오류" || e.starts_with("HTTP 5") => {
+        Err(e) if e == ERR_NETWORK || e.starts_with("HTTP 5") => {
             NET_FAILS.fetch_add(1, Ordering::Relaxed);
             if let Ok(mut g) = NET_LAST_ERR.lock() {
                 *g = e.clone();
@@ -343,7 +346,10 @@ fn note_usage_result<T>(r: &Result<T, String>) {
 /// # 참조
 /// `NET_FAILS`, `NET_LAST_ERR`.
 pub fn usage_net_fails() -> (u32, String) {
-    (NET_FAILS.load(Ordering::Relaxed), NET_LAST_ERR.lock().map(|g| g.clone()).unwrap_or_default())
+    let last = NET_LAST_ERR.lock().map(|g| g.clone()).unwrap_or_default();
+    // 내부 비교용 문구("네트워크 오류")는 화면에 보일 때만 현재 언어로 바꾼다.
+    let last = if last == ERR_NETWORK { i18n::t("codex.err.network").to_string() } else { last };
+    (NET_FAILS.load(Ordering::Relaxed), last)
 }
 
 /// `USAGE_CACHE` 가 아직 유효하면 그 결과를 돌려준다.
@@ -1016,17 +1022,17 @@ pub fn snapshot() -> Snapshot {
                     }
                     s.limits = limits;
                     if s.limits.is_empty() {
-                        s.error = "사용 한도 정보가 없습니다".into();
+                        s.error = i18n::t("codex.err.no_limits").into();
                     }
                 }
                 Err(e) => {
                     s.auth_expired = e == ERR_AUTH;
                     let fb = parse_rollout_limits(&sess.rate_limits, now);
                     if fb.is_empty() {
-                        s.error = "사용 한도를 불러오지 못했습니다".into();
+                        s.error = i18n::t("codex.err.load_failed").into();
                     } else {
                         s.limits = fb;
-                        s.error = "사용 한도: 최근 세션 기록 기준(오래된 값일 수 있음)".into();
+                        s.error = i18n::t("codex.err.stale").into();
                     }
                 }
             }
@@ -1155,11 +1161,8 @@ pub fn spawn_login() -> Result<bool, String> {
         const CREATE_NEW_CONSOLE: u32 = 0x10;
         // 경로는 환경변수로 넘겨 인용 문제 회피. 실패했을 때만 창을 남겨 오류를 읽을 수 있게
         std::process::Command::new("powershell")
-            .args([
-                "-NoProfile",
-                "-Command",
-                "& $env:MEOWFFICE_CODEX login; if ($LASTEXITCODE) { Read-Host '로그인 실패 - Enter 를 누르면 창이 닫힙니다' }",
-            ])
+            .args(["-NoProfile", "-Command"])
+            .arg(format!("& $env:MEOWFFICE_CODEX login; if ($LASTEXITCODE) {{ Read-Host '{}' }}", i18n::t("login.failed_pause")))
             .env("MEOWFFICE_CODEX", &exe)
             .creation_flags(CREATE_NEW_CONSOLE)
             .spawn()
@@ -1300,7 +1303,7 @@ fn parse_tok_file(path: &Path) -> TokFile {
                     .and_then(Value::as_str)
                     .and_then(|t| turn_model.get(t).cloned())
                     .or_else(|| Some(last_model.clone()).filter(|m| !m.is_empty()))
-                    .unwrap_or_else(|| "(모델 미상)".into());
+                    .unwrap_or_else(|| i18n::t("model.unknown").into());
                 let (input, cache_read, cache_write, output) = usage_parts(usage);
                 f.recs.push(Rec { session: String::new(), ts: ts.with_timezone(&Utc), model, input, output, cache_write, cache_read });
             }

@@ -273,7 +273,7 @@ pub fn report(claude_dir: &Path, days: u32) -> LocalReport {
     if hourly {
         for h in 0..=now_local.hour() {
             let key = format!("{h:02}");
-            trend.push(Bucket { label: format!("{h}시"), total: buckets.get(&key).copied().unwrap_or(0), key });
+            trend.push(Bucket { label: crate::i18n::tf("bucket.hour", &[("h", &h.to_string())]), total: buckets.get(&key).copied().unwrap_or(0), key });
         }
     } else {
         for d in (0..days as i64).rev() {
@@ -300,7 +300,7 @@ pub fn report(claude_dir: &Path, days: u32) -> LocalReport {
             .or_else(|| pick(|m| m.first_prompt.as_ref()))
             .or_else(|| pick(|m| m.last_prompt.as_ref()))
             .or_else(|| run.map(|r| r.name.clone()).filter(|n| !n.is_empty()))
-            .unwrap_or_else(|| "(제목 없음)".into());
+            .unwrap_or_else(|| crate::i18n::t("session.untitled").into());
         let cwd = pick(|m| m.cwd.as_ref()).or_else(|| run.map(|r| r.cwd.clone())).unwrap_or_default();
         let project = Path::new(&cwd).file_name().map(|s| s.to_string_lossy().to_string()).unwrap_or_default();
         let started = meta.iter().filter_map(|m| m.first_ts).min();

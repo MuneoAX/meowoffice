@@ -6,6 +6,7 @@
 //! 개인정보: 사용자 홈 경로·사용자 이름은 보내기 전에 가린다(`mask`). 토큰·명령 본문은 원래 로그에 남기지 않는다(applog 규칙).
 //! 설치 id: 같은 PC 의 접수를 묶기 위한 무작위 값. 로그 폴더 옆 `install-id` 파일에 한 번 만들어 둔다(개인정보 아님).
 
+use crate::i18n;
 use serde::Serialize;
 use serde_json::{json, Value};
 use std::time::Duration;
@@ -264,23 +265,22 @@ fn build_body(meta: &Value, symptom: &str, log: &str, limit: usize) -> (Vec<u8>,
 /// - `retry_after`: Retry-After 헤더 값(초)
 ///
 /// # 반환
-/// 화면에 보일 한국어 문구.
+/// 화면에 보일 문구(현재 언어).
 ///
 /// # 참조
 /// `send` 가 호출.
 fn fail_text(status: u16, body: &str, retry_after: Option<u64>) -> String {
     let msg = serde_json::from_str::<Value>(body).ok().and_then(|v| v.get("message").and_then(Value::as_str).map(str::to_string));
     let base = msg.unwrap_or_else(|| match status {
-        400 | 411 => "보낼 내용을 서버가 받지 않았습니다 (앱 문제일 수 있습니다)".into(),
-        413 => "로그가 너무 커서 보내지 못했습니다".into(),
-        429 => "보내기가 너무 잦습니다".into(),
-        503 => "서버 저장 공간이 부족합니다".into(),
-        _ => format!("서버 오류로 보내지 못했습니다 (HTTP {status})"),
+        400 | 411 => i18n::t("logsend.err.400").into(),
+        413 => i18n::t("logsend.err.413").into(),
+        429 => i18n::t("logsend.err.429").into(),
+        503 => i18n::t("logsend.err.503").into(),
+        _ => i18n::tf("logsend.err.other", &[("status", &status.to_string())]),
     });
     match (status, retry_after) {
-        (429 | 503, Some(s)) => format!("{base} — 약 {}분 뒤 다시 보내 주세요", s.div_ceil(60).max(1)),
-        (429 | 503, None) => format!("{base} — 잠시 뒤 다시 보내 주세요"),
-        (500..=599, _) => format!("{base} — 잠시 뒤 다시 보내 주세요"),
+        (429 | 503, Some(s)) => i18n::tf("logsend.retry_min", &[("base", &base), ("min", &s.div_ceil(60).max(1).to_string())]),
+        (429 | 503, None) | (500..=599, _) => i18n::tf("logsend.retry_later", &[("base", &base)]),
         _ => base,
     }
 }
@@ -316,9 +316,9 @@ fn post(version: &str, body: &[u8]) -> Result<(u16, String, Option<u64>), String
             log::warn!("로그 보내기 전송 오류: {e}");
             match e {
                 ureq::Error::Timeout(_) => {
-                    "응답이 늦어 끝까지 확인하지 못했습니다 — 이미 접수됐을 수 있으니 바로 다시 보내지 말고, 몇 분 뒤 다시 보내 주세요".to_string()
+                    i18n::t("logsend.timeout").to_string()
                 }
-                _ => "네트워크 오류로 보내지 못했습니다 — 인터넷 연결을 확인한 뒤 다시 보내 주세요".to_string(),
+                _ => i18n::t("logsend.network").to_string(),
             }
         })?;
     let status = resp.status().as_u16();
@@ -344,7 +344,7 @@ fn post(version: &str, body: &[u8]) -> Result<(u16, String, Option<u64>), String
 /// `collect_masked`, `install_id`, `build_body`, `post`, `fail_text`. main.rs 의 `send_log` 명령이 호출.
 pub fn send(version: &str, symptom: &str, consent: bool) -> Result<Receipt, String> {
     if !consent {
-        return Err("보내기 전에 개인정보 동의에 체크해 주세요".into());
+        return Err(i18n::t("logsend.consent").into());
     }
     let log_text = collect_masked(version)?;
     // 증상에 붙여 넣은 경로도 로그와 똑같이 가린 뒤 자른다

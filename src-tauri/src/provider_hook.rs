@@ -5,6 +5,7 @@
 //! 끄면 우리 항목만 제거 · 임시 파일에 쓴 뒤 이름 바꾸기.
 //! 훅 명령 문자열은 고정(포트·토큰은 중계 모드가 설정 파일에서 읽음) — Codex 의 신뢰(trust)가 명령 문자열에 묶이기 때문.
 
+use crate::i18n;
 use serde_json::{json, Map, Value};
 use std::path::{Path, PathBuf};
 
@@ -155,9 +156,7 @@ pub fn hook_exe_with(path: &str, resolve: impl Fn(&str) -> Option<String>) -> Re
     }
     match resolve(path) {
         Some(s) if !s.is_empty() && !has_unsafe(&s) => Ok(s),
-        _ => Err(format!(
-            "앱 설치 경로({path})에 공백이나 특수문자(& ^ % ( ) ! ; ,)가 있고 짧은 경로(8.3)로도 바꿀 수 없어 훅을 등록할 수 없습니다. 공백·특수문자가 없는 폴더(예: C:\\Meowffice)에 설치한 뒤 다시 켜 주세요."
-        )),
+        _ => Err(i18n::tf("hookfile.unsafe_path", &[("path", path)])),
     }
 }
 
@@ -252,7 +251,7 @@ fn file_of(dir: &Path) -> PathBuf {
 /// `apply`, `installed_command` 가 호출. 파일: `hooks.json` 읽기.
 fn load(path: &Path) -> Result<Value, String> {
     match std::fs::read_to_string(path) {
-        Ok(t) if !t.trim().is_empty() => serde_json::from_str(&t).map_err(|e| format!("hooks.json 파싱 실패: {e}")),
+        Ok(t) if !t.trim().is_empty() => serde_json::from_str(&t).map_err(|e| i18n::tf("hookfile.parse", &[("file", "hooks.json"), ("e", &e.to_string())])),
         Ok(_) => Ok(json!({})),
         Err(e) if e.kind() == std::io::ErrorKind::NotFound => Ok(json!({})),
         Err(e) => Err(e.to_string()),
@@ -276,7 +275,7 @@ fn load(path: &Path) -> Result<Value, String> {
 fn save(path: &Path, v: &Value) -> Result<(), String> {
     let bak = path.with_extension("json.muneo-bak");
     if path.exists() && !bak.exists() {
-        std::fs::copy(path, &bak).map_err(|e| format!("백업 실패: {e}"))?;
+        std::fs::copy(path, &bak).map_err(|e| i18n::tf("hookfile.backup", &[("e", &e.to_string())]))?;
     }
     if let Some(dir) = path.parent() {
         std::fs::create_dir_all(dir).map_err(|e| e.to_string())?;
@@ -444,7 +443,7 @@ fn strip_agy(root: &mut Value) {
 /// `command_line` 호출. `apply` 가 호출.
 fn codex_entry(exe: &str, event: &str) -> Value {
     let c = command_line(exe, Provider::Codex, event);
-    json!({ "hooks": [{ "type": "command", "command": c, "commandWindows": c, "timeout": HOOK_TIMEOUT, "statusMessage": "Meowffice 권한 카드 확인 중" }] })
+    json!({ "hooks": [{ "type": "command", "command": c, "commandWindows": c, "timeout": HOOK_TIMEOUT, "statusMessage": i18n::t("hook.status_message") }] })
 }
 
 /// Antigravity 훅 객체(최상위 `AGY_NAME` 키의 값)를 만든다.
@@ -521,7 +520,7 @@ pub fn apply(dir: &Path, p: Provider, enabled: bool, exe: &str, agy_card: bool) 
     let path = file_of(dir);
     let mut root = load(&path)?;
     if !root.is_object() {
-        return Err("hooks.json 최상위가 객체가 아님".into());
+        return Err(i18n::tf("hookfile.not_object", &[("file", "hooks.json")]));
     }
     let original = root.clone();
     match p {
@@ -533,17 +532,17 @@ pub fn apply(dir: &Path, p: Provider, enabled: bool, exe: &str, agy_card: bool) 
             if enabled {
                 let obj = root.as_object_mut().unwrap();
                 let Some(hooks) = obj.entry("hooks").or_insert_with(|| Value::Object(Map::new())).as_object_mut() else {
-                    return Err("hooks.json 의 hooks 가 객체가 아님".into());
+                    return Err(i18n::tf("hookfile.hooks_not_object", &[("file", "hooks.json")]));
                 };
                 match hooks.entry("PermissionRequest").or_insert_with(|| Value::Array(vec![])).as_array_mut() {
                     Some(a) => a.push(codex_entry(exe, "permission")),
-                    None => return Err("hooks.json 의 hooks.PermissionRequest 가 배열이 아님".into()),
+                    None => return Err(i18n::tf("hookfile.event_not_array", &[("file", "hooks.json"), ("path", "hooks.PermissionRequest")])),
                 }
             }
         }
         Provider::Agy => {
             if enabled && root.get(AGY_NAME).is_some_and(|v| !agy_entry_ours(v)) {
-                return Err(format!("hooks.json 에 이미 '{AGY_NAME}' 이름의 다른 훅이 있어 건드리지 않았습니다"));
+                return Err(i18n::tf("hookfile.agy_exists", &[("name", AGY_NAME)]));
             }
             strip_agy(&mut root);
             if enabled {

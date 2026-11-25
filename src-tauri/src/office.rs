@@ -74,6 +74,11 @@ fn on_screen(app: &AppHandle, b: &Bounds) -> bool {
     })
 }
 
+/// 오피스 창 제목(현재 언어).
+pub fn window_title() -> String {
+    crate::i18n::tf("office.window_title", &[("app", crate::APP_NAME)])
+}
+
 /// 오피스 창을 앞으로 가져온다(없으면 만든다).
 ///
 /// 창이 이미 있으면 최소화 해제·표시·포커스만 한다. 없으면 `office/index.html` 을 여는 창(기본 1280x800, 최소 800x500, 크기 조절·최대화 가능)을
@@ -92,7 +97,7 @@ pub fn open(app: &AppHandle) {
         return;
     }
     let built = WebviewWindowBuilder::new(app, LABEL, WebviewUrl::App("office/index.html".into()))
-        .title(format!("{} — 고양이사무실 · AI 세션 가상 오피스", crate::APP_NAME))
+        .title(window_title())
         .inner_size(1280.0, 800.0)
         .min_inner_size(800.0, 500.0)
         .resizable(true)

@@ -8,6 +8,7 @@
 //! 자동 수락이 켜져 있으면 선택이 필요한 도구(CHOICE_TOOLS)만 카드로 띄우고 나머지는 즉시 수락.
 //! 보안: 루프백 바인드 + 설정에 저장된 토큰 헤더(x-muneo-token) 일치 시에만 처리.
 
+use crate::i18n;
 use crate::provider_hook::{self, AgyPolicy, Event, Provider};
 use serde::Serialize;
 use serde_json::{json, Value};
@@ -320,7 +321,7 @@ fn handle<H: Host>(mut stream: TcpStream, host: &H) -> std::io::Result<()> {
         Some(Decision::Deny) => json!({
             "hookSpecificOutput": {
                 "hookEventName": "PermissionRequest",
-                "decision": { "behavior": "deny", "message": "사용자가 트레이 알림에서 거절했습니다." }
+                "decision": { "behavior": "deny", "message": i18n::t("permit.deny.tray") }
             }
         })
         .to_string(),
@@ -377,7 +378,7 @@ fn handle_provider<H: Host>(stream: &mut TcpStream, host: &H, rest: &str, token:
     let decision = wait_decision(host, permit, WAIT, || peer_closed(stream));
     let body = match decision {
         Some(Decision::Allow(_)) => provider_hook::allow_body(p, e),
-        Some(Decision::Deny) => provider_hook::deny_body(p, e, "사용자가 Meowffice 알림 카드에서 거절했습니다."),
+        Some(Decision::Deny) => provider_hook::deny_body(p, e, i18n::t("permit.deny.card")),
         None => String::new(),
     };
     respond(stream, 200, &body)
@@ -406,14 +407,14 @@ fn handle_chat<H: Host>(stream: &mut TcpStream, host: &H, input: &Value) -> std:
         Some(Decision::Deny) => json!({
             "hookSpecificOutput": {
                 "hookEventName": "PermissionRequest",
-                "decision": { "behavior": "deny", "message": "사용자가 Meowffice 에서 거절했습니다." }
+                "decision": { "behavior": "deny", "message": i18n::t("permit.deny.app") }
             }
         })
         .to_string(),
         None if why == Waited::TimedOut => json!({
             "hookSpecificOutput": {
                 "hookEventName": "PermissionRequest",
-                "decision": { "behavior": "deny", "message": "30분 동안 승인을 받지 못해 작업을 멈춥니다.", "interrupt": true }
+                "decision": { "behavior": "deny", "message": i18n::t("permit.deny.timeout"), "interrupt": true }
             }
         })
         .to_string(),

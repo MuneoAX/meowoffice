@@ -12,6 +12,7 @@
 //!
 //! 사용 한도·요금제는 Antigravity 가 켜져 있을 때만 알 수 있다. 비밀값(CSRF·토큰)은 어디에도 출력·저장하지 않는다.
 
+use crate::i18n;
 use crate::providers::{project_of, Limit, PSession, Snapshot};
 use crate::ptokens::{Meta, Rec};
 use chrono::{DateTime, Duration as CDuration, TimeZone, Utc};
@@ -33,8 +34,10 @@ const RECENT_HOURS: i64 = 24;
 const IDLE_MINUTES: i64 = 30;
 /// 윈도우 자격 증명 관리자의 Antigravity 항목 이름 (존재만 확인하고 내용은 읽지 않는다).
 const CRED_TARGET: &str = "gemini:antigravity";
-/// 로그인되어 있지 않을 때 `Snapshot.error` 에 넣는 문구.
-const MSG_NOT_LOGGED_IN: &str = "Antigravity 에 로그인되어 있지 않습니다";
+/// 로그인되어 있지 않을 때 `Snapshot.error` 에 넣는 문구(현재 언어).
+fn msg_not_logged_in() -> &'static str {
+    i18n::t("agy.err.not_logged_in")
+}
 
 // ── 위치 ────────────────────────────────────────────────────────────────────
 
@@ -385,7 +388,7 @@ fn fetch_remote_uncached(dir: &Path) -> (Remote, Duration) {
     let mut r = Remote::default();
     let hubs = find_hubs(dir);
     if hubs.is_empty() {
-        r.error = "Antigravity 가 실행 중일 때만 사용 한도를 볼 수 있습니다".into();
+        r.error = i18n::t("agy.err.not_running").into();
         return (r, FAIL_TTL);
     }
     r.running = true;
@@ -410,7 +413,7 @@ fn fetch_remote_uncached(dir: &Path) -> (Remote, Duration) {
         }
         Err(CallErr::Auth) => {
             r.signed_out = true;
-            r.error = MSG_NOT_LOGGED_IN.into();
+            r.error = msg_not_logged_in().into();
             return (r, OK_TTL);
         }
         Err(_) => {}
@@ -424,7 +427,7 @@ fn fetch_remote_uncached(dir: &Path) -> (Remote, Duration) {
     }
     if r.limits.is_empty() {
         r.error =
-            if status.is_err() { "Antigravity 응답을 받지 못했습니다" } else { "사용 한도 정보를 찾지 못했습니다" }.into();
+            if status.is_err() { i18n::t("agy.err.no_response") } else { i18n::t("agy.err.no_limits") }.into();
     }
     (r, if status.is_err() { FAIL_TTL } else { OK_TTL })
 }
@@ -1311,7 +1314,7 @@ fn read_models(db: &Path) -> ModelMap {
 /// `parse_transcript` 가 호출.
 fn model_label(m: &str) -> String {
     if m.is_empty() || m.starts_with("MODEL_") {
-        "(모델 미상)".into()
+        i18n::t("model.unknown").into()
     } else {
         m.to_string()
     }
@@ -1545,7 +1548,7 @@ pub fn snapshot() -> Snapshot {
     s.installed = dir.is_some() || app_dir().is_some_and(|d| d.is_dir());
     let Some(dir) = dir else {
         if !s.installed {
-            s.error = "Antigravity 가 설치되어 있지 않습니다".into();
+            s.error = i18n::t("agy.err.not_installed").into();
         }
         return s;
     };
@@ -1564,7 +1567,7 @@ pub fn snapshot() -> Snapshot {
     s.plan = remote.plan.clone();
     s.limits = remote.limits.clone();
     s.auth_expired = remote.signed_out;
-    s.error = if !s.logged_in && !remote.running { MSG_NOT_LOGGED_IN.into() } else { remote.error.clone() };
+    s.error = if !s.logged_in && !remote.running { msg_not_logged_in().into() } else { remote.error.clone() };
 
     let mut sessions = read_rows(&dir.join("conversation_summaries.db"))
         .map(|rows| sessions_from_rows(rows, now, remote.running, &dir))

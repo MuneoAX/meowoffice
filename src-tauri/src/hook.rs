@@ -1,7 +1,7 @@
 //! Claude Code 연동 훅 설치/제거 — <claude_dir>/settings.json 의 hooks.PreToolUse, PermissionRequest 와
 //! 후속 이벤트(EVENTS: 터미널 등에서 처리된 요청 카드 닫기용)에 이 앱의 HTTP 훅을 추가/삭제한다. 다른 설정·훅은 그대로 두고(키 순서 보존), 최초 수정 전 백업.
 
-use crate::permit;
+use crate::{i18n, permit};
 use serde_json::{json, Map, Value};
 use std::path::Path;
 
@@ -61,7 +61,7 @@ fn is_ours(h: &Value) -> bool {
 /// `apply`, `installed` 가 호출. 파일: `settings.json` 읽기.
 fn load(path: &Path) -> Result<Value, String> {
     match std::fs::read_to_string(path) {
-        Ok(t) if !t.trim().is_empty() => serde_json::from_str(&t).map_err(|e| format!("settings.json 파싱 실패: {e}")),
+        Ok(t) if !t.trim().is_empty() => serde_json::from_str(&t).map_err(|e| i18n::tf("hookfile.parse", &[("file", "settings.json"), ("e", &e.to_string())])),
         Ok(_) => Ok(json!({})),
         Err(e) if e.kind() == std::io::ErrorKind::NotFound => Ok(json!({})),
         Err(e) => Err(e.to_string()),
@@ -85,7 +85,7 @@ fn load(path: &Path) -> Result<Value, String> {
 fn save(path: &Path, v: &Value) -> Result<(), String> {
     let bak = path.with_extension("json.muneo-bak");
     if path.exists() && !bak.exists() {
-        std::fs::copy(path, &bak).map_err(|e| format!("백업 실패: {e}"))?;
+        std::fs::copy(path, &bak).map_err(|e| i18n::tf("hookfile.backup", &[("e", &e.to_string())]))?;
     }
     if let Some(dir) = path.parent() {
         std::fs::create_dir_all(dir).map_err(|e| e.to_string())?;
@@ -155,7 +155,7 @@ pub fn apply(claude_dir: &Path, enabled: bool, port: u16, token: &str) -> Result
     let path = claude_dir.join("settings.json");
     let mut root = load(&path)?;
     if !root.is_object() {
-        return Err("settings.json 최상위가 객체가 아님".into());
+        return Err(i18n::tf("hookfile.not_object", &[("file", "settings.json")]));
     }
     let original = root.clone();
     strip(&mut root);
@@ -173,14 +173,14 @@ pub fn apply(claude_dir: &Path, enabled: bool, port: u16, token: &str) -> Result
         let obj = root.as_object_mut().unwrap();
         let hooks = obj.entry("hooks").or_insert_with(|| Value::Object(Map::new()));
         let Some(hooks) = hooks.as_object_mut() else {
-            return Err("settings.json 의 hooks 가 객체가 아님".into());
+            return Err(i18n::tf("hookfile.hooks_not_object", &[("file", "settings.json")]));
         };
         let wanted = std::iter::once(("PermissionRequest", entry(permit::PATH, HOOK_TIMEOUT)))
             .chain(EVENTS.map(|e| (e, entry(permit::EVENT_PATH, EVENT_TIMEOUT))));
         for (event, e) in wanted {
             match hooks.entry(event).or_insert_with(|| Value::Array(vec![])).as_array_mut() {
                 Some(a) => a.push(e),
-                None => return Err(format!("settings.json 의 hooks.{event} 가 배열이 아님")),
+                None => return Err(i18n::tf("hookfile.event_not_array", &[("file", "settings.json"), ("path", &format!("hooks.{event}"))])),
             }
         }
     }

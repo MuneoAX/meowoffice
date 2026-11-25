@@ -128,6 +128,19 @@ pub struct Config {
     /// 기본값 false.
     #[serde(default)]
     pub agy_auto_allow: bool,
+    /// 화면·알림 언어 선택: "auto"(OS 언어 — 한국어면 ko, 그 밖은 en) | "ko" | "en".
+    ///
+    /// 기본값 "auto". 화면이 `set_lang` 명령으로 바꾼다. 실제 언어 판정은 `i18n::resolve`.
+    #[serde(default = "default_lang")]
+    pub lang: String,
+}
+
+/// `lang` 의 serde 기본값.
+///
+/// # 반환
+/// "auto".
+fn default_lang() -> String {
+    "auto".into()
 }
 
 /// `hook_port` 의 serde 기본값.
@@ -200,6 +213,7 @@ impl Default for Config {
             agy_hook: true,
             agy_hook_defaulted: false,
             agy_auto_allow: false,
+            lang: default_lang(),
         }
     }
 }
@@ -247,7 +261,7 @@ pub fn set_admin_key(c: &mut Config, key: &str) -> Result<(), String> {
     c.admin_api_key_enc = if key.is_empty() {
         String::new()
     } else if cfg!(windows) {
-        crate::crypto::encrypt(key).ok_or("키 암호화(DPAPI)에 실패해 저장하지 않았습니다")?
+        crate::crypto::encrypt(key).ok_or(crate::i18n::t("config.err.dpapi"))?
     } else {
         format!("plain:{key}")
     };
@@ -338,8 +352,8 @@ pub fn load() -> Loaded {
 
     if !path.exists() {
         let note = match write_template(&path) {
-            Ok(()) => Some(format!("설정 템플릿 생성됨: {}", path.display())),
-            Err(e) => Some(format!("템플릿 생성 실패({e}) — 기본값 사용")),
+            Ok(()) => Some(crate::i18n::tf("config.note.template_created", &[("path", &path.display().to_string())])),
+            Err(e) => Some(crate::i18n::tf("config.note.template_failed", &[("e", &e.to_string())])),
         };
         return Loaded { config: Config::default(), path, note, created: true };
     }
@@ -347,7 +361,7 @@ pub fn load() -> Loaded {
     match std::fs::read_to_string(&path).map_err(|e| e.to_string()).and_then(|t| toml::from_str::<Config>(&t).map_err(|e| e.to_string())) {
         Ok(config) => Loaded { config, path, note: None, created: false },
         Err(e) => Loaded {
-            config: Config::default(), path, note: Some(format!("설정 파싱 오류({e}) — 기본값 사용")), created: false
+            config: Config::default(), path, note: Some(crate::i18n::tf("config.note.parse_error", &[("e", &e.to_string())])), created: false
         },
     }
 }

@@ -137,7 +137,7 @@ fn parse_line(line: &[u8]) -> LineOut {
                 if !t.is_empty() {
                     t.push('\n');
                 }
-                t.push_str(&format!("[그림 {images}장]"));
+                t.push_str(&crate::i18n::tf("chat.images", &[("n", &images.to_string())]));
             }
             if !t.is_empty() {
                 let key = format!("{uuid}:user");
@@ -308,7 +308,7 @@ pub fn codex_turns_to_items(turns: &Value) -> Vec<HistItem> {
                         if !t.is_empty() {
                             t.push('\n');
                         }
-                        t.push_str(&format!("[그림 {images}장]"));
+                        t.push_str(&crate::i18n::tf("chat.images", &[("n", &images.to_string())]));
                     }
                     if !t.trim().is_empty() {
                         out.push(HistItem { id, role: "user", text: t, tool: None, at: at.clone() });
@@ -328,7 +328,7 @@ pub fn codex_turns_to_items(turns: &Value) -> Vec<HistItem> {
                 "fileChange" => {
                     let paths: Vec<String> = it.get("changes").and_then(Value::as_array).map(|c| c.iter().filter_map(|x| x.get("path").and_then(Value::as_str)).map(str::to_string).collect()).unwrap_or_default();
                     let names: Vec<String> = paths.iter().map(|p| p.rsplit(['\\', '/']).next().unwrap_or(p).to_string()).collect();
-                    let title = if names.is_empty() { "파일 수정".to_string() } else { crate::runner::truncate(&names.join(", "), 80) };
+                    let title = if names.is_empty() { crate::i18n::t("chat.file_edit").to_string() } else { crate::runner::truncate(&names.join(", "), 80) };
                     out.push(HistItem {
                         id,
                         role: "tool",

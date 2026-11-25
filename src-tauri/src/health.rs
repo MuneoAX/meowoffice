@@ -10,6 +10,7 @@
 //!   - Gemini 웹: Google Workspace Status Dashboard(incidents.json)의 Gemini 진행 중 장애 — 설정에서 켠 경우만
 //!   - Antigravity: 로컬 언어 서버 /healthz 연속 실패, GetAuthStatus 로 로그인 만료 (공식 상태 페이지 없음)
 
+use crate::i18n;
 use crate::oauth::ApiError;
 use serde_json::Value;
 use std::time::Duration;
@@ -122,8 +123,8 @@ impl Health {
     fn net_issue(&self) -> Option<Issue> {
         (self.net_fails >= NET_FAILS).then(|| Issue {
             key: "net".into(),
-            title: "Claude 서버 연결이 불안정합니다".into(),
-            detail: format!("최근 요청이 {}번 연속 실패했습니다 ({}).", self.net_fails, self.last_net_error),
+            title: i18n::t("health.net.title").into(),
+            detail: i18n::tf("health.net.detail", &[("n", &self.net_fails.to_string()), ("err", &self.last_net_error)]),
             url: STATUS_PAGE.into(),
         })
     }
@@ -196,11 +197,11 @@ fn watched(_id: &str, name: &str) -> bool {
 /// `build_issue` 가 호출.
 fn status_label(s: &str) -> &'static str {
     match s {
-        "degraded_performance" => "성능 저하",
-        "partial_outage" => "일부 장애",
-        "major_outage" => "주요 장애",
-        "under_maintenance" => "점검 중",
-        _ => "이상",
+        "degraded_performance" => i18n::t("health.status.degraded"),
+        "partial_outage" => i18n::t("health.status.partial"),
+        "major_outage" => i18n::t("health.status.major"),
+        "under_maintenance" => i18n::t("health.status.maint"),
+        _ => i18n::t("health.status.other"),
     }
 }
 
@@ -217,7 +218,7 @@ fn status_label(s: &str) -> &'static str {
 /// # 참조
 /// `build_issue`, `watched` 호출. `fetch_status` 와 시험이 호출.
 fn issue_from_summary(v: &Value) -> Option<Issue> {
-    build_issue(v, &watched, true, "Claude 연결 상태가 좋지 않습니다", STATUS_PAGE)
+    build_issue(v, &watched, true, i18n::t("health.claude.title"), STATUS_PAGE)
 }
 
 /// Statuspage summary.json 을 문제로 바꾼다. watched(구성요소 이름) 인 것만 본다.
@@ -242,13 +243,13 @@ fn issue_from_summary(v: &Value) -> Option<Issue> {
 fn build_issue(v: &Value, watched: &dyn Fn(&str, &str) -> bool, empty_relevant: bool, title: &str, page: &str) -> Option<Issue> {
     let str_of = |x: &Value, k: &str| x.get(k).and_then(Value::as_str).unwrap_or("").to_string();
     let empty = vec![];
-    let bad: Vec<String> = v
+    let bad: Vec<(String, String)> = v
         .get("components")
         .and_then(Value::as_array)
         .unwrap_or(&empty)
         .iter()
         .filter(|c| watched(&str_of(c, "id"), &str_of(c, "name")) && str_of(c, "status") != "operational")
-        .map(|c| format!("{} {}", str_of(c, "name"), status_label(&str_of(c, "status"))))
+        .map(|c| (str_of(c, "name"), str_of(c, "status")))
         .collect();
     // 미해결 장애 중 관련 구성요소에 걸친 것(구성요소 표시가 없으면 관련으로 봄).
     let incident = v.get("incidents").and_then(Value::as_array).unwrap_or(&empty).iter().find(|i| {
@@ -268,9 +269,15 @@ fn build_issue(v: &Value, watched: &dyn Fn(&str, &str) -> bool, empty_relevant: 
             str_of(i, "name"),
             format!("{page}/incidents/{}", str_of(i, "id")),
         ),
-        None => (format!("components:{}", bad.join(",")), String::new(), page.into()),
+        None => (
+            // 키는 언어와 무관하게(상태 코드 그대로) — 언어를 바꿔도 같은 문제로 본다.
+            format!("components:{}", bad.iter().map(|(n, s)| format!("{n} {s}")).collect::<Vec<_>>().join(",")),
+            String::new(),
+            page.into(),
+        ),
     };
-    let detail = [name, bad.join(", ")].into_iter().filter(|s| !s.is_empty()).collect::<Vec<_>>().join(" · ");
+    let shown = bad.iter().map(|(n, s)| format!("{n} {}", status_label(s))).collect::<Vec<_>>().join(", ");
+    let detail = [name, shown].into_iter().filter(|s| !s.is_empty()).collect::<Vec<_>>().join(" · ");
     Some(Issue { key, title: title.into(), detail, url })
 }
 
@@ -319,7 +326,7 @@ fn issue_from_openai(v: &Value) -> Option<Issue> {
         v,
         &|_id: &str, n: &str| n.to_ascii_lowercase().contains("codex") || n == "CLI" || n == "VS Code extension",
         false,
-        "ChatGPT(Codex) 연결 상태가 좋지 않습니다",
+        i18n::t("health.codex.title"),
         OPENAI_STATUS_PAGE,
     )
 }
@@ -356,7 +363,7 @@ fn chatgpt_web_watched(id: &str, name: &str) -> bool {
 /// # 참조
 /// `build_issue`, `chatgpt_web_watched` 호출. `fetch_chatgpt_web_status` 와 시험이 호출.
 fn issue_from_chatgpt_web(v: &Value) -> Option<Issue> {
-    build_issue(v, &chatgpt_web_watched, false, "ChatGPT 웹 서비스 상태가 좋지 않습니다", OPENAI_STATUS_PAGE)
+    build_issue(v, &chatgpt_web_watched, false, i18n::t("health.chatgpt_web.title"), OPENAI_STATUS_PAGE)
 }
 
 /// ChatGPT 웹 서비스 상태를 확인한다 (설정에서 켠 경우만 `main.rs` 가 부름).
@@ -415,13 +422,13 @@ fn issue_from_google(v: &Value) -> Option<Issue> {
         .map(str::to_string)
         .unwrap_or_default();
     let detail = if line.is_empty() {
-        "진행 중인 장애가 있습니다".to_string()
+        i18n::t("health.gemini.detail").to_string()
     } else if line.chars().count() > 160 {
         format!("{}…", line.chars().take(160).collect::<String>())
     } else {
         line
     };
-    Some(Issue { key: format!("incident:{}", str_of(i, "id")), title: "Gemini 서비스 상태가 좋지 않습니다".into(), detail, url })
+    Some(Issue { key: format!("incident:{}", str_of(i, "id")), title: i18n::t("health.gemini.title").into(), detail, url })
 }
 
 /// Gemini 웹 서비스 상태를 확인한다 (설정에서 켠 경우만 `main.rs` 가 부름).
@@ -509,8 +516,8 @@ impl ProvHealth {
 pub fn codex_net_issue(fails: u32, last_err: &str) -> Option<Issue> {
     (fails >= NET_FAILS).then(|| Issue {
         key: "net".into(),
-        title: "ChatGPT 서버 연결이 불안정합니다".into(),
-        detail: format!("사용량 조회가 {fails}번 연속 실패했습니다 ({last_err})."),
+        title: i18n::t("health.codex_net.title").into(),
+        detail: i18n::tf("health.codex_net.detail", &[("n", &fails.to_string()), ("err", last_err)]),
         url: OPENAI_STATUS_PAGE.into(),
     })
 }
@@ -534,15 +541,15 @@ pub fn agy_issue(running: bool, healthz_fails: u32, auth_ok: Option<bool>) -> Op
     if auth_ok == Some(false) {
         return Some(Issue {
             key: "auth".into(),
-            title: "Antigravity 로그인이 필요합니다".into(),
-            detail: "로그인이 만료되었거나 풀렸습니다. 설정 › Antigravity 에서 확인하세요.".into(),
+            title: i18n::t("health.agy_auth.title").into(),
+            detail: i18n::t("health.agy_auth.detail").into(),
             url: "antigravity://".into(),
         });
     }
     (healthz_fails >= NET_FAILS).then(|| Issue {
         key: "healthz".into(),
-        title: "Antigravity 서버가 응답하지 않습니다".into(),
-        detail: format!("이 PC 의 Antigravity 언어 서버 상태 확인이 {healthz_fails}번 연속 실패했습니다."),
+        title: i18n::t("health.agy_down.title").into(),
+        detail: i18n::tf("health.agy_down.detail", &[("n", &healthz_fails.to_string())]),
         url: "antigravity://".into(),
     })
 }
@@ -605,7 +612,7 @@ mod tests {
         assert!(issue_from_chatgpt_web(&mk("b", "Agent", "major_outage")).is_some());
         assert!(issue_from_chatgpt_web(&mk("c", "Codex Web", "major_outage")).is_none());
         let i = issue_from_chatgpt_web(&mk("d", "Conversations", "degraded_performance")).unwrap();
-        assert_eq!(i.key, "components:Conversations 성능 저하");
+        assert_eq!(i.key, "components:Conversations degraded_performance");
         assert_eq!(i.url, OPENAI_STATUS_PAGE);
     }
 

@@ -13,6 +13,7 @@
 //! 종류(KINDS): 알림 분류의 단일 정의. 설정 화면의 종류별 표시 체크·카드 뱃지가 모두 이 표를 씀.
 //! 끈 종류(muted)는 받지 않음 — 알림 창·기록·배지 모두 제외. 끄기 전에 받은 건은 창에서 숨기고 읽음 처리.
 
+use crate::i18n;
 use crate::oauth::CloudSession;
 use chrono::Utc;
 use serde::{Deserialize, Serialize};
@@ -72,6 +73,11 @@ const SEEN_BUMP_MS: i64 = 3_600_000;
 /// `load_marks`, `Alerts::take_marks_if_dirty` 가 사용.
 const MARKS_VERSION: u32 = 1;
 
+/// 문구 키를 현재 언어 문구로 바꿔 직렬화한다(`Kind::label`·`desc` 용).
+fn serialize_t<S: serde::Serializer>(key: &&'static str, s: S) -> Result<S::Ok, S::Error> {
+    s.serialize_str(i18n::t(key))
+}
+
 /// 알림 종류 정의(설정 화면 체크 목록 순서).
 ///
 /// # 참조
@@ -80,9 +86,11 @@ const MARKS_VERSION: u32 = 1;
 pub struct Kind {
     /// 종류 id. 설정의 `muted_alert_kinds` 에 들어가는 값이자 `Alert::kind` 값.
     pub id: &'static str,
-    /// 설정 화면에 표시하는 종류 이름.
+    /// 설정 화면에 표시하는 종류 이름 — 문구 키(`alert.kind.<id>.label`). 직렬화할 때 현재 언어 문구로 바뀐다.
+    #[serde(serialize_with = "serialize_t")]
     pub label: &'static str,
-    /// 설정 화면 설명.
+    /// 설정 화면 설명 — 문구 키(`alert.kind.<id>.desc`). 직렬화할 때 현재 언어 문구로 바뀐다.
+    #[serde(serialize_with = "serialize_t")]
     pub desc: &'static str,
     /// 출처 뱃지: "local" | "remote" | "app".
     ///
@@ -101,64 +109,64 @@ pub struct Kind {
 pub const KINDS: [Kind; 9] = [
     Kind {
         id: "local_done",
-        label: "로컬 세션 응답 완료",
-        desc: "터미널·IDE 의 Claude Code 가 응답을 마치면 알립니다.",
+        label: "alert.kind.local_done.label",
+        desc: "alert.kind.local_done.desc",
         origin: "local",
         needs_hook: true,
     },
     Kind {
         id: "local_input",
-        label: "로컬 세션 입력 대기·권한 확인",
-        desc: "입력을 기다리거나 Claude 화면에서 직접 수락할 확인이 있을 때 알립니다.",
+        label: "alert.kind.local_input.label",
+        desc: "alert.kind.local_input.desc",
         origin: "local",
         needs_hook: true,
     },
     Kind {
         id: "agent",
-        label: "에이전트 완료·대기",
-        desc: "서브·백그라운드 에이전트가 끝나거나 입력을 기다릴 때 알립니다.",
+        label: "alert.kind.agent.label",
+        desc: "alert.kind.agent.desc",
         origin: "local",
         needs_hook: true,
     },
     Kind {
         id: "codex_done",
-        label: "Codex 응답 완료",
-        desc: "ChatGPT(Codex) 대화가 한 턴을 마치면 알립니다. Codex 설정은 바꾸지 않고 이 PC 의 기록만 읽습니다.",
+        label: "alert.kind.codex_done.label",
+        desc: "alert.kind.codex_done.desc",
         origin: "local",
         needs_hook: false,
     },
     Kind {
         id: "agy_done",
-        label: "Antigravity 응답 완료",
-        desc: "Antigravity 대화가 한 턴을 마치면 알립니다. Antigravity 의 권한 요청 연동(훅)을 켜야 받습니다.",
+        label: "alert.kind.agy_done.label",
+        desc: "alert.kind.agy_done.desc",
         origin: "local",
         needs_hook: false,
     },
     Kind {
         id: "remote_input",
-        label: "원격·클라우드 세션 입력 대기",
-        desc: "원격 제어·클라우드 세션이 입력을 기다릴 때 알립니다.",
+        label: "alert.kind.remote_input.label",
+        desc: "alert.kind.remote_input.desc",
         origin: "remote",
         needs_hook: false,
     },
     Kind {
         id: "remote_review",
-        label: "원격·클라우드 세션 검토 준비",
-        desc: "원격 제어·클라우드 세션의 변경 사항 검토가 준비되면 알립니다.",
+        label: "alert.kind.remote_review.label",
+        desc: "alert.kind.remote_review.desc",
         origin: "remote",
         needs_hook: false,
     },
     Kind {
         id: "update",
-        label: "앱 업데이트",
-        desc: "새 버전이 나오면 알림 창에서 바로 설치할 수 있습니다.",
+        label: "alert.kind.update.label",
+        desc: "alert.kind.update.desc",
         origin: "app",
         needs_hook: false,
     },
     Kind {
         id: "status",
-        label: "AI 서비스 연결 상태",
-        desc: "Claude 와 (켜 둔) ChatGPT·Antigravity 의 서비스 장애·연결 불안정, (켜 둔) ChatGPT·Gemini 웹 서비스 장애와 복구를 알립니다.",
+        label: "alert.kind.status.label",
+        desc: "alert.kind.status.desc",
         origin: "app",
         needs_hook: false,
     },
@@ -531,8 +539,8 @@ impl Alerts {
             .map(|s| {
                 let message = if s.needs_action.is_empty() {
                     match s.state.as_str() {
-                        "review_ready" => "검토할 변경 사항이 준비되었습니다.".to_string(),
-                        _ => "Claude 가 응답을 기다리고 있습니다.".to_string(),
+                        "review_ready" => i18n::t("alert.remote.review_ready").to_string(),
+                        _ => i18n::t("alert.remote.waiting").to_string(),
                     }
                 } else {
                     s.needs_action.clone()

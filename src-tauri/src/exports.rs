@@ -724,7 +724,7 @@ impl<'de, F: FnMut(Value)> DeserializeSeed<'de> for Items<'_, F> {
 impl<'de, F: FnMut(Value)> Visitor<'de> for Items<'_, F> {
     type Value = ();
     fn expecting(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
-        f.write_str("배열 또는 객체")
+        f.write_str(crate::i18n::t("exports.expecting"))
     }
     fn visit_seq<A: SeqAccess<'de>>(self, mut seq: A) -> Result<(), A::Error> {
         while let Some(v) = seq.next_element::<Value>()? {

@@ -6,6 +6,7 @@
 //! - 프로필:   GET /api/oauth/profile (계정 이름·이메일 표시, 조직 uuid — 클라우드 세션 조회 헤더용)
 //! - 클라우드 세션: GET /v1/sessions  (claude.ai/code 원격·브리지 세션)
 
+use crate::i18n;
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
@@ -71,13 +72,13 @@ impl std::fmt::Display for ApiError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
             ApiError::NoCredentials => {
-                write!(f, "Claude Code 로그인 정보 없음 — `claude` 실행 후 /login")
+                write!(f, "{}", i18n::t("api.err.no_creds"))
             }
-            ApiError::Expired => write!(f, "로그인 토큰 만료 — Claude Code 를 한 번 실행하면 자동 갱신됩니다"),
-            ApiError::Auth => write!(f, "인증 실패 — Claude Code 에서 다시 로그인하십시오"),
-            ApiError::Http(c) => write!(f, "HTTP 오류 {c}"),
-            ApiError::Network(e) => write!(f, "네트워크 오류: {e}"),
-            ApiError::Parse(e) => write!(f, "응답 파싱 오류: {e}"),
+            ApiError::Expired => write!(f, "{}", i18n::t("api.err.expired")),
+            ApiError::Auth => write!(f, "{}", i18n::t("api.err.auth")),
+            ApiError::Http(c) => write!(f, "{}", i18n::tf("api.err.http", &[("code", &c.to_string())])),
+            ApiError::Network(e) => write!(f, "{}", i18n::tf("api.err.network", &[("e", e)])),
+            ApiError::Parse(e) => write!(f, "{}", i18n::tf("api.err.parse", &[("e", e)])),
         }
     }
 }
@@ -551,9 +552,9 @@ fn parse_promos(v: &Value) -> Vec<Promo> {
 /// `parse_limits` 가 호출.
 fn limit_label(kind: &str, scope_name: Option<&str>) -> String {
     match (kind, scope_name) {
-        ("session", _) => "5시간 세션".into(),
-        ("weekly_all", _) => "주간 · 전체 모델".into(),
-        (_, Some(n)) => format!("주간 · {n}"),
+        ("session", _) => i18n::t("limit.session5").into(),
+        ("weekly_all", _) => i18n::t("limit.weekly_all").into(),
+        (_, Some(n)) => i18n::tf("limit.weekly_scoped", &[("name", n)]),
         (k, None) => k.to_string(),
     }
 }
@@ -781,7 +782,7 @@ fn profile(cred: &Cred) -> Result<Profile, ApiError> {
     let s = |p: &str| v.pointer(p).and_then(Value::as_str).unwrap_or("").trim().to_string();
     let org = s("/organization/uuid");
     if org.is_empty() {
-        return Err(ApiError::Parse("organization.uuid 없음".into()));
+        return Err(ApiError::Parse(i18n::t("api.err.no_org").into()));
     }
     let name = [s("/account/display_name"), s("/account/full_name")].into_iter().find(|n| !n.is_empty()).unwrap_or_default();
     let p = Profile { org, account: Account { name, email: s("/account/email"), org_name: s("/organization/name") } };
