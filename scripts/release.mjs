@@ -44,7 +44,7 @@ const VERSION_FILES = [
   ["src-tauri/Cargo.toml", 1, (v) => `version = "${v}"`],
 ];
 // README(영어·한국어)의 다운로드 표(<!-- download:start --> ~ <!-- download:end -->) 안의 버전 글자를 모두 바꾼다 — 제목·파일 이름·링크.
-const READMES = ["README.md", "README.ko.md"];
+const READMES = ["README.md", "README.ko.md", "README.ja.md"];
 const COMMIT_FILES = [...VERSION_FILES.map(([f]) => f), "src-tauri/Cargo.lock", ...READMES];
 const README_BLOCK = /<!-- download:start[\s\S]*?<!-- download:end -->/;
 

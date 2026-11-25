@@ -1,12 +1,16 @@
 # Meowffice · 고양이사무실
 
-[English](README.md) | **한국어**
+[English](README.md) | **한국어** | [日本語](README.ja.md)
 
 AI 코딩 세션 하나하나가 **고양이 직원**이 되어 출근하는 데스크톱 사무실입니다.
 시계 옆 트레이에서 Claude Code · Codex(ChatGPT) · Antigravity 의 **사용량 한도**를 보여 주고,
 세션이 권한·질문·검토를 기다리면 **알림 카드**를 띄웁니다. 3D 사무실 창에서는 일하는 세션이 고양이로 움직입니다.
 
 Windows 10/11 · macOS (Rust + Tauri v2, 바닐라 HTML·CSS·JS, Babylon.js)
+
+<p align="center">
+  <img src="assets/readme/demo.gif" alt="Meowffice 시연: AI 세션이 고양이 직원으로 일하는 3D 사무실" width="860">
+</p>
 
 <!-- download:start — 버전은 scripts/release.mjs 가 릴리스 때 바꾼다 -->
 ### ⬇ 최신 버전 v0.6.8 다운로드
@@ -31,6 +35,16 @@ Windows 10/11 · macOS (Rust + Tauri v2, 바닐라 HTML·CSS·JS, Babylon.js)
 - **고양이 사무실**: 세션마다 고양이 한 마리가 출근해 일하고, 결재(권한 승인)를 받으러 오고, 간식을 받으면 레벨이 오릅니다. 날씨·계절이 실제 위치를 따라갑니다
 - **채팅**: 사무실 안에서 Claude Code · Codex 세션과 대화(설치된 CLI 를 그대로 사용)
 - **언어**: 한국어·영어·일본어(시스템 언어를 따르고, 설정에서 바꿀 수 있음)
+
+<table>
+<tr>
+<td width="50%"><img src="assets/readme/office-ko.png" alt="고양이 사무실"><br><sub><b>고양이 사무실</b></sub></td>
+<td width="50%"><img src="assets/readme/usage-ko.png" alt="사용량 상세"><br><sub><b>사용량 상세</b></sub></td>
+</tr>
+<tr>
+<td colspan="2" align="center"><img src="assets/readme/notify-ko.png" alt="알림 카드" width="320"><br><sub><b>알림 카드</b></sub></td>
+</tr>
+</table>
 
 ## 설치
 

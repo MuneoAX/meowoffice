@@ -1,12 +1,16 @@
 # Meowffice
 
-**English** | [한국어](README.ko.md)
+**English** | [한국어](README.ko.md) | [日本語](README.ja.md)
 
 A desktop office where every AI coding session clocks in as a **cat employee**.
 From the tray next to your clock, Meowffice shows the **usage limits** of Claude Code · Codex (ChatGPT) · Antigravity,
 and pops up **alert cards** when a session is waiting for a permission, an answer, or a review. In the 3D office window, each working session moves around as a cat.
 
 Windows 10/11 · macOS (Rust + Tauri v2, vanilla HTML·CSS·JS, Babylon.js)
+
+<p align="center">
+  <img src="assets/readme/demo.gif" alt="Meowffice demo: AI sessions working as cats in a 3D office" width="860">
+</p>
 
 <!-- download:start — scripts/release.mjs updates the version on each release -->
 ### ⬇ Download the latest version v0.6.8
@@ -31,6 +35,16 @@ Other versions: [all releases](https://github.com/MuneoAX/meowoffice/releases). 
 - **Cat office**: one cat clocks in per session — it works, brings approvals (permission requests) to you, and levels up when you give it treats. Weather and seasons follow your real location
 - **Chat**: talk to Claude Code · Codex sessions inside the office (uses the CLIs you already have installed)
 - **Languages**: Korean, English, and Japanese (follows your system language; change it in Settings)
+
+<table>
+<tr>
+<td width="50%"><img src="assets/readme/office-en.png" alt="Cat office"><br><sub><b>Cat office</b></sub></td>
+<td width="50%"><img src="assets/readme/usage-en.png" alt="Usage details"><br><sub><b>Usage details</b></sub></td>
+</tr>
+<tr>
+<td colspan="2" align="center"><img src="assets/readme/notify-en.png" alt="Alert cards" width="320"><br><sub><b>Alert cards</b></sub></td>
+</tr>
+</table>
 
 ## Install
 
