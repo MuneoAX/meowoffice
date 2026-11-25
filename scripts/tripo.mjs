@@ -103,6 +103,10 @@ if (cmd === "upload") {
   for (const an of doc.getRoot().listAnimations()) { const n = REN[an.getName()]; if (n) an.setName(n); else an.dispose(); }
   await doc.transform(prune());
   await io.write(b, doc);
+  // 사람형 리깅 보정: 꼬리를 엉덩이 뼈로(손들 때 말려 올라감 방지), 서기·걷기 굽힘 줄이기(큰 머리가 앞으로 숙음 방지)
+  const here = path.dirname(new URL(import.meta.url).pathname.replace(/^\/(\w:)/, "$1"));
+  execFileSync(process.execPath, [path.join(here, "fix-ai-tail.mjs"), b, b], { stdio: "inherit" });
+  execFileSync(process.execPath, [path.join(here, "tune-ai-anims.mjs"), b, b, "0.3"], { stdio: "inherit" });
   console.log("완료", b, doc.getRoot().listAnimations().map((x) => x.getName()).join(","));
 } else {
   console.error("명령: upload | rigcheck | rig | retarget | wait | task | cat"); process.exit(1);
