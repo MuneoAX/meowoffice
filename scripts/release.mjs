@@ -43,7 +43,9 @@ const VERSION_FILES = [
   ["src-tauri/tauri.conf.json", 1, (v) => `"version": "${v}"`],
   ["src-tauri/Cargo.toml", 1, (v) => `version = "${v}"`],
 ];
-const COMMIT_FILES = [...VERSION_FILES.map(([f]) => f), "src-tauri/Cargo.lock"];
+const COMMIT_FILES = [...VERSION_FILES.map(([f]) => f), "src-tauri/Cargo.lock", "README.md"];
+// README 의 다운로드 표(<!-- download:start --> ~ <!-- download:end -->) 안의 버전 글자를 모두 바꾼다 — 제목·파일 이름·링크.
+const README_BLOCK = /<!-- download:start[\s\S]*?<!-- download:end -->/;
 
 function nextVersion(cur, how) {
   if (/^\d+\.\d+\.\d+$/.test(how)) return how;
@@ -64,6 +66,11 @@ function bumpFiles(from, to) {
     }
     fs.writeFileSync(p, s);
   }
+  const readme = path.join(root, "README.md");
+  const r = fs.readFileSync(readme, "utf8");
+  const block = r.match(README_BLOCK)?.[0];
+  if (!block || !block.includes(from)) throw new Error(`README.md 다운로드 표에서 ${from} 을 찾지 못함`);
+  fs.writeFileSync(readme, r.replace(block, () => block.split(from).join(to)));
 }
 
 // 여러 줄 노트는 --notes-file 로(셸·npm 을 거치면 --notes 의 줄바꿈이 잘린다). --notes 안의 \\n 글자도 줄바꿈으로 바꾼다.

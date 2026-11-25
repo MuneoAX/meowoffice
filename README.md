@@ -6,14 +6,16 @@ AI 코딩 세션 하나하나가 **고양이 직원**이 되어 출근하는 데
 
 Windows 10/11 · macOS (Rust + Tauri v2, 바닐라 HTML·CSS·JS, Babylon.js)
 
-### ⬇ [최신 버전 다운로드](https://github.com/MuneoAX/meowoffice/releases/latest)
+<!-- download:start — 버전은 scripts/release.mjs 가 릴리스 때 바꾼다 -->
+### ⬇ 최신 버전 v0.6.7 다운로드
 
 | OS | 받을 파일 |
 |---|---|
-| Windows 10/11 | `Meowffice_<버전>_x64-setup.exe` |
-| macOS (Intel·Apple Silicon) | `Meowffice_<버전>_universal.dmg` |
+| Windows 10/11 | [Meowffice_0.6.7_x64-setup.exe](https://github.com/MuneoAX/meowoffice/releases/download/v0.6.7/Meowffice_0.6.7_x64-setup.exe) |
+| macOS (Intel·Apple Silicon) | [Meowffice_0.6.7_universal.dmg](https://github.com/MuneoAX/meowoffice/releases/download/v0.6.7/Meowffice_0.6.7_universal.dmg) |
 
-설치 방법·주의사항은 [설치](#설치) 를 보세요.
+다른 버전은 [전체 릴리스](https://github.com/MuneoAX/meowoffice/releases), 설치 방법·주의사항은 [설치](#설치) 를 보세요.
+<!-- download:end -->
 
 > **비공식 앱입니다.** Anthropic, OpenAI, Google 과 제휴하거나 승인받지 않았습니다.
 > Claude, ChatGPT, Codex, Gemini, Antigravity 는 각 회사의 상표이며, 이 앱은 어떤 서비스의 사용량인지 표시하는 데에만 이름과 로고를 씁니다.
