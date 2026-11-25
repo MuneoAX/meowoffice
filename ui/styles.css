@@ -5,6 +5,11 @@
   font-display: swap;
 }
 
+/* 글꼴: 한글·라틴은 Pretendard, 일본어는 Noto Sans JP(ui/vendor/noto-sans-jp). 일본어 화면(html lang="ja")은 Noto Sans JP 를 먼저.
+   설정 창은 이 파일을 shadow DOM 에 넣는다(:root → :host). @font-face 는 문서(index.html·notify.html 의 link)에서 선언한다. */
+:root { --font: "Pretendard", "Noto Sans JP", system-ui, sans-serif; }
+:root:lang(ja) { --font: "Noto Sans JP", "Pretendard", system-ui, sans-serif; }
+
 :root {
   --accent: #6366f1;
   --accent-soft: #eef0ff;
@@ -37,7 +42,7 @@
 html, body {
   background: transparent;
   overflow: hidden;
-  font-family: "Pretendard", system-ui, "Yu Gothic UI", "Hiragino Sans", sans-serif; /* Pretendard 에 없는 일본어 글자는 시스템 글꼴로 */
+  font-family: var(--font);
   color: var(--text);
   height: 100%;
 }

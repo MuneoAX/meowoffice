@@ -1,4 +1,6 @@
 :root {
+  /* 글꼴: 한글·라틴 Pretendard, 일본어 Noto Sans JP(ui/vendor/noto-sans-jp, index.html 에서 선언). 일본어 화면은 Noto Sans JP 먼저 */
+  --font: "Pretendard", "Noto Sans JP", system-ui, sans-serif;
   --bg: #eef0f6;
   --panel: #ffffff;
   --panel-fg: #2a2f3a;
@@ -38,7 +40,7 @@ html, body { margin: 0; height: 100%; background: var(--bg); overflow: hidden; }
   border-radius: 999px;
   background: var(--bubble-bg);
   color: var(--bubble-fg);
-  font: 600 13px/1 "Pretendard", system-ui, sans-serif;
+  font: 600 13px/1 var(--font);
   box-shadow: var(--bubble-shadow);
   border: 2px solid var(--st);
   white-space: nowrap;
@@ -64,7 +66,7 @@ html, body { margin: 0; height: 100%; background: var(--bg); overflow: hidden; }
 #hud {
   position: absolute; top: 12px; left: 12px;
   display: flex; gap: 8px;
-  font: 600 13px/1 "Pretendard", system-ui, sans-serif;
+  font: 600 13px/1 var(--font);
 }
 #hud span {
   background: var(--panel); color: var(--panel-fg);
@@ -74,7 +76,7 @@ html, body { margin: 0; height: 100%; background: var(--bg); overflow: hidden; }
 #hud button {
   background: var(--panel); color: var(--panel-fg); border: 0; cursor: pointer;
   padding: 8px 12px; border-radius: 999px; box-shadow: var(--bubble-shadow);
-  font: 600 13px/1 "Pretendard", system-ui, sans-serif;
+  font: 600 13px/1 var(--font);
 }
 #hud .h-q b { color: var(--st-permission); }
 
@@ -83,7 +85,7 @@ html, body { margin: 0; height: 100%; background: var(--bg); overflow: hidden; }
   position: absolute; left: 50%; bottom: 24px; transform: translate(-50%, 20px);
   background: var(--panel); color: var(--panel-fg);
   padding: 10px 16px; border-radius: 12px; box-shadow: var(--bubble-shadow);
-  font: 600 13px/1.3 "Pretendard", system-ui, sans-serif;
+  font: 600 13px/1.3 var(--font);
   opacity: 0; transition: opacity .2s, transform .2s; pointer-events: none;
 }
 #toast.on { opacity: 1; transform: translate(-50%, 0); }
@@ -94,7 +96,7 @@ html, body { margin: 0; height: 100%; background: var(--bg); overflow: hidden; }
   background: var(--panel); color: var(--panel-fg);
   border-radius: 14px; box-shadow: 0 10px 30px rgba(30, 40, 70, .25);
   border-top: 6px solid var(--st-permission);
-  font: 14px/1.45 "Pretendard", system-ui, sans-serif;
+  font: 14px/1.45 var(--font);
   display: none; overflow: hidden;
 }
 #card.on { display: block; animation: cardIn .18s ease-out; }
@@ -113,14 +115,14 @@ html, body { margin: 0; height: 100%; background: var(--bg); overflow: hidden; }
 .c-btns { display: flex; gap: 8px; padding: 10px 14px 14px; flex-wrap: wrap; }
 .c-btns button {
   flex: 1; min-width: 90px; padding: 9px 10px; border-radius: 10px; cursor: pointer;
-  border: 1px solid var(--line); background: var(--panel); color: var(--panel-fg); font: 600 14px "Pretendard", system-ui, sans-serif;
+  border: 1px solid var(--line); background: var(--panel); color: var(--panel-fg); font: 600 14px var(--font);
   white-space: nowrap;
 }
 .c-btns button.primary { background: var(--st-thinking); border-color: var(--st-thinking); color: #fff; }
 #card[data-kind="question"] .c-btns { flex-direction: column; }
 .c-stamp {
   position: absolute; right: 22px; top: 44px; width: 92px; height: 92px; border-radius: 50%;
-  display: grid; place-items: center; font: 800 26px/1 "Pretendard", system-ui, sans-serif;
+  display: grid; place-items: center; font: 800 26px/1 var(--font);
   border: 5px solid currentColor; transform: rotate(-14deg) scale(2.2); opacity: 0; pointer-events: none;
 }
 .c-stamp.ok { color: #d4483b; }
@@ -133,7 +135,7 @@ html, body { margin: 0; height: 100%; background: var(--bg); overflow: hidden; }
 #fsBtn {
   position: absolute; top: 12px; right: 12px; z-index: 5;
   padding: 6px 12px; border: 0; border-radius: 10px; cursor: pointer;
-  background: rgba(255, 255, 255, 0.85); color: #3b3f4a; font: 600 12px/1 "Pretendard", system-ui, sans-serif;
+  background: rgba(255, 255, 255, 0.85); color: #3b3f4a; font: 600 12px/1 var(--font);
   box-shadow: 0 1px 4px rgba(0, 0, 0, 0.12);
 }
 #fsBtn:hover { background: #fff; }
@@ -142,7 +144,7 @@ html, body { margin: 0; height: 100%; background: var(--bg); overflow: hidden; }
 .nametag {
   position: absolute; transform: translate(-50%, 4px); white-space: nowrap;
   padding: 3px 10px; border-radius: 10px; background: rgba(59, 63, 74, 0.82); color: #fff;
-  font: 600 12px/1.2 "Pretendard", system-ui, sans-serif; pointer-events: none;
+  font: 600 12px/1.2 var(--font); pointer-events: none;
 }
 /* 상단 한도 칩 */
 #hud .h-lim { background: rgba(255, 255, 255, 0.9); }
@@ -154,7 +156,7 @@ html, body { margin: 0; height: 100%; background: var(--bg); overflow: hidden; }
   /* 기본 색: 문어AI 보라 #8b6dff (프라이머리), 기본 그라데이션 135deg #8b6dff → #5b8cff */
   --pri: #8b6dff; --pri-soft: #f1edff; --pri-grad: linear-gradient(135deg, #8b6dff 0%, #5b8cff 100%);
   position: absolute; inset: 0; pointer-events: none; color: var(--ink);
-  font-family: "Pretendard", system-ui, -apple-system, sans-serif; letter-spacing: -0.01em;
+  font-family: var(--font); letter-spacing: -0.01em;
 }
 #widgets .wg, #widgets .topbar > * { pointer-events: auto; }
 /* 위쪽 막대 (오른쪽 위) */
@@ -168,7 +170,7 @@ html, body { margin: 0; height: 100%; background: var(--bg); overflow: hidden; }
 .topbar #hud span, .topbar #hud button, .topbar #fsBtn {
   position: static; height: 40px; display: inline-flex; align-items: center; gap: 6px; padding: 0 14px; border: 0; border-radius: 20px;
   background: var(--card); backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px); color: var(--ink);
-  box-shadow: 0 4px 16px rgba(30, 40, 80, 0.08); font: 600 13px/1 "Pretendard", system-ui, sans-serif; cursor: default;
+  box-shadow: 0 4px 16px rgba(30, 40, 80, 0.08); font: 600 13px/1 var(--font); cursor: default;
 }
 .topbar #hud button, .topbar #fsBtn { cursor: pointer; }
 .topbar #hud button:hover, .topbar #fsBtn:hover { background: #fff; color: var(--pri); }
@@ -272,7 +274,7 @@ html, body { margin: 0; height: 100%; background: var(--bg); overflow: hidden; }
 .topbar .ib svg { width: 20px; height: 20px; }
 .topbar .ib .bad, .topbar .ib .cnt {
   position: absolute; top: -3px; right: -3px; min-width: 18px; height: 18px; padding: 0 5px; border-radius: 9px;
-  font: 700 10.5px/18px "Pretendard", system-ui, sans-serif; font-style: normal; text-align: center; box-sizing: border-box;
+  font: 700 10.5px/18px var(--font); font-style: normal; text-align: center; box-sizing: border-box;
 }
 .topbar .ib .bad { background: #e5534b; color: #fff; box-shadow: 0 0 0 2px #fff; }
 .topbar .ib .cnt { background: var(--pri, #8b6dff); color: #fff; box-shadow: 0 0 0 2px #fff; }
@@ -286,7 +288,7 @@ html, body { margin: 0; height: 100%; background: var(--bg); overflow: hidden; }
 /* 현황 서비스 탭 (밑줄 탭: 카드 폭 전체, 고른 탭에 기본 색 밑줄) */
 .ov-tabs { display: flex; margin: -4px -20px 16px; padding: 0 12px; border-bottom: 1px solid var(--line); }
 .ov-tabs button { position: relative; flex: 1; display: inline-flex; align-items: center; justify-content: center; gap: 4px; height: 34px; padding: 0 2px; border: 0;
-  background: transparent; color: #8a90a0; font: 600 12px/1 "Pretendard", system-ui, sans-serif; cursor: pointer; white-space: nowrap; }
+  background: transparent; color: #8a90a0; font: 600 12px/1 var(--font); cursor: pointer; white-space: nowrap; }
 .ov-tabs button:hover { color: var(--ink); }
 .ov-tabs button i { width: 7px; height: 7px; border-radius: 50%; flex: none; }
 .ov-tabs button small { font-size: 10px; font-weight: 700; color: #a6abb8; }
@@ -305,12 +307,12 @@ html, body { margin: 0; height: 100%; background: var(--bg); overflow: hidden; }
 
 /* 현황 카드 아래 '사용량 상세 보기' */
 .ov-more { display: flex; align-items: center; justify-content: center; gap: 4px; width: calc(100% + 40px); margin: 14px -20px -18px; height: 40px; border: 0; border-top: 1px solid var(--line);
-  background: transparent; color: var(--pri); font: 700 12.5px/1 "Pretendard", system-ui, sans-serif; cursor: pointer; }
+  background: transparent; color: var(--pri); font: 700 12.5px/1 var(--font); cursor: pointer; }
 .ov-more:hover { background: var(--pri-soft); }
 .ov-more span { font-size: 15px; }
 /* 사용량 상세 (가운데 큰 카드, 시안 스타일) */
 .us-overlay { position: absolute; inset: 0; z-index: 40; display: grid; place-items: center; background: rgba(20, 24, 36, 0.28); backdrop-filter: blur(2px);
-  font-family: "Pretendard", system-ui, sans-serif; color: #1f2430; --pri: #8b6dff; --pri-soft: #f1edff; --line: rgba(31, 36, 48, 0.07); --sub: #7a8193; }
+  font-family: var(--font); color: #1f2430; --pri: #8b6dff; --pri-soft: #f1edff; --line: rgba(31, 36, 48, 0.07); --sub: #7a8193; }
 .us-overlay[hidden] { display: none; }
 .us-card { width: min(720px, calc(100% - 48px)); max-height: calc(100% - 120px); display: flex; flex-direction: column; border-radius: 20px; overflow: hidden;
   background: rgba(255, 255, 255, 0.94); box-shadow: 0 24px 60px rgba(20, 30, 60, 0.25); }
@@ -355,7 +357,7 @@ html, body { margin: 0; height: 100%; background: var(--bg); overflow: hidden; }
 .us-big b { font-size: 28px; font-weight: 800; font-variant-numeric: tabular-nums; }
 .us-chart { width: 100%; height: 120px; }
 .us-chart rect { fill: var(--pri); opacity: 0.85; } .us-chart rect:hover { opacity: 1; }
-.us-chart text { font-size: 9px; fill: #9aa0b0; text-anchor: middle; font-family: "Pretendard", system-ui, sans-serif; }
+.us-chart text { font-size: 9px; fill: #9aa0b0; text-anchor: middle; font-family: var(--font); }
 .us-model { display: grid; grid-template-columns: 180px 1fr 70px; align-items: center; gap: 12px; font-size: 12.5px; padding: 5px 0; }
 .us-model span { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: #3a4050; }
 .us-model .us-bar { margin-top: 0; }
@@ -402,7 +404,7 @@ html, body { margin: 0; height: 100%; background: var(--bg); overflow: hidden; }
 .zn-b:hover { background: var(--pri-soft); color: var(--pri); }
 .zn-r { width: 150px; accent-color: var(--pri); cursor: pointer; }
 .zn-v { min-width: 44px; text-align: right; font-size: 13px; font-variant-numeric: tabular-nums; color: var(--ink); }
-.zn-1 { height: 30px; padding: 0 12px; border: 0; border-radius: 15px; background: var(--pri); color: #fff; font: 700 12px/1 "Pretendard", system-ui, sans-serif; cursor: pointer; }
+.zn-1 { height: 30px; padding: 0 12px; border: 0; border-radius: 15px; background: var(--pri); color: #fff; font: 700 12px/1 var(--font); cursor: pointer; }
 .zn-1:hover { filter: brightness(1.1); }
 
 /* 마우스 조작 안내 (아래 가운데) */
@@ -428,11 +430,11 @@ html, body { margin: 0; height: 100%; background: var(--bg); overflow: hidden; }
 .help-menu { position: absolute; top: 48px; right: 100px; display: flex; flex-direction: column; min-width: 180px; padding: 6px;
   border-radius: 14px; background: #fff; box-shadow: 0 10px 30px rgba(30, 40, 80, 0.18); pointer-events: auto; z-index: 6; }
 .help-menu[hidden] { display: none; }
-.help-menu button { text-align: left; border: 0; background: none; padding: 10px 12px; border-radius: 10px; font: 600 13px/1.2 "Pretendard", system-ui, sans-serif; color: var(--ink); cursor: pointer; }
+.help-menu button { text-align: left; border: 0; background: none; padding: 10px 12px; border-radius: 10px; font: 600 13px/1.2 var(--font); color: var(--ink); cursor: pointer; }
 .help-menu button:hover { background: var(--pri-soft); color: var(--pri); }
 
 /* 처음 사용자 안내 (tour.js) */
-.tour { position: fixed; inset: 0; z-index: 50; font-family: "Pretendard", system-ui, sans-serif; color: #1f2430; }
+.tour { position: fixed; inset: 0; z-index: 50; font-family: var(--font); color: #1f2430; }
 .tour-hole { position: fixed; border-radius: 18px; pointer-events: none;
   box-shadow: 0 0 0 3px #8b6dff, 0 0 0 9999px rgba(18, 14, 40, 0.62);
   transition: left 0.3s ease-in, top 0.3s ease-in, width 0.3s ease-in, height 0.3s ease-in; }
@@ -461,7 +463,7 @@ html, body { margin: 0; height: 100%; background: var(--bg); overflow: hidden; }
 .tour-dots i { width: 7px; height: 7px; border-radius: 50%; background: #dcd6f5; transition: width 0.2s; }
 .tour-dots i.on { width: 20px; border-radius: 4px; background: #8b6dff; }
 .tour-btns { display: flex; gap: 8px; }
-.tour-btns button { border: 0; border-radius: 12px; padding: 11px 18px; font: 700 14px/1 "Pretendard", system-ui, sans-serif; cursor: pointer; }
+.tour-btns button { border: 0; border-radius: 12px; padding: 11px 18px; font: 700 14px/1 var(--font); cursor: pointer; }
 .t-next { background: linear-gradient(135deg, #8b6dff 0%, #5b8cff 100%); color: #fff; box-shadow: 0 6px 16px rgba(139, 109, 255, 0.35); }
 .t-next:hover { filter: brightness(1.06); }
 .t-prev { background: #f1f0f6; color: #4a5162; }
@@ -495,7 +497,7 @@ html, body { margin: 0; height: 100%; background: var(--bg); overflow: hidden; }
 
 /* 사용량 상세: 서비스 탭 (현황 카드의 탭을 따라 열림) · 세션 줄 */
 .us-svc { display: flex; gap: 4px; }
-.us-svc button { display: inline-flex; align-items: center; gap: 6px; height: 28px; padding: 0 10px; border: 0; border-radius: 14px; background: transparent; color: var(--sub, #7a8193); font: 600 12.5px/1 "Pretendard", system-ui, sans-serif; cursor: pointer; }
+.us-svc button { display: inline-flex; align-items: center; gap: 6px; height: 28px; padding: 0 10px; border: 0; border-radius: 14px; background: transparent; color: var(--sub, #7a8193); font: 600 12.5px/1 var(--font); cursor: pointer; }
 .us-svc button.on { background: #f1edff; color: #8b6dff; }
 .us-tabs[hidden] { display: none; }
 .us-ses { display: flex; align-items: flex-start; gap: 10px; padding: 8px 0; border-top: 1px solid rgba(31, 36, 48, 0.07); }
@@ -523,7 +525,7 @@ html, body { margin: 0; height: 100%; background: var(--bg); overflow: hidden; }
 .ap-muted { font-size: 12px; color: #7a8193; margin-top: 4px; }
 .ap-cmd { display: flex; align-items: center; gap: 8px; margin-top: 6px; padding: 6px 8px 6px 10px; border-radius: 10px; background: #f5f3ff; }
 .ap-cmd code { flex: 1; min-width: 0; overflow-x: auto; white-space: nowrap; font-size: 12px; }
-.ap-cmd button, .ap-btn { border: 0; border-radius: 10px; padding: 8px 14px; background: #f1f0f6; color: #4a5162; font: 600 12.5px/1 "Pretendard", system-ui, sans-serif; cursor: pointer; }
+.ap-cmd button, .ap-btn { border: 0; border-radius: 10px; padding: 8px 14px; background: #f1f0f6; color: #4a5162; font: 600 12.5px/1 var(--font); cursor: pointer; }
 .ap-cmd button { padding: 6px 10px; background: #fff; }
 .ap-btn.pri { background: linear-gradient(135deg, #8b6dff 0%, #5b8cff 100%); color: #fff; }
 .ap-btns { display: flex; justify-content: flex-end; gap: 8px; margin-top: 18px; }
@@ -595,7 +597,7 @@ body.has-sb #stage { height: calc(100% - var(--sb-h)); }
 #statusbar { position: fixed; left: 0; right: 0; bottom: 0; height: var(--sb-h); box-sizing: border-box; z-index: 10;
   display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 0 12px;
   background: var(--panel); border-top: 1px solid var(--line); color: var(--muted);
-  font: 500 11.5px/1 "Pretendard", system-ui, sans-serif; font-variant-numeric: tabular-nums; user-select: none; }
+  font: 500 11.5px/1 var(--font); font-variant-numeric: tabular-nums; user-select: none; }
 #statusbar .sb-sys { display: flex; align-items: center; gap: 14px; min-width: 0; overflow: hidden; white-space: nowrap; }
 #statusbar .sb-it { display: inline-flex; align-items: center; gap: 6px; }
 #statusbar .sb-it[hidden], #statusbar .sb-m[hidden] { display: none; }
@@ -610,20 +612,20 @@ body.has-sb #stage { height: calc(100% - var(--sb-h)); }
 #statusbar .zn-b:hover { background: var(--line); color: var(--panel-fg); }
 #statusbar .zn-r { width: 96px; height: 14px; margin: 0; accent-color: var(--muted); cursor: pointer; }
 #statusbar .zn-v { min-width: 40px; text-align: right; font-size: 11.5px; font-weight: 600; color: var(--panel-fg); }
-#statusbar .zn-1 { height: 20px; padding: 0 8px; border: 1px solid var(--line); border-radius: 10px; background: transparent; color: var(--panel-fg); font: 600 11px/1 "Pretendard", system-ui, sans-serif; cursor: pointer; }
+#statusbar .zn-1 { height: 20px; padding: 0 8px; border: 1px solid var(--line); border-radius: 10px; background: transparent; color: var(--panel-fg); font: 600 11px/1 var(--font); cursor: pointer; }
 #statusbar .zn-1:hover { background: var(--line); }
 #statusbar .z1 .zn-1 { opacity: 0.45; } /* 이미 1배 */
 
 /* 간식 주기 단추 (office.js placeFeed): 고른 고양이 머리 위 동전 바로 왼쪽. 오른쪽 끝이 동전에 닿게 */
 .feed-btn { position: absolute; transform: translate(-100%, -50%); pointer-events: auto; border: 0; border-radius: 14px; padding: 6px 12px;
-  background: linear-gradient(135deg, #8b6dff 0%, #5b8cff 100%); color: #fff; font: 700 12px/1 "Pretendard", system-ui, sans-serif; white-space: nowrap;
+  background: linear-gradient(135deg, #8b6dff 0%, #5b8cff 100%); color: #fff; font: 700 12px/1 var(--font); white-space: nowrap;
   box-shadow: 0 4px 12px rgba(60, 40, 140, 0.25); cursor: pointer; z-index: 2; }
 .feed-btn:hover { filter: brightness(1.08); }
 .feed-btn:disabled { background: #c9ccd6; box-shadow: none; cursor: default; }
 .feed-btn[hidden] { display: none; }
 
 /* ── 공통 로딩 표시 (loading.js OfficeLoading): 고양이 발자국이 한 걸음씩 찍히며 걸어간다 ── */
-.paw-load { display: inline-flex; align-items: center; gap: 10px; color: var(--pri, #8b6dff); font: 600 12.5px/1.2 "Pretendard", system-ui, sans-serif; }
+.paw-load { display: inline-flex; align-items: center; gap: 10px; color: var(--pri, #8b6dff); font: 600 12.5px/1.2 var(--font); }
 .paw-load-t { display: inline-flex; align-items: center; gap: 3px; }
 .paw-load-p { display: inline-block; width: 18px; height: 18px; opacity: 0; transform: rotate(90deg) scale(0.6); animation: paw-step 1.4s ease-in-out infinite; }
 .paw-load-p svg { display: block; width: 100%; height: 100%; }
@@ -646,3 +648,4 @@ body.has-sb #stage { height: calc(100% - var(--sb-h)); }
 button.paw-busy { position: relative; }
 button.paw-busy > .paw-load { margin-left: 8px; color: inherit; vertical-align: middle; }
 @media (prefers-reduced-motion: reduce) { .paw-load-p { animation-duration: 2.4s !important; } }
+:root:lang(ja) { --font: "Noto Sans JP", "Pretendard", system-ui, sans-serif; }

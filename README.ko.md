@@ -90,4 +90,5 @@ npm run build                      # 설치 파일 (src-tauri/target/release/bun
 - 3D 모델·소리 등 외부 자산: 각 출처의 라이선스(대부분 CC0) — [assets/licenses/](assets/licenses/)
 - 고양이 3D 모델: **Generated with Hi3D** (이후 Blender 로 다듬음)
 - 번들된 Babylon.js: Apache-2.0 — [ui/vendor/babylon/license.md](ui/vendor/babylon/license.md)
+- 번들된 Noto Sans JP(일본어 화면 글꼴): SIL OFL 1.1 — [ui/vendor/noto-sans-jp/LICENSE](ui/vendor/noto-sans-jp/LICENSE)
 - 서비스 이름·로고: 각 회사의 상표 — [NOTICE.md](NOTICE.md)

@@ -41,7 +41,7 @@ const OfficeRoomSigns = (() => {
       .room-sign { position: absolute; transform: translate(-50%, -50%); display: flex; flex-direction: column; align-items: center;
         padding: 3px 9px 4px; border-radius: 8px; background: rgba(248, 248, 249, .7); color: #4b505c; white-space: nowrap;
         border: 1px solid rgba(31, 36, 48, .08); box-shadow: 0 1px 3px rgba(31, 36, 48, .06); transition: opacity .25s;
-        font-family: "Pretendard", system-ui, sans-serif; }
+        font-family: var(--font); }
       .room-sign b { font-size: 11.5px; font-weight: 600; line-height: 1.3; }
       .room-sign small { font-size: 9.5px; color: #8a8f9a; line-height: 1.25; }`;
     document.head.appendChild(st);

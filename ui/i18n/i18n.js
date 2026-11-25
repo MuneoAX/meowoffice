@@ -66,8 +66,18 @@ const I18N = (() => {
   function changed() {
     cur = null;
     document.documentElement.lang = lang();
+    preloadFont();
     apply(document);
     window.dispatchEvent(new CustomEvent('meow-lang', { detail: lang() }));
+  }
+  /**
+   * 일본어 화면이면 Noto Sans JP 중 사전 문구에 쓰인 글자 조각을 미리 불러온다.
+   * 글꼴은 글자 범위별 조각(ui/vendor/noto-sans-jp)이라 DOM 에 처음 나올 때 받는데, 캔버스(3D 라벨)는 그 전에 그리면 대체 글꼴로 굳는다.
+   * @returns {void}
+   */
+  function preloadFont() {
+    if (lang() !== 'ja' || !document.fonts || !dicts.ja) return;
+    document.fonts.load('400 16px "Noto Sans JP"', Object.values(dicts.ja).join('')).catch(() => { /* 글꼴 없음 — 대체 글꼴 */ });
   }
   /**
    * 앱 본체(Rust)에 언어를 알린다 — 트레이 메뉴·알림 카드·오류 문구가 화면과 같은 언어를 쓰도록.
@@ -127,6 +137,7 @@ const I18N = (() => {
   // 사전·화면 스크립트가 모두 실린 뒤: html lang, 정적 data-i18n 채우기, 본체에 언어 알림.
   document.addEventListener('DOMContentLoaded', () => {
     document.documentElement.lang = lang();
+    preloadFont();
     apply(document);
     syncNative();
   });

@@ -2108,7 +2108,7 @@
       .replace(/html,\s*body\s*\{/g, ':host(.never) {').replace(/(^|\n)body\s*\{/g, '$1:host(.never) {')
       .replace(/url\("(?!data:|https?:|\/)([^"]+)"\)/g, 'url("../$1")'); // 상대 경로는 ui/ 기준
     shadow.innerHTML = `<style>${css}
-      :host { position: fixed; inset: 0; z-index: 50; pointer-events: none; font-family: "Pretendard", system-ui, sans-serif; color: var(--text); }
+      :host { position: fixed; inset: 0; z-index: 50; pointer-events: none; font-family: var(--font); color: var(--text); }
       #settings:not([hidden]) { pointer-events: auto; }</style><div id="wrap"></div>`;
     const inv = window.__TAURI__ && window.__TAURI__.core ? window.__TAURI__.core.invoke : null;
     settings = MeowSettings.mount(shadow, shadow.getElementById('wrap'), {
@@ -2189,7 +2189,7 @@
   console.error('오피스 초기화 실패', e);
   try { window.__TAURI__ && window.__TAURI__.core.invoke('log_ui', { level: 'error', message: `office: 초기화 실패 ${(e && e.stack) || e}` }); } catch (_) { /* 무시 */ }
   const m = document.createElement('div');
-  m.style.cssText = 'position:fixed;inset:0;display:grid;place-items:center;padding:24px;text-align:center;font:600 14px/1.6 Pretendard,system-ui,sans-serif;color:#4a5162;background:#f5f3ff;z-index:99';
+  m.style.cssText = 'position:fixed;inset:0;display:grid;place-items:center;padding:24px;text-align:center;font:600 14px/1.6 var(--font);color:#4a5162;background:#f5f3ff;z-index:99';
   m.innerHTML = '<div><b style="font-size:16px;color:#1f2430" data-i18n="office.fail.title"></b><br><span data-i18n="office.fail.body"></span></div>';
   try { I18N.apply(m); } catch (_) { /* 사전 없음 */ }
   document.body.appendChild(m);

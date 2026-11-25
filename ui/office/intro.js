@@ -321,7 +321,7 @@ const OfficeIntro = (() => {
     const key = txt + '|' + cls;
     const hit = pillCache.get(key);
     if (hit) return hit;
-    const H = PILL_PX, font = `700 ${Math.round(H * 0.52)}px Pretendard, "Malgun Gothic", system-ui, sans-serif`;
+    const H = PILL_PX, font = `700 ${Math.round(H * 0.52)}px ${I18N.lang() === 'ja' ? '"Noto Sans JP", Pretendard' : 'Pretendard, "Noto Sans JP"'}, system-ui, sans-serif`; // 캔버스는 var(--font) 를 못 써서 같은 순서를 직접
     if (!measureCtx) measureCtx = document.createElement('canvas').getContext('2d');
     measureCtx.font = font;
     const padL = Math.round((COIN_R / PILL_H) * H) + Math.round(H * 0.16), padR = Math.round(H * 0.38);

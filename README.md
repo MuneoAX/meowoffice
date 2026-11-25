@@ -90,4 +90,5 @@ Please report bugs and ideas in [Issues](https://github.com/MuneoAX/meowoffice/i
 - 3D models, sounds, and other third-party assets: each source's license (mostly CC0) — [assets/licenses/](assets/licenses/)
 - Cat 3D model: **Generated with Hi3D** (refined in Blender)
 - Bundled Babylon.js: Apache-2.0 — [ui/vendor/babylon/license.md](ui/vendor/babylon/license.md)
+- Bundled Noto Sans JP (Japanese UI font): SIL OFL 1.1 — [ui/vendor/noto-sans-jp/LICENSE](ui/vendor/noto-sans-jp/LICENSE)
 - Service names and logos: trademarks of their owners — [NOTICE.md](NOTICE.md)
