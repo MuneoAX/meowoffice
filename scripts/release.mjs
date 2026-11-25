@@ -66,10 +66,17 @@ function bumpFiles(from, to) {
   }
 }
 
+// 여러 줄 노트는 --notes-file 로(셸·npm 을 거치면 --notes 의 줄바꿈이 잘린다). --notes 안의 \\n 글자도 줄바꿈으로 바꾼다.
+// 버전 올림·빌드 전에 읽는다 — 경로 오타로 빌드 뒤에 멈추면 버전 파일 변경이 작업 트리에 남는다.
+const notesFile = opt("--notes-file") && path.resolve(opt("--notes-file"));
+const notes = notesFile ? fs.readFileSync(notesFile, "utf8").trim() : (opt("--notes") || "").replace(/\\n/g, "\n");
+// 저장소 안에 둔 노트 파일은 커밋되지 않은 변경으로 치지 않는다.
+const notesRel = notesFile && path.relative(root, notesFile).split(path.sep).join("/");
+
 const bump = opt("--bump");
 let version = JSON.parse(fs.readFileSync(path.join(root, "src-tauri/tauri.conf.json"), "utf8")).version;
 if (bump) {
-  const dirty = git("status", "--porcelain").split("\n").filter((l) => l && !l.includes(".idea/"));
+  const dirty = git("status", "--porcelain").split("\n").filter((l) => l && !l.includes(".idea/") && !(notesRel && l.slice(3) === notesRel));
   if (dirty.length) throw new Error(`커밋되지 않은 변경이 있습니다:\n${dirty.join("\n")}`);
   const next = nextVersion(version, bump);
   if (git("tag", "--list", `v${next}`)) throw new Error(`태그 v${next} 가 이미 있습니다`);
@@ -87,15 +94,12 @@ if (!flag("--skip-build")) {
   });
 }
 
-// NSIS 설치 파일 + 서명(.sig). 이름에 한글·공백이 있어 업로드 시 영문 이름으로 바꿈.
+// NSIS 설치 파일 + 서명(.sig). 서버에는 예전부터 쓰던 이름(muneo-claude-usage-tray_*)으로 올린다.
 const nsisDir = path.join(root, "src-tauri/target/release/bundle/nsis");
 const setup = fs.readdirSync(nsisDir).find((f) => f.endsWith(`_${version}_x64-setup.exe`));
 if (!setup || !fs.existsSync(path.join(nsisDir, setup + ".sig"))) {
   throw new Error(`${version} 설치 파일/서명이 없습니다 (${nsisDir}) — 서명 키로 빌드했는지 확인`);
 }
-
-// 여러 줄 노트는 --notes-file 로(셸·npm 을 거치면 --notes 의 줄바꿈이 잘린다). --notes 안의 \\n 글자도 줄바꿈으로 바꾼다.
-const notes = opt("--notes-file") ? fs.readFileSync(path.resolve(opt("--notes-file")), "utf8").trim() : (opt("--notes") || "").replace(/\\n/g, "\n");
 
 if (bump) {
   git("add", ...COMMIT_FILES);
