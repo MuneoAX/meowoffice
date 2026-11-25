@@ -441,9 +441,13 @@ fn strip_agy(root: &mut Value) {
 ///
 /// # 참조
 /// `command_line` 호출. `apply` 가 호출.
+/// Codex 훅 상태 문구. 번역하지 않는다 — Codex 는 statusMessage 까지 훅 신뢰 해시에 넣어서,
+/// 문구가 바뀌면(언어 변경 포함) 훅이 "수정됨"으로 신뢰가 풀려 권한 카드가 조용히 멈춘다. 0.6.7 까지와 같은 문자열.
+const HOOK_STATUS_MESSAGE: &str = "Meowffice 권한 카드 확인 중";
+
 fn codex_entry(exe: &str, event: &str) -> Value {
     let c = command_line(exe, Provider::Codex, event);
-    json!({ "hooks": [{ "type": "command", "command": c, "commandWindows": c, "timeout": HOOK_TIMEOUT, "statusMessage": i18n::t("hook.status_message") }] })
+    json!({ "hooks": [{ "type": "command", "command": c, "commandWindows": c, "timeout": HOOK_TIMEOUT, "statusMessage": HOOK_STATUS_MESSAGE }] })
 }
 
 /// Antigravity 훅 객체(최상위 `AGY_NAME` 키의 값)를 만든다.

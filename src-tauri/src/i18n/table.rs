@@ -120,7 +120,6 @@ pub const TABLE: &[(&str, &str, &str, &str)] = &[
     ("hookfile.event_not_array", "{file} 의 {path} 가 배열이 아님", "\"{path}\" in {file} is not an array", "{file} の「{path}」が配列ではありません"),
     ("hookfile.agy_exists", "hooks.json 에 이미 '{name}' 이름의 다른 훅이 있어 건드리지 않았습니다", "hooks.json already has another hook named '{name}', so it was left untouched", "hooks.json にすでに「{name}」という名前の別のフックがあるため、変更しませんでした"),
     ("hookfile.unsafe_path", "앱 설치 경로({path})에 공백이나 특수문자(& ^ % ( ) ! ; ,)가 있고 짧은 경로(8.3)로도 바꿀 수 없어 훅을 등록할 수 없습니다. 공백·특수문자가 없는 폴더(예: C:\\Meowffice)에 설치한 뒤 다시 켜 주세요.", "The app install path ({path}) contains spaces or special characters (& ^ % ( ) ! ; ,) and cannot be converted to a short (8.3) path, so the hook cannot be registered. Install the app in a folder without spaces or special characters (e.g. C:\\Meowffice) and turn this on again.", "アプリのインストール先（{path}）に空白や特殊文字（& ^ % ( ) ! ; ,）が含まれており、短いパス（8.3）にも変換できないため、フックを登録できません。空白や特殊文字を含まないフォルダー（例: C:\\Meowffice）にインストールしてから、もう一度オンにしてください。"),
-    ("hook.status_message", "Meowffice 권한 카드 확인 중", "Checking the Meowffice permission card", "Meowffice の権限カードを確認中"),
     ("permit.deny.tray", "사용자가 트레이 알림에서 거절했습니다.", "The user denied this from the tray notification.", "ユーザーがトレイ通知から拒否しました。"),
     ("permit.deny.card", "사용자가 Meowffice 알림 카드에서 거절했습니다.", "The user denied this from the Meowffice notification card.", "ユーザーが Meowffice の通知カードから拒否しました。"),
     ("permit.deny.app", "사용자가 Meowffice 에서 거절했습니다.", "The user denied this in Meowffice.", "ユーザーが Meowffice で拒否しました。"),

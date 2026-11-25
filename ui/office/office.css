@@ -1,3 +1,11 @@
+/* Pretendard 선언 — ui/styles.css 의 선언은 설정 창 shadow DOM 안에만 들어가 문서에는 등록되지 않는다(Chromium) */
+@font-face {
+  font-family: "Pretendard";
+  src: url("../Pretendard-Regular.otf") format("opentype");
+  font-weight: 400 700;
+  font-display: swap;
+}
+
 :root {
   /* 글꼴: 한글·라틴 Pretendard, 일본어 Noto Sans JP(ui/vendor/noto-sans-jp, index.html 에서 선언). 일본어 화면은 Noto Sans JP 먼저 */
   --font: "Pretendard", "Noto Sans JP", system-ui, sans-serif;

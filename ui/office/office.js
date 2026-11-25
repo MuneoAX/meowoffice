@@ -2104,7 +2104,7 @@
     document.getElementById('stage').appendChild(host);
     const shadow = host.attachShadow({ mode: 'open' });
     let css = await fetch('../styles.css').then((r) => r.text());
-    css = css.replace(/:root/g, ':host')
+    css = css.replace(/:root:lang\((\w+)\)/g, ':host(:lang($1))').replace(/:root/g, ':host') // :host:lang() 은 매칭되지 않아 :host(:lang())
       .replace(/html,\s*body\s*\{/g, ':host(.never) {').replace(/(^|\n)body\s*\{/g, '$1:host(.never) {')
       .replace(/url\("(?!data:|https?:|\/)([^"]+)"\)/g, 'url("../$1")'); // 상대 경로는 ui/ 기준
     shadow.innerHTML = `<style>${css}
