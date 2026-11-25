@@ -14,7 +14,7 @@ const MeowMd = (() => {
    * @param {string} dflt 기본 문구
    * @returns {string}
    */
-  const tr = (key, dflt) => { try { return typeof t === 'function' ? t(key) : dflt; } catch (e) { return dflt; } };
+  const tr = (key, params) => { try { return typeof t === 'function' ? t(key, params) : key; } catch (e) { return key; } };
 
   /**
    * 링크 주소가 열어도 되는 http/https 인지.
@@ -51,7 +51,7 @@ const MeowMd = (() => {
       if (!m) { parent.appendChild(document.createTextNode(rest)); return; }
       if (m.index > 0) parent.appendChild(document.createTextNode(rest.slice(0, m.index)));
       if (m[2] !== undefined) {
-        parent.appendChild(document.createTextNode(`그림: ${m[2]}`));
+        parent.appendChild(document.createTextNode(tr('office.md.image', { alt: m[2] })));
       } else if (m[3] !== undefined) {
         const c = document.createElement('code'); c.textContent = m[3]; parent.appendChild(c);
       } else if (m[4] !== undefined) {
@@ -92,10 +92,10 @@ const MeowMd = (() => {
     const wrap = document.createElement('div');
     wrap.className = 'md-code';
     const btn = document.createElement('button');
-    btn.type = 'button'; btn.className = 'md-copy'; btn.textContent = tr('chat.copy', '복사');
+    btn.type = 'button'; btn.className = 'md-copy'; btn.textContent = tr('chat.copy');
     btn.addEventListener('click', () => {
       try {
-        navigator.clipboard.writeText(code).then(() => { btn.textContent = tr('chat.copied', '복사됨'); setTimeout(() => { btn.textContent = tr('chat.copy', '복사'); }, 1200); }, () => {});
+        navigator.clipboard.writeText(code).then(() => { btn.textContent = tr('chat.copied'); setTimeout(() => { btn.textContent = tr('chat.copy'); }, 1200); }, () => {});
       } catch (e) { /* 클립보드 불가 */ }
     });
     const pre = document.createElement('pre');

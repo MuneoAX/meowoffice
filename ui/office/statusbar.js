@@ -14,7 +14,7 @@ const OfficeStatusBar = (() => {
    * @param {string} label 보이는 이름
    * @returns {string} HTML
    */
-  const meter = (key, label) => `<span class="sb-it" data-k="${key}" hidden><em>${label}</em><i class="sb-m"><b></b></i><span class="sb-v"></span></span>`;
+  const meter = (key, label, i18nKey) => `<span class="sb-it" data-k="${key}" hidden><em${i18nKey ? ` data-i18n="${i18nKey}"` : ''}>${label}</em><i class="sb-m"><b></b></i><span class="sb-v"></span></span>`;
 
   /**
    * 칸 값 쓰기. 값이 없으면 칸을 숨긴다.
@@ -50,7 +50,7 @@ const OfficeStatusBar = (() => {
   function init(o) {
     const bar = document.createElement('footer');
     bar.id = 'statusbar';
-    bar.innerHTML = `<div class="sb-sys">${meter('cpu', 'CPU')}${meter('mem', '메모리')}${meter('bat', '배터리')}<span class="sb-it" data-k="fps" title="사무실 화면을 1초에 그린 횟수 (움직임이 없으면 일부러 줄인다)"><em>화면</em><span class="sb-v">–</span></span></div><div class="sb-zoom"></div>`;
+    bar.innerHTML = `<div class="sb-sys">${meter('cpu', 'CPU')}${meter('mem', t('status.bar.mem'), 'status.bar.mem')}${meter('bat', t('status.bar.bat'), 'status.bar.bat')}<span class="sb-it" data-k="fps" data-i18n-title="status.bar.fpsTip" title="${t('status.bar.fpsTip')}"><em data-i18n="status.bar.screen">${t('status.bar.screen')}</em><span class="sb-v">–</span></span></div><div class="sb-zoom"></div>`;
     document.body.appendChild(bar);
     document.body.classList.add('has-sb');
     if (o.onResize) o.onResize();
@@ -66,7 +66,7 @@ const OfficeStatusBar = (() => {
       const now = performance.now();
       const fps = Math.round((frames * 1000) / Math.max(1, now - since));
       frames = 0; since = now;
-      put(bar, 'fps', null, `${fps} fps`, '사무실 화면을 1초에 그린 횟수 (움직임이 없으면 일부러 줄인다)');
+      put(bar, 'fps', null, `${fps} fps`, t('status.bar.fpsTip'));
     };
     setInterval(() => { if (!document.hidden) fpsTick(); }, 1000);
 
@@ -82,13 +82,13 @@ const OfficeStatusBar = (() => {
       busy = true;
       try {
         const s = await inv('sys_stats');
-        put(bar, 'cpu', s.cpu, s.cpu == null ? null : `${Math.round(s.cpu)}%`, '전체 CPU 사용률');
+        put(bar, 'cpu', s.cpu, s.cpu == null ? null : `${Math.round(s.cpu)}%`, t('status.bar.cpuTip'));
         if (s.memTotal) {
           const p = (100 * s.memUsed) / s.memTotal;
-          put(bar, 'mem', p, `${Math.round(p)}%`, `메모리 ${(s.memUsed / GB).toFixed(1)} GB / ${(s.memTotal / GB).toFixed(1)} GB 사용`);
+          put(bar, 'mem', p, `${Math.round(p)}%`, t('status.bar.memTip', { used: (s.memUsed / GB).toFixed(1), total: (s.memTotal / GB).toFixed(1) }));
         } else put(bar, 'mem', null, null);
         if (s.battery != null) {
-          put(bar, 'bat', s.battery, `${s.battery}%${s.charging ? ' ⚡' : ''}`, s.charging ? '배터리 (충전 중)' : '배터리');
+          put(bar, 'bat', s.battery, `${s.battery}%${s.charging ? ' ⚡' : ''}`, s.charging ? t('status.bar.batCharging') : t('status.bar.batTip'));
           const m = bar.querySelector('.sb-it[data-k="bat"] .sb-m');
           m.dataset.lv = s.battery <= 10 ? 'hi' : s.battery <= 20 ? 'mid' : ''; // 배터리는 낮을수록 경고
         } else put(bar, 'bat', null, null);

@@ -21,7 +21,6 @@
  * @property {GaitCfg} gait 걷는 동작 한 주기(초)와 그동안 나아가는 거리(m)
  *
  * @typedef {Object} BreedInfo 품종 도감 한 칸 (BREEDS 의 값)
- * @property {string} name 화면에 보이는 한글 이름
  * @property {string} body 체형 키 (BODIES 의 키)
  * @property {number} [ears] 귀 크기 배율 (없으면 1)
  *
@@ -110,27 +109,27 @@ const CatModel = (() => {
   };
   /**
    * 품종 도감 16종 (+ 대표). body: 체형, ears: 귀 크기 배율
-   * 키 → { name 한글 이름, body 체형 키, ears(선택) }. 털 무늬 PNG 이름이 키와 같다.
+   * 키 → { body 체형 키, ears(선택) }. 보이는 이름은 사전 cat.breed.<키> (breedName). 털 무늬 PNG 이름이 키와 같다.
    * @type {Object<string, BreedInfo>}
    */
   const BREEDS = {
-    siamese: { name: '샴', body: 'standard' },
-    russian_blue: { name: '러시안 블루', body: 'standard' },
-    persian: { name: '페르시안', body: 'longhair' },
-    scottish_fold: { name: '스코티시 폴드', body: 'foldear' },
-    munchkin: { name: '먼치킨', body: 'shortleg' },
-    maine_coon: { name: '메인쿤', body: 'longhair' },
-    bengal: { name: '뱅갈', body: 'standard' },
-    sphynx: { name: '스핑크스', body: 'standard', ears: 1.35 },
-    ragdoll: { name: '랙돌', body: 'longhair' },
-    norwegian_forest: { name: '노르웨이 숲', body: 'longhair' },
-    turkish_angora: { name: '터키시 앙고라', body: 'longhair' },
-    korean_cheese: { name: '코리안 치즈', body: 'standard' },
-    korean_tabby: { name: '코리안 고등어', body: 'standard' },
-    korean_calico: { name: '코리안 삼색', body: 'standard' },
-    korean_tuxedo: { name: '코리안 턱시도', body: 'standard' },
-    american_shorthair: { name: '아메리칸 숏헤어', body: 'standard' },
-    boss: { name: '대표', body: 'standard' },
+    siamese: { body: 'standard' },
+    russian_blue: { body: 'standard' },
+    persian: { body: 'longhair' },
+    scottish_fold: { body: 'foldear' },
+    munchkin: { body: 'shortleg' },
+    maine_coon: { body: 'longhair' },
+    bengal: { body: 'standard' },
+    sphynx: { body: 'standard', ears: 1.35 },
+    ragdoll: { body: 'longhair' },
+    norwegian_forest: { body: 'longhair' },
+    turkish_angora: { body: 'longhair' },
+    korean_cheese: { body: 'standard' },
+    korean_tabby: { body: 'standard' },
+    korean_calico: { body: 'standard' },
+    korean_tuxedo: { body: 'standard' },
+    american_shorthair: { body: 'standard' },
+    boss: { body: 'standard' },
   };
   /**
    * 체형 키 → 불러온 glb 컨테이너 (불러오기에 실패한 체형은 없음).
@@ -300,7 +299,7 @@ const CatModel = (() => {
    * @param {string} k 품종 키
    * @returns {string}
    */
-  const breedName = (k) => (BREEDS[k] || {}).name || k;
+  const breedName = (k) => (BREEDS[k] ? t('cat.breed.' + k) : k);
 
   /**
    * 품종 털 재질을 얻는다 (체형·품종 쌍마다 하나, 캐시됨).

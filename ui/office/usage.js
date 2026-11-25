@@ -99,9 +99,9 @@ const OfficeUsage = (() => {
     const ms = Date.parse(iso) - Date.now();
     if (!(ms > 0)) return '';
     const h = Math.floor(ms / 3600e3), m = Math.floor((ms % 3600e3) / 60e3);
-    const left = h >= 24 ? `${Math.floor(h / 24)}일 ${h % 24}시간` : h ? `${h}시간 ${m}분` : `${m}분`;
-    const at = new Date(iso).toLocaleString('ko-KR', { month: 'numeric', day: 'numeric', weekday: 'short', hour: '2-digit', minute: '2-digit', hour12: false });
-    return `${left} 뒤 초기화 · ${at}`;
+    const left = h >= 24 ? tr('usage.left.dh', { d: Math.floor(h / 24), h: h % 24 }) : h ? tr('usage.left.hm', { h, m }) : tr('usage.left.m', { m });
+    const at = new Date(iso).toLocaleString(lc(), { month: 'numeric', day: 'numeric', weekday: 'short', hour: '2-digit', minute: '2-digit', hour12: false });
+    return tr('usage.until', { left, at });
   };
   /**
    * 추이 막대 그래프(SVG + 축 라벨) HTML.
@@ -113,7 +113,7 @@ const OfficeUsage = (() => {
    * @see mousemove 툴팁(init)
    */
   function trendHtml(items, fmt, unit) {
-    if (!items.length) return '<div class="us-empty">기록이 없습니다</div>';
+    if (!items.length) return `<div class="us-empty">${tr('usage.empty.none')}</div>`;
     const W = 100, H = 40, pad = 2, n = items.length;
     const max = items.reduce((m, x) => Math.max(m, x.total), 0) || 1;
     const colW = W / n, bw = colW * 0.9;
@@ -127,7 +127,7 @@ const OfficeUsage = (() => {
       const top = it.total > 0 ? Math.min(y, H - pad - 1) : H - pad - 0.6;
       bars += `<rect class="tbar ${cls}" x="${(cx - bw / 2).toFixed(2)}" y="${top.toFixed(2)}" width="${bw.toFixed(2)}" height="${(H - pad - top).toFixed(2)}"/>`;
       const prev = i > 0 ? items[i - 1].total : null;
-      const tip = esc(JSON.stringify({ d: it.key || it.label, a: fmt(it.total), p: prev == null ? null : (it.total >= prev ? '▲ ' : '▼ ') + fmt(Math.abs(it.total - prev)) + (unit === 'hour' ? ' (이전 시간 대비)' : ' (전일 대비)'), u: prev == null || it.total >= prev }));
+      const tip = esc(JSON.stringify({ d: it.key || it.label, a: fmt(it.total), p: prev == null ? null : (it.total >= prev ? '▲ ' : '▼ ') + fmt(Math.abs(it.total - prev)) + (unit === 'hour' ? tr('usage.tip.prevH') : tr('usage.tip.prevD')), u: prev == null || it.total >= prev }));
       hits += `<rect class="d-hit" x="${(i * colW).toFixed(2)}" y="0" width="${colW.toFixed(2)}" height="${H}" data-tip="${tip}"/>`;
       pts.push(`${cx.toFixed(2)},${y.toFixed(2)}`);
     });
@@ -145,6 +145,8 @@ const OfficeUsage = (() => {
    * @returns {string} 번역 문구
    */
   const tr = (k, p) => (typeof I18N !== 'undefined' ? I18N.t(k, p) : k);
+  /** 날짜·시간 표기 언어(I18N.lang). */
+  const lc = () => (typeof I18N !== 'undefined' ? I18N.lang() : 'ko');
 
   const COLORS = ['#8b6dff', '#29b7c0', '#e8915a', '#7a6ff0', '#4fb08a', '#e0708f', '#d9b44a'];
 
@@ -174,8 +176,8 @@ const OfficeUsage = (() => {
   const SVC_NAME = { claude: 'Claude Code', chatgpt: 'ChatGPT(Codex)', antigravity: 'Antigravity' };
   /** 로그인 안내 문구와 버튼 이름 (버튼을 눌러야만 실행한다) */
   const LOGIN = {
-    chatgpt: { btn: 'Codex 로그인', how: '버튼을 누르면 터미널에서 <code>codex login</code> 을 실행합니다. Codex CLI 를 못 찾으면 Codex 앱을 엽니다.' },
-    antigravity: { btn: 'Antigravity 앱 열기', how: '버튼을 누르면 Antigravity 앱을 엽니다. 앱에서 Google 계정으로 로그인하세요.' },
+    chatgpt: { btn: 'usage.login.cliBtn', how: 'usage.login.cliHow' },
+    antigravity: { btn: 'usage.login.agyBtn', how: 'usage.login.agyHow' },
   };
 
   let root, opts, tab = 'plan', days = 7, svc = 'claude', web = null;
@@ -193,11 +195,11 @@ const OfficeUsage = (() => {
     root = document.createElement('div');
     root.className = 'us-overlay';
     root.hidden = true;
-    root.innerHTML = `<div class="us-card" role="dialog" aria-label="사용량 상세">
+    root.innerHTML = `<div class="us-card" role="dialog" data-i18n-aria-label="usage.title">
       <header class="us-head3">
-        <div class="us-r1"><b>사용량 상세</b><button class="us-x" title="닫기 (Esc)">×</button></div>
-        <nav class="us-svc">${SVC.map(([k, t]) => `<button data-svc="${k}"><i class="pv-logo pv-${k}" aria-hidden="true"></i>${t}</button>`).join('')}</nav>
-        <nav class="us-tabs"><button data-t="plan">플랜 한도</button><button data-t="tokens">토큰 사용량</button><button data-t="api" data-claude-only>API 크레딧</button><button data-t="export" data-i18n="exp.tab"></button></nav>
+        <div class="us-r1"><b data-i18n="usage.title"></b><button class="us-x" data-i18n-title="usage.close">×</button></div>
+        <nav class="us-svc">${SVC.map(([k, nm]) => `<button data-svc="${k}"><i class="pv-logo pv-${k}" aria-hidden="true"></i>${nm}</button>`).join('')}</nav>
+        <nav class="us-tabs"><button data-t="plan" data-i18n="usage.tab.plan"></button><button data-t="tokens" data-i18n="usage.tab.tokens"></button><button data-t="api" data-claude-only data-i18n="usage.tab.api"></button><button data-t="export" data-i18n="exp.tab"></button></nav>
       </header>
       <div class="us-acct"></div><div class="us-b"></div></div>`;
     stage.appendChild(root);
@@ -249,6 +251,8 @@ const OfficeUsage = (() => {
       tip.style.top = e.clientY - 12 + 'px';
     });
     root.addEventListener('mouseleave', () => { tip.hidden = true; });
+    // 언어가 바뀌면 정적 문구를 채우고, 열려 있으면 본문을 다시 그린다
+    window.addEventListener('meow-lang', () => { I18N.apply(root); if (!root.hidden) render(); });
   }
   /**
    * 사용량 상세를 연다.
@@ -286,7 +290,7 @@ const OfficeUsage = (() => {
   const loadingEl = () => {
     const w = document.createElement('div');
     w.className = 'us-load';
-    w.appendChild(typeof OfficeLoading !== 'undefined' ? OfficeLoading.el('불러오는 중…') : document.createTextNode('불러오는 중…'));
+    w.appendChild(typeof OfficeLoading !== 'undefined' ? OfficeLoading.el(tr('usage.loading')) : document.createTextNode(tr('usage.loading')));
     return w;
   };
   /**
@@ -371,23 +375,25 @@ const OfficeUsage = (() => {
    * @see sev, until, usd
    */
   function planHtml(p) {
-    if (!p) return '<div class="us-empty">플랜 정보를 아직 불러오지 못했어요. 잠시 뒤 다시 열어 보세요.</div>';
+    /** 한도 이름: 알려진 종류는 번역 문구, 그 밖(모델별 한도 등)은 서버가 준 이름. */
+    const limLabel = (l) => (l.kind === 'session' || l.kind === 'weekly_all' ? tr('usage.lim.' + l.kind) : l.label || l.kind);
+    if (!p) return `<div class="us-empty">${tr('usage.plan.none')}</div>`;
     const lim = p.limits || [];
     const rows = lim.map((l) => {
       const pct = Math.max(0, Math.min(100, l.percent || 0));
-      const share = l.share_of_weekly != null ? `<div class="us-sub">주간 전체의 ${Math.round(l.share_of_weekly)}% 사용${l.allowance_of_weekly != null ? ` · 허용 ${Math.round(l.allowance_of_weekly)}%` : ''}</div>` : '';
-      return `<div class="us-lim"><div class="us-lh"><span>${esc(l.label || l.kind)}</span><b style="color:${sev(pct)}">${Math.round(pct)}%</b></div>
+      const share = l.share_of_weekly != null ? `<div class="us-sub">${tr('usage.plan.share', { pct: Math.round(l.share_of_weekly) })}${l.allowance_of_weekly != null ? tr('usage.plan.allow', { pct: Math.round(l.allowance_of_weekly) }) : ''}</div>` : '';
+      return `<div class="us-lim"><div class="us-lh"><span>${esc(limLabel(l))}</span><b style="color:${sev(pct)}">${Math.round(pct)}%</b></div>
         <div class="us-bar"><i style="width:${pct}%;background:${sev(pct)}"></i></div>
         <div class="us-sub">${esc(l.resets_at ? until(l.resets_at) : '')}</div>${share}</div>`;
     }).join('');
     const br = (p.breakdown || []).filter((b) => b.percent > 0);
-    const brHtml = br.length ? `<div class="us-h">주간 사용 비중</div><div class="us-stack">${br.map((b, i) => `<i style="width:${b.percent}%;background:${COLORS[i % COLORS.length]}" title="${esc(b.name)} ${Math.round(b.percent)}%"></i>`).join('')}</div>
+    const brHtml = br.length ? `<div class="us-h">${tr('usage.plan.breakdown')}</div><div class="us-stack">${br.map((b, i) => `<i style="width:${b.percent}%;background:${COLORS[i % COLORS.length]}" title="${esc(b.name)} ${Math.round(b.percent)}%"></i>`).join('')}</div>
       <div class="us-legend">${br.map((b, i) => `<span><i style="background:${COLORS[i % COLORS.length]}"></i>${esc(b.name)} ${Math.round(b.percent)}%</span>`).join('')}</div>` : '';
-    const ex = p.extra ? `<div class="us-h">추가 사용량</div><div class="us-kv"><span>이번 달 사용</span><b>${usd(p.extra.used, p.extra.currency)}${p.extra.limit != null ? ` / ${usd(p.extra.limit, p.extra.currency)}` : ''}</b></div>` : '';
-    const cr = p.credits ? `<div class="us-h">사용 크레딧</div><div class="us-kv"><span>잔액</span><b>${usd(p.credits.balance, p.credits.currency)}</b></div>${(p.credits.promos || []).map((t) => `<div class="us-kv"><span>${esc(t.name)}</span><b>${usd(t.remaining, p.credits.currency)}${t.expires_at ? ` · ${new Date(t.expires_at).toLocaleDateString('ko-KR')} 만료` : ''}</b></div>`).join('')}` : '';
-    const pr = (p.promos || []).length ? `<div class="us-h">프로모션</div>${p.promos.map((x) => `<div class="us-lim"><div class="us-lh"><span>${esc(x.label)}</span><b>${Math.round(x.percent)}%</b></div><div class="us-bar"><i style="width:${Math.min(100, x.percent)}%;background:${sev(x.percent)}"></i></div><div class="us-sub">${esc(x.resets_at ? until(x.resets_at) : x.terms || '')}</div></div>`).join('')}` : '';
-    return `<div class="us-acc"><b>${esc((p.account && p.account.name) || '계정')}</b>${p.plan ? `<span>${esc(p.plan)}</span>` : ''}</div>
-      <div class="us-grid">${rows || '<div class="us-empty">한도 정보가 없습니다</div>'}</div>${brHtml}${ex}${cr}${pr}`;
+    const ex = p.extra ? `<div class="us-h">${tr('usage.plan.extra')}</div><div class="us-kv"><span>${tr('usage.plan.extraMonth')}</span><b>${usd(p.extra.used, p.extra.currency)}${p.extra.limit != null ? ` / ${usd(p.extra.limit, p.extra.currency)}` : ''}</b></div>` : '';
+    const cr = p.credits ? `<div class="us-h">${tr('usage.plan.credits')}</div><div class="us-kv"><span>${tr('usage.plan.balance')}</span><b>${usd(p.credits.balance, p.credits.currency)}</b></div>${(p.credits.promos || []).map((pc) => `<div class="us-kv"><span>${esc(pc.name)}</span><b>${usd(pc.remaining, p.credits.currency)}${pc.expires_at ? ` · ${tr('usage.plan.expires', { date: new Date(pc.expires_at).toLocaleDateString(lc()) })}` : ''}</b></div>`).join('')}` : '';
+    const pr = (p.promos || []).length ? `<div class="us-h">${tr('usage.plan.promos')}</div>${p.promos.map((x) => `<div class="us-lim"><div class="us-lh"><span>${esc(x.label)}</span><b>${Math.round(x.percent)}%</b></div><div class="us-bar"><i style="width:${Math.min(100, x.percent)}%;background:${sev(x.percent)}"></i></div><div class="us-sub">${esc(x.resets_at ? until(x.resets_at) : x.terms || '')}</div></div>`).join('')}` : '';
+    return `<div class="us-acc"><b>${esc((p.account && p.account.name) || tr('usage.plan.account'))}</b>${p.plan ? `<span>${esc(p.plan)}</span>` : ''}</div>
+      <div class="us-grid">${rows || `<div class="us-empty">${tr('usage.plan.nolimits')}</div>`}</div>${brHtml}${ex}${cr}${pr}`;
   }
 
   /**
@@ -402,8 +408,8 @@ const OfficeUsage = (() => {
   function loginGuide(name, title, expired) {
     const g = LOGIN[name];
     if (!g) return '';
-    return `<div class="us-login"><b>${esc(title)} ${expired ? '로그인이 만료되었어요' : '에 로그인되어 있지 않아요'}</b>
-      <p>${g.how}</p><button class="us-btn" data-login="${esc(name)}">${esc(g.btn)}</button><small class="us-login-msg"></small></div>`;
+    return `<div class="us-login"><b>${esc(tr(expired ? 'usage.login.expired' : 'usage.login.out', { title }))}</b>
+      <p>${tr(g.how)}</p><button class="us-btn" data-login="${esc(name)}">${esc(tr(g.btn))}</button><small class="us-login-msg"></small></div>`;
   }
   /**
    * 로그인 안내의 [로그인] 단추 처리.
@@ -417,8 +423,8 @@ const OfficeUsage = (() => {
     btn.disabled = true;
     try {
       const how = opts.invoke ? await opts.invoke('provider_login', { name: btn.dataset.login }) : 'app';
-      if (msg) msg.textContent = how === 'cli' ? '터미널 창에서 로그인을 진행하세요. 끝나면 이 화면을 다시 열어 주세요.' : '앱을 열었어요. 앱에서 로그인한 뒤 이 화면을 다시 열어 주세요.';
-    } catch (e) { if (msg) msg.textContent = '실행하지 못했어요: ' + e; }
+      if (msg) msg.textContent = how === 'cli' ? tr('usage.login.cliMsg') : tr('usage.login.appMsg');
+    } catch (e) { if (msg) msg.textContent = tr('usage.login.fail', { err: e }); }
     setTimeout(() => { btn.disabled = false; }, 4000);
   }
 
@@ -432,30 +438,30 @@ const OfficeUsage = (() => {
   function providerHtml(name) {
     const title = (SVC.find(([k]) => k === name) || [])[1] || name;
     if (opts.providerOn && !opts.providerOn(name)) {
-      return `<div class="us-empty">${esc(title)} 연동이 꺼져 있어요.<br><button class="us-btn" data-settings="${esc(name)}">설정 › ${esc(title)} 에서 켜기</button></div>`;
+      return `<div class="us-empty">${esc(tr('usage.prov.off', { title }))}<br><button class="us-btn" data-settings="${esc(name)}">${esc(tr('usage.prov.enable', { title }))}</button></div>`;
     }
     const p = opts.getProvider ? opts.getProvider(name) : null;
-    if (!p) return '<div class="us-empty">불러오는 중이에요. 잠시 뒤 다시 열어 보세요.</div>';
+    if (!p) return `<div class="us-empty">${tr('usage.prov.loading')}</div>`;
     if (p.state === 'not_installed') return `<div class="us-empty">${esc(tr('usage.tool.missing', { tool: SVC_NAME[name] || title }))}</div>`;
-    if (p.state === 'logged_out') return loginGuide(name, title, false) || `<div class="us-empty">${esc(title)} 에 로그인되어 있지 않아요.${p.error ? `<br><small>${esc(p.error)}</small>` : ''}</div>`;
+    if (p.state === 'logged_out') return loginGuide(name, title, false) || `<div class="us-empty">${esc(tr('usage.prov.loggedOut', { title }))}${p.error ? `<br><small>${esc(p.error)}</small>` : ''}</div>`;
     const rows = (p.limits || []).filter((l) => l.percent != null).map((l) => {
       const pct = Math.max(0, Math.min(100, l.percent));
       return `<div class="us-lim"><div class="us-lh"><span>${esc(l.label || l.kind)}</span><b style="color:${sev(pct)}">${Math.round(pct)}%</b></div>
         <div class="us-bar"><i style="width:${pct}%;background:${sev(pct)}"></i></div>
         <div class="us-sub">${esc(l.resets_at ? until(l.resets_at) : '')}</div></div>`;
     }).join('');
-    const ST = { busy: ['일하는 중', 'busy'], idle: ['쉬는 중', 'idle'], '': ['끝남', 'off'] };
+    const ST = { busy: [tr('usage.st.busy'), 'busy'], idle: [tr('usage.st.idle'), 'idle'], '': [tr('usage.st.off'), 'off'] };
     const ses = (p.sessions || []).slice(0, 12).map((x) => {
       const [st, cls] = ST[x.status] || ST[''];
-      const when = x.last_at ? new Date(x.last_at).toLocaleString('ko-KR', { month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit', hour12: false }) : '';
-      return `<div class="us-ses"><span class="chip ${cls}">${st}</span><div><b>${esc(x.title || '(제목 없음)')}</b><small>${esc([x.project, when].filter(Boolean).join(' · '))}</small></div></div>`;
+      const when = x.last_at ? new Date(x.last_at).toLocaleString(lc(), { month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit', hour12: false }) : '';
+      return `<div class="us-ses"><span class="chip ${cls}">${st}</span><div><b>${esc(x.title || tr('panel.row.untitled'))}</b><small>${esc([x.project, when].filter(Boolean).join(' · '))}</small></div></div>`;
     }).join('');
-    const at = p.fetched_at ? new Date(p.fetched_at).toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit', hour12: false }) : '';
-    return `${p.state === 'expired' ? loginGuide(name, title, true) : ''}<div class="us-acc"><b>${esc(p.account || '계정')}</b>${p.plan ? `<span>${esc(p.plan)}</span>` : ''}</div>
-      <div class="us-grid">${rows || `<div class="us-empty">한도 정보가 없습니다${p.error ? `<br><small>${esc(p.error)}</small>` : ''}</div>`}</div>
+    const at = p.fetched_at ? new Date(p.fetched_at).toLocaleTimeString(lc(), { hour: '2-digit', minute: '2-digit', hour12: false }) : '';
+    return `${p.state === 'expired' ? loginGuide(name, title, true) : ''}<div class="us-acc"><b>${esc(p.account || tr('usage.plan.account'))}</b>${p.plan ? `<span>${esc(p.plan)}</span>` : ''}</div>
+      <div class="us-grid">${rows || `<div class="us-empty">${tr('usage.plan.nolimits')}${p.error ? `<br><small>${esc(p.error)}</small>` : ''}</div>`}</div>
       ${rows && p.error ? `<div class="us-note">※ ${esc(p.error)}</div>` : ''}
-      <div class="us-h">최근 세션</div>${ses || '<div class="us-empty">최근 24시간 세션이 없습니다</div>'}
-      <div class="us-note">※ ${esc(at)} 기준 · 이 PC 의 ${esc(title)} 기록</div>`;
+      <div class="us-h">${tr('usage.prov.recent')}</div>${ses || `<div class="us-empty">${tr('usage.prov.noRecent')}</div>`}
+      <div class="us-note">${esc(tr('usage.prov.asOf', { at, title }))}</div>`;
   }
 
   /**
@@ -468,15 +474,15 @@ const OfficeUsage = (() => {
    */
   function tokensHtml(r, name) {
     const what = SVC_NAME[name] || SVC_NAME.claude;
-    const sel = `<div class="us-days">${[[1, '오늘'], [7, '7일'], [30, '30일']].map(([d, t]) => `<button data-days="${d}" class="${d === days ? 'on' : ''}">${t}</button>`).join('')}</div>`;
-    if (!r) return sel + `<div class="us-empty">이 PC 의 ${esc(what)} 사용 기록을 읽지 못했어요.</div>`;
+    const sel = `<div class="us-days">${[[1, tr('usage.tok.today')], [7, tr('usage.tok.d7')], [30, tr('usage.tok.d30')]].map(([d, nm]) => `<button data-days="${d}" class="${d === days ? 'on' : ''}">${nm}</button>`).join('')}</div>`;
+    if (!r) return sel + `<div class="us-empty">${esc(tr('usage.tok.unread', { what }))}</div>`;
     const models = (r.by_model || []).slice().sort((a, b) => b.total - a.total);
     const max = Math.max(1, ...models.map((m) => m.total));
     const trend = r.trend || [];
-    return sel + `<div class="us-big"><div><small>토큰</small><b>${tok(r.total)}</b></div><div><small>응답 수</small><b>${(r.turns || 0).toLocaleString()}</b></div><div><small>실행 중 세션</small><b>${r.running ?? '-'}</b></div></div>
-      <div class="us-h">${r.trend_unit === 'hour' ? '시간대별 추이 (오늘)' : `일별 추이 (최근 ${r.days || days}일)`}</div>${trendHtml(trend, (v) => tok(v) + ' 토큰', r.trend_unit)}
-      <div class="us-note">※ 이 PC 의 ${esc(what)} 기록 기준 (캐시 토큰 포함${name === 'chatgpt' ? ' · 다른 에이전트에서 가져온 세션은 제외' : ''})</div>
-      <div class="us-h">모델별</div>${models.length ? models.map((m, i) => `<div class="us-model"><span>${esc(m.model)}</span><div class="us-bar"><i style="width:${(m.total / max) * 100}%;background:${COLORS[i % COLORS.length]}"></i></div><b>${tok(m.total)}</b></div>`).join('') : '<div class="us-empty">사용 기록이 없습니다</div>'}`;
+    return sel + `<div class="us-big"><div><small>${tr('usage.tok.tokens')}</small><b>${tok(r.total)}</b></div><div><small>${tr('usage.tok.turns')}</small><b>${(r.turns || 0).toLocaleString(lc())}</b></div><div><small>${tr('usage.tok.running')}</small><b>${r.running ?? '-'}</b></div></div>
+      <div class="us-h">${r.trend_unit === 'hour' ? tr('usage.tok.byHour') : tr('usage.tok.byDay', { n: r.days || days })}</div>${trendHtml(trend, (v) => tr('usage.tok.unit', { v: tok(v) }), r.trend_unit)}
+      <div class="us-note">${esc(tr('usage.tok.note', { what, extra: name === 'chatgpt' ? tr('usage.tok.noteImported') : '' }))}</div>
+      <div class="us-h">${tr('usage.tok.byModel')}</div>${models.length ? models.map((m, i) => `<div class="us-model"><span>${esc(m.model)}</span><div class="us-bar"><i style="width:${(m.total / max) * 100}%;background:${COLORS[i % COLORS.length]}"></i></div><b>${tok(m.total)}</b></div>`).join('') : `<div class="us-empty">${tr('usage.tok.nomodel')}</div>`}`;
   }
 
   /**
@@ -488,16 +494,16 @@ const OfficeUsage = (() => {
    */
   function apiHtml(a) {
     if (!a || !a.configured) {
-      return `<div class="us-empty">Claude API(Console) 사용액을 보려면 Admin API 키가 필요해요.<br><button class="us-btn" data-settings="claude">설정 › Claude 에서 키 입력</button></div>`;
+      return `<div class="us-empty">${tr('usage.api.needKey')}<br><button class="us-btn" data-settings="claude">${tr('usage.api.enterKey')}</button></div>`;
     }
-    if (!a.report) return `<div class="us-empty">불러오지 못했어요: ${esc(a.error || '알 수 없는 오류')}</div>`;
+    if (!a.report) return `<div class="us-empty">${esc(tr('usage.api.fail', { err: a.error || tr('usage.api.unknown') }))}</div>`;
     const r = a.report, alloc = a.allocated || 0, pct = alloc > 0 ? Math.min(100, (r.total / alloc) * 100) : 0;
     const daily = (r.daily || []).map((d) => ({ label: `${+d.date.slice(5, 7)}/${+d.date.slice(8, 10)}`, key: d.date, total: d.amount }));
     const models = (r.by_model || []).slice().sort((x, y) => y.amount - x.amount), mmax = Math.max(0.01, ...models.map((m) => m.amount));
-    return `<div class="us-big"><div><small>이번 달 사용액</small><b>${usd(r.total)}</b></div>${alloc > 0 ? `<div><small>할당</small><b>${usd(alloc)}</b></div><div><small>남은 금액</small><b>${usd(Math.max(0, alloc - r.total))}</b></div>` : ''}</div>
+    return `<div class="us-big"><div><small>${tr('usage.api.month')}</small><b>${usd(r.total)}</b></div>${alloc > 0 ? `<div><small>${tr('usage.api.alloc')}</small><b>${usd(alloc)}</b></div><div><small>${tr('usage.api.left')}</small><b>${usd(Math.max(0, alloc - r.total))}</b></div>` : ''}</div>
       ${alloc > 0 ? `<div class="us-bar big"><i style="width:${pct}%;background:${sev(pct)}"></i></div>` : ''}
-      <div class="us-h">일별 사용액</div>${trendHtml(daily, (v) => usd(v), 'day')}
-      <div class="us-h">모델별</div>${models.map((m, i) => `<div class="us-model"><span>${esc(m.model)}</span><div class="us-bar"><i style="width:${(m.amount / mmax) * 100}%;background:${COLORS[i % COLORS.length]}"></i></div><b>${usd(m.amount)}</b></div>`).join('')}`;
+      <div class="us-h">${tr('usage.api.daily')}</div>${trendHtml(daily, (v) => usd(v), 'day')}
+      <div class="us-h">${tr('usage.tok.byModel')}</div>${models.map((m, i) => `<div class="us-model"><span>${esc(m.model)}</span><div class="us-bar"><i style="width:${(m.amount / mmax) * 100}%;background:${COLORS[i % COLORS.length]}"></i></div><b>${usd(m.amount)}</b></div>`).join('')}`;
   }
 
   /**

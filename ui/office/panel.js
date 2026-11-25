@@ -97,7 +97,8 @@ const OfficePanel = (() => {
    */
   const logo = (k) => `<i class="pv-logo pv-${esc(k || 'claude')}" aria-hidden="true"></i>`;
   const OPEN_IC = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 3h6v6"/><path d="M10 14 21 3"/><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/></svg>';
-  const STATE_TXT = { need_input: '입력 대기', review_ready: '검토 대기', done: '완료', error: '오류' };
+  const STATE_KEY = { need_input: 'panel.state.need_input', review_ready: 'panel.state.review_ready', done: 'panel.state.done', error: 'panel.state.error' };
+  const lc = () => (typeof I18N !== 'undefined' ? I18N.lang() : 'ko'); // 날짜·시간 표기 언어
   const PROJ_COLORS = ['#f0a35e', '#5b8def', '#d9b44a', '#7a6ff0', '#4fb08a', '#e0708f'];
 
   let root, onFocus = () => {}, onUnselect = () => {}, onOpen = () => {}, onAlertsShown = () => {}, clockFn = null, onUsage = () => {}, onChat = () => {}, onInfo = () => {}, docked = false;
@@ -122,7 +123,7 @@ const OfficePanel = (() => {
     const el = document.createElement('section');
     el.className = 'wg' + (collapsed[id] ? ' closed' : '');
     el.dataset.id = id;
-    el.innerHTML = `<header><span class="wg-ic">${icon || ''}</span><span class="wg-t">${title}</span><span class="wg-n"></span><span class="wg-x" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="m7 10 5 5 5-5"/></svg></span></header><div class="wg-b"></div>`;
+    el.innerHTML = `<header><span class="wg-ic">${icon || ''}</span><span class="wg-t" data-i18n="${title}">${t(title)}</span><span class="wg-n"></span><span class="wg-x" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="m7 10 5 5 5-5"/></svg></span></header><div class="wg-b"></div>`;
     el.querySelector('header').onclick = () => {
       el.classList.toggle('closed');
       collapsed[id] = el.classList.contains('closed');
@@ -141,7 +142,7 @@ const OfficePanel = (() => {
     const ms = Date.parse(iso) - Date.now();
     if (!(ms > 0)) return '';
     const h = Math.floor(ms / 3600e3), m = Math.floor((ms % 3600e3) / 60e3);
-    return h >= 24 ? `${Math.floor(h / 24)}일 ${h % 24}시간 뒤 초기화` : h ? `${h}시간 ${m}분 뒤 초기화` : `${m}분 뒤 초기화`;
+    return h >= 24 ? t('panel.until.dh', { d: Math.floor(h / 24), h: h % 24 }) : h ? t('panel.until.hm', { h, m }) : t('panel.until.m', { m });
   };
   /**
    * 경과 시간 문구.
@@ -152,7 +153,7 @@ const OfficePanel = (() => {
   const agoText = (iso) => {
     const s = (Date.now() - Date.parse(iso)) / 1000;
     if (!(s >= 0)) return '';
-    return s < 60 ? '방금' : s < 3600 ? `${Math.floor(s / 60)}분 전` : s < 86400 ? `${Math.floor(s / 3600)}시간 전` : `${Math.floor(s / 86400)}일 전`;
+    return s < 60 ? t('panel.ago.now') : s < 3600 ? t('panel.ago.m', { n: Math.floor(s / 60) }) : s < 86400 ? t('panel.ago.h', { n: Math.floor(s / 3600) }) : t('panel.ago.d', { n: Math.floor(s / 86400) });
   };
   /**
    * 진행 시간 문구.
@@ -164,7 +165,7 @@ const OfficePanel = (() => {
     const s = (Date.now() - Date.parse(iso)) / 1000;
     if (!(s >= 0)) return '-';
     const h = Math.floor(s / 3600), m = Math.floor((s % 3600) / 60);
-    return h ? `${h}시간 ${m}분` : `${m}분 ${Math.floor(s % 60)}초`;
+    return h ? t('panel.dur.hm', { h, m }) : t('panel.dur.ms', { m, s: Math.floor(s % 60) });
   };
   /**
    * 시각을 "HH:MM:SS"(24시간, ko-KR)로.
@@ -172,7 +173,7 @@ const OfficePanel = (() => {
    * @param {string} iso 시각(ISO)
    * @returns {string} 시각 문구
    */
-  const hhmm = (iso) => { const d = new Date(iso); return isNaN(d) ? '-' : d.toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false }); };
+  const hhmm = (iso) => { const d = new Date(iso); return isNaN(d) ? '-' : d.toLocaleTimeString(lc(), { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false }); };
 
   let wOver, wCats, wAlerts, wSel, clockEl, bellBtn;
   /**
@@ -201,7 +202,7 @@ const OfficePanel = (() => {
     for (const id of ['hud', 'fsBtn']) { const el = document.getElementById(id); if (el) top.appendChild(el); }
     bellBtn = document.createElement('button');
     bellBtn.className = 'ib';
-    bellBtn.title = '최근 알림';
+    bellBtn.title = t('panel.bell'); bellBtn.setAttribute('data-i18n-title', 'panel.bell');
     bellBtn.innerHTML = (window.__icon ? window.__icon('bell') : '🔔') + '<em class="bad" hidden></em>';
     /**
      * 알림 단추: 최근 알림 카드 접기/펼치기.
@@ -212,9 +213,9 @@ const OfficePanel = (() => {
     top.insertBefore(bellBtn, top.querySelector('#fsBtn'));
     const left = document.createElement('div'); left.className = 'wg-col wg-left';
     const right = document.createElement('div'); right.className = 'wg-col wg-right';
-    wOver = card('over', '현황', '📁');
-    wCats = card('cats', '업무 현황', '🐾');
-    wAlerts = card('alerts', '최근 알림', '🔔');
+    wOver = card('over', 'panel.card.over', '📁');
+    wCats = card('cats', 'panel.card.cats', '🐾');
+    wAlerts = card('alerts', 'panel.card.alerts', '🔔');
     left.append(wOver);
     right.append(wCats, wAlerts);
     // 아래: 고른 고양이 상세 + 범례
@@ -275,12 +276,13 @@ const OfficePanel = (() => {
     const tick = () => {
       const st = clockFn && clockFn();
       const d = (st && st.time) || new Date();
-      clockEl.textContent = d.toLocaleString('ko-KR', { timeZone: (st && st.tz) || undefined, month: 'short', day: 'numeric', weekday: 'short', hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false });
-      clockEl.title = st && st.place ? '사무실 위치: ' + st.place + ' (설정 › 일반에서 바꿈)' : '';
+      clockEl.textContent = d.toLocaleString(lc(), { timeZone: (st && st.tz) || undefined, month: 'short', day: 'numeric', weekday: 'short', hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false });
+      clockEl.title = st && st.place ? t('panel.clock.place', { place: st.place }) : '';
       if (st && st.phase) {
         const ic = { day: 'sun', night: 'moon', dawn: 'sunrise', dusk: 'sunset' }[st.phase];
         const html = (window.__icon ? window.__icon(ic) : '') + st.label;
-        if (dayEl.dataset.k !== st.phase) { dayEl.innerHTML = html; dayEl.dataset.k = st.phase; dayEl.className = 'dayph ' + st.phase; }
+        const dk = st.phase + lc();
+        if (dayEl.dataset.k !== dk) { dayEl.innerHTML = html; dayEl.dataset.k = dk; dayEl.className = 'dayph ' + st.phase; }
       }
     };
     tick();
@@ -785,11 +787,11 @@ const OfficePanel = (() => {
     const [dtxt, dcls] = status(c);
     const [ptxt] = PROVIDER[c.provider] || PROVIDER.claude;
     const body = `<div class="sel-p">${esc(ptxt)}${c.project ? ' · ' + esc(c.project) : ''}</div>
-        <div class="sel-g"><div><small>작업</small><b>${esc(c.title || '-')}</b></div>
-        <div><small>진행 시간</small><b>${esc(c.startedAt ? durText(c.startedAt) : '-')}</b></div>
-        <div><small>마지막 갱신</small><b>${esc(c.lastAt ? hhmm(c.lastAt) : '-')}</b></div>${c.level ? `<div><small>레벨</small><b>Lv.${c.level.level}</b><small class="lv-next">다음 레벨까지 간식 ${c.level.next - c.level.xp}개</small></div>` : ''}</div>`;
+        <div class="sel-g"><div><small>${t('panel.sel.task')}</small><b>${esc(c.title || '-')}</b></div>
+        <div><small>${t('panel.sel.elapsed')}</small><b>${esc(c.startedAt ? durText(c.startedAt) : '-')}</b></div>
+        <div><small>${t('panel.sel.last')}</small><b>${esc(c.lastAt ? hhmm(c.lastAt) : '-')}</b></div>${c.level ? `<div><small>${t('panel.sel.level')}</small><b>Lv.${c.level.level}</b><small class="lv-next">${t('panel.sel.nextLv', { n: c.level.next - c.level.xp })}</small></div>` : ''}</div>`;
     if (bare) return body;
-    return `<header><span class="coin-logo" title="${esc(ptxt)}">${logo(c.provider)}</span><span class="wg-t">${esc(c.name)}</span><span class="chip ${dcls}">${esc(dtxt)}</span><button class="sel-x" title="닫기">×</button></header>
+    return `<header><span class="coin-logo" title="${esc(ptxt)}">${logo(c.provider)}</span><span class="wg-t">${esc(c.name)}</span><span class="chip ${dcls}">${esc(dtxt)}</span><button class="sel-x" title="${t('panel.sel.close')}">×</button></header>
         <div class="wg-b">${body}</div>`;
   }
   /**
@@ -861,8 +863,8 @@ const OfficePanel = (() => {
     const plans = data.plans || { claude: data.plan ? { name: data.name, plan: data.plan } : null };
     const tabCats = overTab === 'all' ? cats : cats.filter((c) => (c.provider || 'claude') === overTab);
     const count = (pv) => cats.filter((c) => (c.provider || 'claude') === pv).length;
-    const tabs = `<div class="ov-tabs" role="tablist">` + [['all', '전체', null], ...Object.entries(PROVIDER).map(([k, [t, col]]) => [k, t, col])]
-      .map(([k, t, col]) => `<button role="tab" data-tab="${k}" title="${t}" class="${overTab === k ? 'on' : ''}" aria-selected="${overTab === k}">${col ? logo(k) : ''}${{ chatgpt: 'GPT' }[k] || t}<small>${k === 'all' ? cats.length : count(k)}</small></button>`).join('') + `</div>`;
+    const tabs = `<div class="ov-tabs" role="tablist">` + [['all', t('panel.tab.all'), null], ...Object.entries(PROVIDER).map(([k, [nm, col]]) => [k, nm, col])]
+      .map(([k, nm, col]) => `<button role="tab" data-tab="${k}" title="${nm}" class="${overTab === k ? 'on' : ''}" aria-selected="${overTab === k}">${col ? logo(k) : ''}${{ chatgpt: 'GPT' }[k] || nm}<small>${k === 'all' ? cats.length : count(k)}</small></button>`).join('') + `</div>`;
     /**
      * 서비스의 플랜과 대표 한도 찾기.
      * 한도 목록에서 kind 가 session(5시간)·weekly_all(주간 전체)인 항목을 고른다.
@@ -875,32 +877,32 @@ const OfficePanel = (() => {
       return { pl, s5: lim.find((l) => l.kind === 'session'), wk: lim.find((l) => l.kind === 'weekly_all') };
     };
     const projects = {};
-    for (const c of tabCats) { const k = c.project || '기타'; projects[k] = (projects[k] || 0) + 1; }
+    for (const c of tabCats) { const k = c.project || t('panel.project.other'); projects[k] = (projects[k] || 0) + 1; }
     const plist = Object.entries(projects).sort((a, b) => b[1] - a[1]);
     let mid = '';
     if (overTab === 'all') {
       // 서비스마다 한 줄: 세션 수 · 5시간 한도
-      mid = Object.entries(PROVIDER).map(([k, [t, col]]) => {
+      mid = Object.entries(PROVIDER).map(([k, [nm, col]]) => {
         const { pl, s5 } = limitsOf(k);
-        const right = s5 ? `<b style="color:${sevColor(s5.percent)}">${Math.round(s5.percent)}%</b>` : `<span class="ov-na">${pl ? '-' : '연결 전'}</span>`;
-        return `<div class="svc" data-tab="${k}">${logo(k)}<span>${t}</span><small>${count(k)}개 세션</small>${right}</div>`;
+        const right = s5 ? `<b style="color:${sevColor(s5.percent)}">${Math.round(s5.percent)}%</b>` : `<span class="ov-na">${pl ? '-' : t('panel.ov.notLinked')}</span>`;
+        return `<div class="svc" data-tab="${k}">${logo(k)}<span>${nm}</span><small>${t('panel.ov.sessions', { n: count(k) })}</small>${right}</div>`;
       }).join('');
     } else {
       const { pl, s5, wk } = limitsOf(overTab);
-      if (!pl) mid = `<div class="ov-na-box">${esc(PROVIDER[overTab][0])} 계정이 아직 연결되지 않았어요.<br><small>연결하면 한도와 사용량이 여기에 나와요.</small></div>`;
+      if (!pl) mid = `<div class="ov-na-box">${esc(t('panel.ov.noAccount', { name: PROVIDER[overTab][0] }))}<br><small>${t('panel.ov.noAccountHint')}</small></div>`;
       else {
-        mid = `<div class="ov-row"><div><div class="ov-l">${esc(pl.name || '계정')}${pl.plan && pl.plan.plan ? ` · ${esc(pl.plan.plan)}` : ''}</div>`
-          + `<div class="ov-big">${s5 ? Math.round(s5.percent) + '<small>%</small>' : '-'}</div><div class="ov-s">${esc((s5 && s5.label) || '5시간 한도')}${s5 && s5.resets_at ? ' · ' + esc(untilText(s5.resets_at)) : ''}</div></div>`
+        mid = `<div class="ov-row"><div><div class="ov-l">${esc(pl.name || t('panel.ov.account'))}${pl.plan && pl.plan.plan ? ` · ${esc(pl.plan.plan)}` : ''}</div>`
+          + `<div class="ov-big">${s5 ? Math.round(s5.percent) + '<small>%</small>' : '-'}</div><div class="ov-s">${esc((s5 && s5.label) || t('panel.ov.limit5h'))}${s5 && s5.resets_at ? ' · ' + esc(untilText(s5.resets_at)) : ''}</div></div>`
           + (s5 ? ring(s5.percent, sevColor(s5.percent)) : '') + `</div>`
-          + (wk ? `<div class="lim"><div class="lim-h"><span>${esc(wk.label || '주간 · 전체 모델')}</span><b>${Math.round(wk.percent)}%</b></div><div class="bar"><i style="width:${Math.min(100, wk.percent)}%;background:${sevColor(wk.percent)}"></i></div><div class="ov-s">${esc(wk.resets_at ? untilText(wk.resets_at) : '')}</div></div>` : '');
+          + (wk ? `<div class="lim"><div class="lim-h"><span>${esc(wk.label || t('panel.ov.weeklyAll'))}</span><b>${Math.round(wk.percent)}%</b></div><div class="bar"><i style="width:${Math.min(100, wk.percent)}%;background:${sevColor(wk.percent)}"></i></div><div class="ov-s">${esc(wk.resets_at ? untilText(wk.resets_at) : '')}</div></div>` : '');
       }
     }
     const over = tabs
-      + `<div class="ov-row"><div><div class="ov-l">활성 세션</div><div class="ov-big">${tabCats.length}${overTab === 'all' && delta ? `<span class="ov-d ${delta > 0 ? 'up' : 'dn'}">${delta > 0 ? '+' : ''}${delta}</span>` : ''}</div></div>${overTab === 'all' ? spark(history) : ''}</div>`
+      + `<div class="ov-row"><div><div class="ov-l">${t('panel.ov.active')}</div><div class="ov-big">${tabCats.length}${overTab === 'all' && delta ? `<span class="ov-d ${delta > 0 ? 'up' : 'dn'}">${delta > 0 ? '+' : ''}${delta}</span>` : ''}</div></div>${overTab === 'all' ? spark(history) : ''}</div>`
       + `<div class="ov-sep"></div>` + mid
-      + `<div class="ov-sep"></div><div class="ov-h">프로젝트</div>`
-      + (plist.length ? plist.slice(0, 6).map(([k, n]) => `<div class="pj"><span>${esc(k)}</span><b>${n}</b></div>`).join('') : '<div class="wg-empty">실행 중인 세션이 없습니다</div>')
-      + `<button class="ov-more" data-usage>사용량 상세 보기 <span>›</span></button>`;
+      + `<div class="ov-sep"></div><div class="ov-h">${t('panel.ov.projects')}</div>`
+      + (plist.length ? plist.slice(0, 6).map(([k, n]) => `<div class="pj"><span>${esc(k)}</span><b>${n}</b></div>`).join('') : `<div class="wg-empty">${t('panel.ov.noSessions')}</div>`)
+      + `<button class="ov-more" data-usage>${t('panel.ov.more')} <span>›</span></button>`;
     if (over !== lastOver) { wOver.querySelector('.wg-b').innerHTML = over; lastOver = over; }
     // 업무 현황
     // 순서: 요청(결정 필요)이 맨 위, 나머지는 최근 활동 순
@@ -920,25 +922,25 @@ const OfficePanel = (() => {
     const rows = cats.slice().sort((a, b) => order(a) - order(b) || when(b) - when(a) || String(a.title || a.project).localeCompare(String(b.title || b.project))).map((c) => {
       const [ptxt, pcol] = PROVIDER[c.provider] || PROVIDER.claude;
       const [dtxt, dcls] = status(c);
-      return `<div class="cat-row ${c.id === selected ? 'on' : ''}" data-cat="${esc(c.id)}" title="누르면 이 고양이로 이동">
+      return `<div class="cat-row ${c.id === selected ? 'on' : ''}" data-cat="${esc(c.id)}" title="${t('panel.row.goto')}">
         <span class="coin-logo" title="${ptxt}">${logo(c.provider)}</span>
         <div class="cat-m"><div class="cat-t">${esc(c.title || c.project || c.name)}</div>
         <div class="cat-s">${esc(c.name)}${c.level ? ` · Lv.${c.level.level}` : ''}${c.project && c.title ? ' · ' + esc(c.project) : ''}</div></div>
-        <span class="chip ${dcls}">${esc(dtxt)}</span>${c.open ? `<button class="row-open" data-open-cat="${esc(c.id)}" title="세션 열기">${OPEN_IC}</button>` : ''}</div>`;
+        <span class="chip ${dcls}">${esc(dtxt)}</span>${c.open ? `<button class="row-open" data-open-cat="${esc(c.id)}" title="${t('panel.row.open')}">${OPEN_IC}</button>` : ''}</div>`;
     }).join('');
     // 지난 세션: 끝난 로컬 세션(새 터미널에서 재개) · 지난 클라우드 세션(링크) — 예전 관리 창의 세션 목록
-    const ended = (data.ended || []).map((x, i) => `<div class="end-row" data-ended="${i}" title="누르면 이어서 열기">
-        <div class="cat-m"><div class="cat-t">${esc(x.title || x.project || '(제목 없음)')}</div><div class="cat-s">${esc([x.project, x.lastAt ? agoText(x.lastAt) : ''].filter(Boolean).join(' · '))}</div></div>
+    const ended = (data.ended || []).map((x, i) => `<div class="end-row" data-ended="${i}" title="${t('panel.row.resume')}">
+        <div class="cat-m"><div class="cat-t">${esc(x.title || x.project || t('panel.row.untitled'))}</div><div class="cat-s">${esc([x.project, x.lastAt ? agoText(x.lastAt) : ''].filter(Boolean).join(' · '))}</div></div>
         <span class="row-open">${OPEN_IC}</span></div>`).join('');
-    const catsHtml = (rows || '<div class="wg-empty">실행 중인 세션이 없습니다</div>') + (ended ? `<div class="end-h">지난 세션</div>${ended}` : '');
+    const catsHtml = (rows || `<div class="wg-empty">${t('panel.ov.noSessions')}</div>`) + (ended ? `<div class="end-h">${t('panel.row.ended')}</div>${ended}` : '');
     if (catsHtml !== lastCats) { wCats.querySelector('.wg-b').innerHTML = catsHtml; lastCats = catsHtml; }
     wCats.querySelector('.wg-n').textContent = cats.length || '';
     // 최근 알림
     const al = (data.alerts || []).slice(0, 8);
-    const alHtml = al.length ? al.map((e, i) => `<div class="al-row link ${e.resolved || e.read ? 'seen' : 'unread'}" data-al="${i}" title="클릭: 세션 열기"><span class="al-svc" title="${esc((PROVIDER[e.provider] || [e.provider === 'app' ? 'Meowffice' : 'Claude'])[0])}">${logo(e.provider)}</span><span class="row-open al-open">${OPEN_IC}</span>
+    const alHtml = al.length ? al.map((e, i) => `<div class="al-row link ${e.resolved || e.read ? 'seen' : 'unread'}" data-al="${i}" title="${t('panel.al.open')}"><span class="al-svc" title="${esc((PROVIDER[e.provider] || [e.provider === 'app' ? 'Meowffice' : 'Claude'])[0])}">${logo(e.provider)}</span><span class="row-open al-open">${OPEN_IC}</span>
         <div class="al-t">${esc(e.title)}</div><div class="al-m">${esc(e.message)}</div>
-        <div class="al-s">${esc(e.resolved ? '처리됨' : STATE_TXT[e.state] || '알림')}${e.project ? ' · ' + esc(e.project) : ''} · ${esc(agoText(e.updated_at))}</div></div>`).join('')
-      : '<div class="wg-empty">받은 알림이 없습니다</div>';
+        <div class="al-s">${esc(e.resolved ? t('panel.state.resolved') : t(STATE_KEY[e.state] || 'panel.state.other'))}${e.project ? ' · ' + esc(e.project) : ''} · ${esc(agoText(e.updated_at))}</div></div>`).join('')
+      : `<div class="wg-empty">${t('panel.al.none')}</div>`;
     if (alHtml !== lastAlerts) { wAlerts.querySelector('.wg-b').innerHTML = alHtml; lastAlerts = alHtml; }
     const openN = (data.alerts || []).filter((e) => !e.resolved).length;
     wAlerts.querySelector('.wg-n').textContent = openN || '';
@@ -968,5 +970,8 @@ const OfficePanel = (() => {
    * init · resetLayout · update · select · unselect · alertsVisible 와, 사용량 상세를 여는 콜백을 등록하는 onUsage(fn) 를 노출한다.
    * @returns {{init: function, resetLayout: function, update: function, select: function, unselect: function, alertsVisible: function, onUsage: function(function(string):void):void}}
    */
+  // 언어가 바뀌면 캐시를 비우고 본문을 다시 그린다 (카드 제목·툴팁은 data-i18n 으로 I18N.apply 가 채움)
+  window.addEventListener('meow-lang', () => { lastOver = lastCats = lastAlerts = lastSel = ''; if (lastData) update(lastData); });
+
   return { init, resetLayout, update, select, unselect, alertsVisible, overlaps, onUsage: (fn) => { onUsage = fn; } };
 })();

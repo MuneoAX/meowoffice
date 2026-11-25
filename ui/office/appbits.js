@@ -69,28 +69,29 @@ const OfficeApp = (() => {
    * @returns {string} HTML 조각
    * @see mkCard
    */
-  const cmdRow = (cmd) => `<div class="ap-cmd"><code>${esc(cmd)}</code><button data-copy="${esc(cmd)}">복사</button></div>`;
-  const LOGIN = {
+  const cmdRow = (cmd) => `<div class="ap-cmd"><code>${esc(cmd)}</code><button data-copy="${esc(cmd)}">${t('app.copy')}</button></div>`;
+  /** 종류별 안내문(언어가 바뀌어도 맞도록 부를 때마다 만든다). @returns {Object<string, {title:string, lead:string, steps:string[]}>} */
+  const LOGIN = () => ({
     no_credentials: {
-      title: 'Claude 로그인이 필요합니다',
-      lead: 'Meowffice 는 Claude Code 의 로그인 정보로 사용 한도와 세션을 봅니다. 아래 순서로 한 번만 설정하면 됩니다.',
+      title: t('app.login.none.title'),
+      lead: t('app.login.none.lead'),
       steps: [
-        `<b>Claude Code 설치</b> — PowerShell 을 열고 실행하세요.${cmdRow(INSTALL_CMD)}<div class="ap-muted">Node.js 가 있으면 <code>npm install -g @anthropic-ai/claude-code</code> 도 됩니다</div>`,
-        `<b>로그인</b> — 아래 <b>Claude Code 로그인</b> 을 누르면 브라우저가 열립니다. <b>Claude 구독 계정</b>(Pro·Max 등)으로 로그인하세요.<div class="ap-muted">직접 하려면 터미널에서:</div>${cmdRow('claude auth login')}`,
-        '로그인이 끝나면 자동으로 연결됩니다. 그 뒤로는 Claude Code 를 쓰지 않아도 됩니다.',
+        `${t('app.login.none.s1')}${cmdRow(INSTALL_CMD)}<div class="ap-muted">${t('app.login.none.s1b')}</div>`,
+        `${t('app.login.none.s2')}<div class="ap-muted">${t('app.login.none.s2b')}</div>${cmdRow('claude auth login')}`,
+        t('app.login.none.s3'),
       ],
     },
     expired: {
-      title: '로그인이 만료되었습니다',
-      lead: 'Claude Code 를 한동안 쓰지 않아 로그인 정보가 만료되었습니다. Claude Code 를 한 번 실행하면 저절로 갱신됩니다.',
-      steps: [`터미널에서 실행한 뒤 화면이 뜨면 종료(<code>/exit</code>)하고 <b>다시 확인</b> 을 누르세요.${cmdRow('claude')}`, '또는 아래 <b>Claude Code 로그인</b> 으로 다시 로그인하세요. 끝나면 자동으로 연결됩니다.'],
+      title: t('app.login.expired.title'),
+      lead: t('app.login.expired.lead'),
+      steps: [`${t('app.login.expired.s1')}${cmdRow('claude')}`, t('app.login.expired.s2')],
     },
     auth: {
-      title: '인증에 실패했습니다',
-      lead: '저장된 로그인 정보가 거부되었습니다. Claude Code 에서 다시 로그인하세요.',
-      steps: ['아래 <b>Claude Code 로그인</b> 을 누르고, 열린 브라우저에서 구독 계정으로 로그인하세요.', '로그인이 끝나면 자동으로 연결됩니다.'],
+      title: t('app.login.auth.title'),
+      lead: t('app.login.auth.lead'),
+      steps: [t('app.login.auth.s1'), t('app.login.auth.s2')],
     },
-  };
+  });
 
   /**
    * 앱 공통 기능 시작.
@@ -120,7 +121,7 @@ const OfficeApp = (() => {
       upd.disabled = installing; // 설치 중에는 확인 이벤트가 와도 단추를 다시 켜지 않는다 (이중 설치 방지)
       upd.classList.toggle('new', !!u);
       upd.innerHTML = svg(u ? 'download' : 'refresh') + (u ? `<em class="bad">N</em>` : '');
-      upd.title = u ? `새 버전 ${u.version} — 눌러서 바뀌는 내용 보기` : '업데이트 (마지막 업데이트 내역 보기 · 새 버전이 있으면 설치)';
+      upd.title = u ? t('app.upd.new', { v: u.version }) : t('app.upd.none');
     };
     /**
      * 새 버전 설치 (업데이트 대기 중 카드의 [업데이트]).
@@ -131,9 +132,9 @@ const OfficeApp = (() => {
      */
     const install = async (u) => {
       if (!invoke || installing) return;
-      toast(`새 버전 ${u.version} 설치 중… 끝나면 다시 시작합니다`);
+      toast(t('app.upd.installing', { v: u.version }));
       installing = true; upd.disabled = true;
-      try { await invoke('install_update'); } catch (e) { installing = false; toast('업데이트 실패: ' + e); showUpdate(u); }
+      try { await invoke('install_update'); } catch (e) { installing = false; toast(t('app.upd.fail', { err: e })); showUpdate(u); }
     };
     /**
      * 업데이트 단추 클릭: 언제나 업데이트 창(설정 창 같은 가운데 카드)을 연다.
@@ -148,7 +149,7 @@ const OfficeApp = (() => {
       upd.disabled = true; checking = true; // 확인·내역 조회가 끝날 때까지 다시 누르지 못하게
       let failed = '', ld = null, cur = null, found = null;
       try {
-        ld = typeof OfficeLoading !== 'undefined' ? OfficeLoading.cover(stage, '업데이트 확인 중…', { dim: false }) : null; // 확인·내역 조회가 끝날 때까지 (공통 로딩 표시)
+        ld = typeof OfficeLoading !== 'undefined' ? OfficeLoading.cover(stage, t('app.upd.checking'), { dim: false }) : null; // 확인·내역 조회가 끝날 때까지 (공통 로딩 표시)
         try {
           found = (await invoke('check_update')) || null;
           stampCheck();
@@ -197,7 +198,8 @@ const OfficeApp = (() => {
       const ov = document.createElement('div');
       ov.className = 'us-overlay ap-ov ' + cls;
       ov.hidden = true;
-      ov.innerHTML = '<div class="us-card ap-card" role="dialog"><header><div class="us-t"><b class="ap-title"></b></div><button class="us-x" title="닫기">×</button></header><div class="us-b ap-body"></div></div>';
+      ov.innerHTML = '<div class="us-card ap-card" role="dialog"><header><div class="us-t"><b class="ap-title"></b></div><button class="us-x" data-i18n-title="app.close">×</button></header><div class="us-b ap-body"></div></div>';
+      I18N.apply(ov);
       stage.appendChild(ov);
       let onClose = null;
       const c = {
@@ -226,7 +228,7 @@ const OfficeApp = (() => {
       ov.addEventListener('click', async (e) => {
         if (e.target === ov || e.target.closest('.us-x') || e.target.closest('[data-ap="close"]')) return c.close();
         const cp = e.target.closest('[data-copy]');
-        if (cp) { try { await navigator.clipboard.writeText(cp.dataset.copy); toast('복사됨: ' + cp.dataset.copy); } catch (_) { toast(cp.dataset.copy); } }
+        if (cp) { try { await navigator.clipboard.writeText(cp.dataset.copy); toast(t('app.copied', { text: cp.dataset.copy })); } catch (_) { toast(cp.dataset.copy); } }
       });
       return c;
     }
@@ -268,10 +270,10 @@ const OfficeApp = (() => {
       const isHead = (l) => /^#+\s*/.test(l) || (hasBullets && !BULLET.test(l));
       const li = lines.length
         ? lines.map((l) => (isHead(l) ? `<li class="head">${esc(l.replace(/^#+\s*/, ''))}</li>` : `<li>${esc(l.replace(BULLET, ''))}</li>`)).join('')
-        : '<li class="ap-muted">등록된 변경 내역이 없습니다.</li>';
+        : `<li class="ap-muted">${t('app.upd.noNotes')}</li>`;
       return `<ul class="ap-notes">${li}</ul>`;
     };
-    const showWhatsNew = (u) => notesCard.open(`v${u.version} 업데이트 완료`, notesList(u) + '<div class="ap-btns"><button class="ap-btn pri" data-ap="close">확인</button></div>');
+    const showWhatsNew = (u) => notesCard.open(t('app.upd.doneTitle', { v: u.version }), notesList(u) + `<div class="ap-btns"><button class="ap-btn pri" data-ap="close">${t('app.ok')}</button></div>`);
     /**
      * 업데이트 대기 중 카드: 업데이트 이력과 같은 카드에 제목만 바꿔, 설치될 새 버전의 바뀌는 내용과 [업데이트]·[취소] 단추를 나란히.
      * @param {UpdateInfo} u 새 버전 정보
@@ -279,7 +281,7 @@ const OfficeApp = (() => {
      * @see install
      */
     function showPending(u) {
-      notesCard.open(`v${u.version} 업데이트 대기 중`, notesList(u) + '<div class="ap-btns"><button class="ap-btn" data-ap="close">확인</button><button class="ap-btn pri" data-ap="install">업데이트</button></div>');
+      notesCard.open(t('app.upd.pendingTitle', { v: u.version }), notesList(u) + `<div class="ap-btns"><button class="ap-btn" data-ap="close">${t('app.ok')}</button><button class="ap-btn pri" data-ap="install">${t('app.update')}</button></div>`);
     }
     /**
      * 새 버전이 없을 때의 업데이트 창: 지금 버전의 마지막 업데이트 내역 + [확인] + 꺼진 [업데이트].
@@ -289,8 +291,8 @@ const OfficeApp = (() => {
      * @see showPending
      */
     function showCurrent(u, failed) {
-      const head = failed ? `<p class="ap-muted">업데이트 확인 실패: ${esc(failed)}</p>` : '<p class="ap-muted">최신 버전입니다. 아래는 마지막 업데이트 내역입니다.</p>';
-      notesCard.open(u.version ? `v${u.version} 업데이트 내역` : '업데이트 내역', head + notesList(u) + '<div class="ap-btns"><button class="ap-btn" data-ap="close">확인</button><button class="ap-btn pri" disabled title="업데이트할 새 버전이 없습니다">업데이트</button></div>');
+      const head = failed ? `<p class="ap-muted">${esc(t('app.upd.checkFail', { err: failed }))}</p>` : `<p class="ap-muted">${t('app.upd.latest')}</p>`;
+      notesCard.open(u.version ? t('app.upd.histTitle', { v: u.version }) : t('app.upd.hist'), head + notesList(u) + `<div class="ap-btns"><button class="ap-btn" data-ap="close">${t('app.ok')}</button><button class="ap-btn pri" disabled title="${t('app.upd.noNew')}">${t('app.update')}</button></div>`);
     }
     notesCard.ov.addEventListener('click', (e) => { if (e.target.closest('[data-ap="install"]') && pending) { notesCard.hide(); install(pending); } });
 
@@ -318,13 +320,13 @@ const OfficeApp = (() => {
      * @returns {void}
      */
     function showLogin(kind) {
-      const g = LOGIN[kind];
+      const g = LOGIN()[kind];
       if (!g) { loginDismissed = null; if (loginOpen) { loginOpen = false; stopWait(); loginCard.hide(); } return; }
       if (loginDismissed === kind || (loginOpen && loginKind === kind)) return;
       loginKind = kind; loginOpen = true;
       loginCard.open(g.title, `<p class="ap-lead">${esc(g.lead)}</p><ol class="ap-steps">${g.steps.map((x) => `<li>${x}</li>`).join('')}</ol>
         <div class="ap-conn"></div>
-        <div class="ap-btns"><button class="ap-btn" data-ap="help">설치 안내 열기</button><button class="ap-btn" data-ap="retry">다시 확인</button><button class="ap-btn pri" data-ap="login">Claude Code 로그인</button></div>`,
+        <div class="ap-btns"><button class="ap-btn" data-ap="help">${t('app.login.help')}</button><button class="ap-btn" data-ap="retry">${t('app.login.retry')}</button><button class="ap-btn pri" data-ap="login">${t('app.login.go')}</button></div>`,
       () => { loginOpen = false; loginDismissed = loginKind; stopWait(); });
     }
     /**
@@ -340,15 +342,15 @@ const OfficeApp = (() => {
       if (!b || !invoke) return;
       if (b.dataset.ap === 'help') invoke('open_url', { url: 'https://claude.ai/download' }).catch((er) => toast(String(er)));
       if (b.dataset.ap === 'retry') {
-        setConn('확인 중…');
+        setConn(t('app.login.checking'));
         const snap = await invoke('get_plan', { force: true }).catch(() => null);
-        if (snap && snap.plan) { toast('연결되었습니다'); showLogin(null); o.onPlanRefreshed && o.onPlanRefreshed(snap); } else setConn((snap && snap.error) || '아직 로그인 정보를 찾지 못했습니다.', 'err');
+        if (snap && snap.plan) { toast(t('app.login.connected')); showLogin(null); o.onPlanRefreshed && o.onPlanRefreshed(snap); } else setConn((snap && snap.error) || t('app.login.notFound'), 'err');
       }
       if (b.dataset.ap === 'login') {
         // 새 콘솔에서 claude auth login → 자격 증명 파일이 바뀌면 바로 확인 (최대 5분, 15초마다는 직접 조회)
         let base = await invoke('cred_stamp').catch(() => null);
-        try { await invoke('claude_login'); } catch (er) { setConn(String(er) === 'not_installed' ? 'Claude Code 가 설치되어 있지 않습니다 — 먼저 설치하세요.' : '실행 실패: ' + er, 'err'); return; }
-        setConn('브라우저에서 로그인을 마치세요… 끝나면 저절로 연결됩니다.');
+        try { await invoke('claude_login'); } catch (er) { setConn(String(er) === 'not_installed' ? t('app.login.notInstalled') : t('app.login.runFail', { err: er }), 'err'); return; }
+        setConn(t('app.login.waiting'));
         stopWait();
         const t0 = Date.now();
         let last = t0, checking = false;
@@ -360,7 +362,7 @@ const OfficeApp = (() => {
           base = st; last = Date.now(); checking = true;
           const snap = await invoke('get_plan', { force: true }).catch(() => null);
           checking = false;
-          if (snap && snap.plan) { stopWait(); toast('로그인되었습니다'); showLogin(null); o.onPlanRefreshed && o.onPlanRefreshed(snap); }
+          if (snap && snap.plan) { stopWait(); toast(t('app.login.done')); showLogin(null); o.onPlanRefreshed && o.onPlanRefreshed(snap); }
         }, 2000);
       }
     });
@@ -378,6 +380,7 @@ const OfficeApp = (() => {
     };
     window.addEventListener('focus', () => o.lastAlerts && onAlerts(o.lastAlerts()));
 
+    window.addEventListener('meow-lang', () => { showUpdate(pending); }); // 단추 툴팁을 새 언어로 (열려 있는 안내 카드는 다시 열 때 새 언어)
     if (invoke) {
       invoke('get_update').then(showUpdate, () => {});
       /**

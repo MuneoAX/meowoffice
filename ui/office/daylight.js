@@ -478,7 +478,7 @@ const OfficeDay = (() => {
       // 화면 표시용
       const h = partsIn(d, loc().tz).hour;
       state.phase = night > 0.6 ? 'night' : low > 0.35 ? (h < 12 ? 'dawn' : 'dusk') : 'day';
-      state.label = { night: '밤', dawn: '아침', dusk: '노을', day: '낮' }[state.phase];
+      state.label = t('world.phase.' + state.phase);
       state.time = d;
       state.tz = loc().tz;
       state.place = loc().name;

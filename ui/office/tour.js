@@ -51,47 +51,47 @@ const OfficeTour = (() => {
    */
   const MOUSE = (btn) => `<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="6" y="3" width="12" height="18" rx="6" fill="none" stroke="currentColor" stroke-width="1.6"/><path d="M12 3v7" stroke="currentColor" stroke-width="1.6"/>${btn === 'L' ? '<path d="M12 3.8a5.2 5.2 0 0 0-5.2 5.2V10H12Z" fill="currentColor"/>' : btn === 'R' ? '<path d="M12 3.8a5.2 5.2 0 0 1 5.2 5.2V10H12Z" fill="currentColor"/>' : btn === 'W' ? '<rect x="10.9" y="5.5" width="2.2" height="4" rx="1.1" fill="currentColor"/>' : ''}</svg>`;
   const CONTROLS = [
-    ['L', '클릭', '고양이 선택 · 따라가기'],
-    ['L', '고양이 끌기', '자리 옮기기 (놓으면 제자리로)'],
-    ['L', '빈 곳 끌기', '화면 이동'],
-    ['R', '오른쪽 끌기', '돌려 보기 (Shift+끌기, Q·E)'],
-    ['W', '휠', '확대 · 축소 (오른쪽 아래 막대로도)'],
+    ['L', 'tour.mouse.click.b', 'tour.mouse.click.d'],
+    ['L', 'tour.mouse.drag.b', 'tour.mouse.drag.d'],
+    ['L', 'tour.mouse.pan.b', 'tour.mouse.pan.d'],
+    ['R', 'tour.mouse.rot.b', 'tour.mouse.rot.d'],
+    ['W', 'tour.mouse.wheel.b', 'tour.mouse.wheel.d'],
   ];
 
   // 단계: target = 밝힐 곳(선택자 또는 함수 → DOMRect), 없으면 가운데 카드
   const STEPS = [
     {
       hero: true,
-      title: 'Meowffice 에 오신 걸 환영해요',
-      text: 'AI 세션 하나하나가 고양이 직원이 되어 출근하는 사무실이에요.<br>권한 결재, 질문 답변, 사용량 확인을 여기서 한 번에 해요.<br><small style="opacity:.7">사용량을 보려고 이 PC 의 Claude Code·Codex 로그인 정보를 읽기만 하며, 그 서비스 말고 다른 곳으로 보내지 않아요.</small>',
-      next: '둘러보기 (30초)',
+      title: 'tour.welcome.title',
+      text: 'tour.welcome.text',
+      next: 'tour.welcome.next',
     },
     {
       target: () => catRect(),
       track: true, // 고른 고양이 한 마리를 따라감, 없으면 고양이 사진
-      title: '고양이 한 마리 = AI 세션 하나',
-      text: 'Claude Code 같은 AI 작업이 시작되면 고양이가 출근해 자리에 앉아요. 일하는 중이면 타자를 치고, 끝나면 쉬러 가요.<br>고양이를 누르면 확대해서 따라가요.',
+      title: 'tour.cat.title',
+      text: 'tour.cat.text',
     },
     {
       target: '.wg[data-id="cats"]', // 옮겨도 따라가도록 카드 기준
-      title: '업무 현황',
-      text: '고양이마다 지금 하는 일과 프로젝트가 보여요. 줄을 누르면 그 고양이로 바로 이동해요.',
+      title: 'tour.cats.title',
+      text: 'tour.cats.text',
     },
     {
       target: () => rectOf('#hud .h-q') || rectOf('.topbar'),
-      title: '결재 = 권한 요청',
-      text: 'AI 가 파일 수정·명령 실행 허락을 구하면 고양이가 결재판을 들고 대표(나) 책상 앞에 줄을 서요.<br>고양이를 누르거나 이 단추로 대표 책상에 가서 승인·반려해요.',
+      title: 'tour.permit.title',
+      text: 'tour.permit.text',
     },
     {
       target: '.wg[data-id="over"]',
-      title: '현황: 한도와 사용량',
-      text: '5시간·주간 사용 한도와 서비스별 세션 수예요. 한도 줄을 누르면 사용량 상세가 열려요.',
+      title: 'tour.over.title',
+      text: 'tour.over.text',
     },
     {
       controls: true,
-      title: '이렇게 둘러봐요',
-      text: '위쪽 <b>?</b> 단추로 이 안내를 언제든 다시 볼 수 있어요.',
-      next: '시작하기',
+      title: 'tour.ctl.title',
+      text: 'tour.ctl.text',
+      next: 'tour.ctl.next',
     },
   ];
 
@@ -235,17 +235,17 @@ const OfficeTour = (() => {
     const s = STEPS[idx], last = idx === STEPS.length - 1;
     const dots = STEPS.map((_, i) => `<i class="${i === idx ? 'on' : ''}"></i>`).join('');
     const body = s.controls
-      ? `<div class="tour-ctrl">${CONTROLS.map(([m, t, d]) => `<div><i>${MOUSE(m)}</i><b>${esc(t)}</b><span>${esc(d)}</span></div>`).join('')}</div>`
+      ? `<div class="tour-ctrl">${CONTROLS.map(([m, b, d]) => `<div><i>${MOUSE(m)}</i><b>${esc(t(b))}</b><span>${esc(t(d))}</span></div>`).join('')}</div>`
       : '';
     card.className = 'tour-card' + (s.hero ? ' hero' : '') + (s.controls ? ' wide' : '') + (s.target ? ' spot' : '');
     card.innerHTML = `${s.hero ? '<div class="tour-logo"></div>' : ''}
-      <h2>${esc(s.title)}</h2><p>${s.text}</p>${body}
+      <h2>${esc(t(s.title))}</h2><p>${t(s.text)}</p>${body}
       <div class="tour-foot">
         <div class="tour-dots">${dots}</div>
         <div class="tour-btns">
-          ${last ? '' : '<button data-t="skip" class="t-skip">건너뛰기</button>'}
-          ${idx > 0 && !last ? '<button data-t="prev" class="t-prev">이전</button>' : ''}
-          <button data-t="next" class="t-next">${esc(s.next || (last ? '시작하기' : '다음'))}</button>
+          ${last ? '' : '<button data-t="skip" class="t-skip">' + t('tour.skip') + '</button>'}
+          ${idx > 0 && !last ? '<button data-t="prev" class="t-prev">' + t('tour.prev') + '</button>' : ''}
+          <button data-t="next" class="t-next">${esc(s.next ? t(s.next) : t(last ? 'tour.start' : 'tour.next'))}</button>
         </div>
       </div>`;
     letGo(); side = null;
@@ -369,5 +369,6 @@ const OfficeTour = (() => {
    * @returns {boolean}
    */
   function isOpen() { return !!root; }
+  window.addEventListener('meow-lang', () => { if (root) render(); }); // 열려 있는 동안 언어가 바뀌면 현재 단계를 다시 그린다
   return { start, seen, isOpen };
 })();

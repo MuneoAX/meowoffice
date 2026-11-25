@@ -638,7 +638,7 @@
       limits(list) {
         const pick = (k) => list.find((l) => l.kind === k);
         const f = (l) => (l ? Math.round(l.percent) + '%' : '-');
-        this.limitText = `Claude 5시간 ${f(pick('session'))} · 주간 ${f(pick('weekly_all'))}`;
+        this.limitText = t('office.hud.limits', { s: f(pick('session')), w: f(pick('weekly_all')) });
         lastHud = '';
       },
       /**
@@ -650,15 +650,15 @@
        * @see focusCat, OfficeSound.setEnabled
        */
       hud({ queue, points }) {
-        const k = queue + '|' + points + '|' + OfficeSound.isOn() + '|' + (this.limitText || '') + '|' + (this.treatHint || '');
+        const k = queue + '|' + points + '|' + OfficeSound.isOn() + '|' + (this.limitText || '') + '|' + (this.treatHint || '') + '|' + I18N.lang();
         if (k === lastHud) return;
         lastHud = k;
-        const q = { low: '낮음', mid: '보통', high: '높음' }[QUALITY];
-        hud.innerHTML = `<button class="ib h-q" title="결재 대기 ${queue}건 (누르면 대표 책상으로)">${svg('stamp')}${queue ? `<em class="bad">${queue}</em>` : ''}</button>`
+        const q = t('office.hud.q.' + QUALITY);
+        hud.innerHTML = `<button class="ib h-q" title="${t('office.hud.queue', { n: queue })}">${svg('stamp')}${queue ? `<em class="bad">${queue}</em>` : ''}</button>`
           // 안내 문구에 큰따옴표가 있어 속성값에 그대로 넣으면 그 자리에서 title 이 끊긴다 → 속성용으로 바꿔 넣는다
-          + `<button class="ib h-p" title="${`간식 ${points}개${this.treatHint ? ' · ' + this.treatHint : ''}`.replace(/&/g, '&amp;').replace(/"/g, '&quot;')}">${svg('fish')}<em class="cnt">${points}</em></button>`
-          + `<button class="ib h-snd" title="고양이 소리 ${OfficeSound.isOn() ? '켬' : '끔'} (누르면 바꿈)">${svg(OfficeSound.isOn() ? 'volOn' : 'volOff')}</button>`
-          + `<button class="ib h-q2" title="화질 ${q} (누르면 바꿈, 낮을수록 가벼움)">${pixels({ low: 3, mid: 4, high: 5 }[QUALITY])}</button>`;
+          + `<button class="ib h-p" title="${`${t('office.hud.treats', { n: points })}${this.treatHint ? ' · ' + t(this.treatHint) : ''}`.replace(/&/g, '&amp;').replace(/"/g, '&quot;')}">${svg('fish')}<em class="cnt">${points}</em></button>`
+          + `<button class="ib h-snd" title="${t('office.hud.sound', { state: t(OfficeSound.isOn() ? 'office.hud.on' : 'office.hud.off') })}">${svg(OfficeSound.isOn() ? 'volOn' : 'volOff')}</button>`
+          + `<button class="ib h-q2" title="${t('office.hud.quality', { q })}">${pixels({ low: 3, mid: 4, high: 5 }[QUALITY])}</button>`;
         hud.querySelector('.h-q').onclick = () => { if (typeof focusCat === 'function') focusCat('boss'); };
         hud.querySelector('.h-q2').onclick = () => {
           const next = { low: 'mid', mid: 'high', high: 'low' }[QUALITY];
@@ -719,7 +719,7 @@
         return new Promise((resolve) => {
           cardEl.dataset.kind = spec.kind;
           cardEl.innerHTML = `
-            <div class="c-head"><span class="c-title"></span><span class="c-proj"></span><button class="c-x" aria-label="닫기">×</button></div>
+            <div class="c-head"><span class="c-title"></span><span class="c-proj"></span><button class="c-x" data-i18n-aria-label="app.close">×</button></div>
             <div class="c-body"></div>
             <div class="c-btns"></div>
             <div class="c-stamp"></div>`;
@@ -745,7 +745,7 @@
               if (spec.kind === 'permission') {
                 // 도장 쾅
                 const st = cardEl.querySelector('.c-stamp');
-                st.textContent = v === 'approve' ? '승인' : '반려';
+                st.textContent = t(v === 'approve' ? 'office.stamp.approve' : 'office.stamp.deny');
                 st.className = 'c-stamp on ' + (v === 'approve' ? 'ok' : 'no');
                 btns.querySelectorAll('button').forEach((x) => (x.disabled = true));
                 setTimeout(() => close(v), 650);
@@ -770,7 +770,7 @@
    * @see answer_permit
    */
   const answer = async (id, allow, answers) => {
-    try { await window.__TAURI__.core.invoke('answer_permit', { id, allow, answers }); return true; } catch (e) { ui.toast('이미 처리된 요청이에요'); return false; }
+    try { await window.__TAURI__.core.invoke('answer_permit', { id, allow, answers }); return true; } catch (e) { ui.toast(t('office.toast.handled')); return false; }
   };
   // 진행 기록(간식 누계·고양이별 경험치): 앱 데이터 폴더에 저장된 값(업데이트에도 남음). 못 읽으면 null → demo 가 localStorage 값으로 대신한다
   const savedProgress = LIVE ? await window.__TAURI__.core.invoke('get_progress').catch(() => null) : null;
@@ -839,7 +839,7 @@
   scene.meshes.forEach((m) => { m.receiveShadows = true; });
 
   // ── 말풍선 (HTML 겹침)
-  const LABEL = { thinking: ['…', '생각 중'], permission: ['!', '결재 대기'], waiting: ['?', '질문 있어요'], complete: ['✓', '완료 배달'], error: ['!', '오류'] };
+  const LABEL = { thinking: ['…', 'office.bubble.thinking'], permission: ['!', 'office.bubble.permission'], waiting: ['?', 'office.bubble.waiting'], complete: ['✓', 'office.bubble.complete'], error: ['!', 'office.bubble.error'] };
   const bubbles = new Map();
   /**
    * 고양이 말풍선 DOM 을 신호에 맞춰 만들고 지우고 갱신하기.
@@ -857,9 +857,10 @@
       bubbleLayer.appendChild(el);
       bubbles.set(cat.id, el);
     }
-    const key = cat.signal + '|' + (cat.signalText || '');
+    const key = cat.signal + '|' + (cat.signalText || '') + '|' + I18N.lang();
     if (el.dataset.key === key) return;
-    const [ic, tx] = LABEL[cat.signal] || ['!', cat.signal];
+    const [ic, txKey] = LABEL[cat.signal] || ['!', null];
+    const tx = txKey ? t(txKey) : cat.signal;
     el.dataset.key = key;
     el.dataset.st = cat.signal;
     el.querySelector('.ic').textContent = ic;
@@ -879,7 +880,7 @@
     const w = engine.getRenderWidth(), h = engine.getRenderHeight();
     const scale = canvas.clientWidth / w;
     const p = BABYLON.Vector3.Project(boss.root.position.add(new BABYLON.Vector3(0, -0.05, 0)), BABYLON.Matrix.Identity(), scene.getTransformMatrix(), camera.viewport.toGlobal(w, h));
-    const name = (typeof live !== 'undefined' && live.name) || '대표';
+    const name = (typeof live !== 'undefined' && live.name) || t('world.boss');
     if (bossTag.textContent !== name) bossTag.textContent = name;
     bossTag.style.left = (p.x * scale).toFixed(1) + 'px';
     bossTag.style.top = (p.y * scale).toFixed(1) + 'px';
@@ -944,10 +945,10 @@
     const p = BABYLON.Vector3.Project(at, BABYLON.Matrix.Identity(), tm, vp);
     if (p.z < 0 || p.z > 1) { feedBtn.hidden = true; return; }
     const n = demo.balance();
-    const label = `간식 주기 ${n}`;
+    const label = t('office.feed.btn', { n });
     if (feedBtn.textContent !== label) feedBtn.textContent = label;
     feedBtn.disabled = n <= 0;
-    feedBtn.title = n > 0 ? '남은 간식 1개를 이 고양이에게 줍니다 (경험치 +1, 먹거나 발라당)' : '남은 간식이 없어요 — 결재·작업 완료로 모을 수 있어요';
+    feedBtn.title = t(n > 0 ? 'office.feed.yes' : 'office.feed.no');
     feedBtn.hidden = false;
     feedBtn.style.left = (p.x * scale).toFixed(1) + 'px';
     feedBtn.style.top = (p.y * scale).toFixed(1) + 'px';
@@ -1254,8 +1255,8 @@
         if (how === 'active') {
           // 실행 중인 터미널 세션: 명령 복사 대신 브라우저로. 원격 제어로 연결된 웹 세션이 있으면 그 세션, 없으면 Claude Code 세션 목록
           await inv('open_url', { url: o.url || 'https://claude.ai/code' });
-          ui.toast(o.url ? '브라우저에서 세션 여는 중' : '브라우저에서 Claude Code 세션 목록 여는 중 (원격 제어로 연결된 세션이 없음)');
-        } else ui.toast(how === 'desktop' ? '데스크톱 앱에서 여는 중' : '새 터미널에서 재개하는 중');
+          ui.toast(t(o.url ? 'office.open.web' : 'office.open.list'));
+        } else ui.toast(t(how === 'desktop' ? 'office.open.desktop' : 'office.open.terminal'));
       } catch (e) { ui.toast(String(e)); }
       return;
     }
@@ -1283,12 +1284,13 @@
   const ZMAX = R1 / camera.lowerRadiusLimit;
   const zoomNav = statusBar.zoomSlot;
   zoomNav.innerHTML = `<div class="zn">
-      <button class="zn-b" data-z="out" title="축소">−</button>
-      <input class="zn-r" type="range" min="0" max="1000" step="1" aria-label="확대 배율" />
-      <button class="zn-b" data-z="in" title="확대">+</button>
+      <button class="zn-b" data-z="out" data-i18n-title="office.zoom.out">−</button>
+      <input class="zn-r" type="range" min="0" max="1000" step="1" data-i18n-aria-label="office.zoom.label" />
+      <button class="zn-b" data-z="in" data-i18n-title="office.zoom.in">+</button>
       <b class="zn-v">100%</b>
-      <button class="zn-1" title="처음 화면으로 (100%)">100%</button>
+      <button class="zn-1" data-i18n-title="office.zoom.reset">100%</button>
     </div>`;
+  I18N.apply(zoomNav);
   const zr = zoomNav.querySelector('.zn-r'), zv = zoomNav.querySelector('.zn-v');
   /**
    * 현재 확대 배율.
@@ -1354,13 +1356,14 @@
   hint.className = 'mouse-hint';
   hint.hidden = true;
   hint.innerHTML = `<div class="mh-items">
-      <div><i>${MOUSE('L')}</i><b>클릭</b><span>고양이 선택 · 따라가기</span></div>
-      <div><i>${MOUSE('L')}</i><b>고양이 끌기</b><span>자리 옮기기 (놓으면 제자리로)</span></div>
-      <div><i>${MOUSE('L')}</i><b>빈 곳 끌기</b><span>화면 이동</span></div>
-      <div><i>${MOUSE('R')}</i><b>오른쪽 끌기</b><span>돌려 보기 (Shift+끌기, Q·E)</span></div>
-      <div><i>${MOUSE('W')}</i><b>휠</b><span>확대 · 축소</span></div>
+      <div><i>${MOUSE('L')}</i><b data-i18n="tour.mouse.click.b"></b><span data-i18n="tour.mouse.click.d"></span></div>
+      <div><i>${MOUSE('L')}</i><b data-i18n="tour.mouse.drag.b"></b><span data-i18n="tour.mouse.drag.d"></span></div>
+      <div><i>${MOUSE('L')}</i><b data-i18n="tour.mouse.pan.b"></b><span data-i18n="tour.mouse.pan.d"></span></div>
+      <div><i>${MOUSE('R')}</i><b data-i18n="tour.mouse.rot.b"></b><span data-i18n="tour.mouse.rot.d"></span></div>
+      <div><i>${MOUSE('W')}</i><b data-i18n="tour.mouse.wheel.b"></b><span data-i18n="office.mouse.zoom"></span></div>
     </div>
-    <button class="mh-x" title="닫기" aria-label="닫기"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg></button>`;
+    <button class="mh-x" data-i18n-title="app.close" data-i18n-aria-label="app.close"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg></button>`;
+  I18N.apply(hint);
   (document.getElementById('widgets') || document.getElementById('stage')).appendChild(hint);
   /**
    * 마우스 안내를 자동으로 보여 준 횟수.
@@ -1952,9 +1955,9 @@
     // 권한 연동이 꺼져 있으면 결재가 오지 않아 간식을 거의 못 받는다: 간식 단추 설명에 늘 적고, 처음 한 번은 알림 글로도 알린다
     window.__TAURI__.core.invoke('get_config').then((c) => {
       if (!c || c.permission_hook) return;
-      ui.treatHint = '설정 › Claude 의 "권한 요청을 알림에서 수락/거절"을 켜면 결재 간식을 받을 수 있어요';
+      ui.treatHint = 'office.treatHint'; // 사전 키 (hud 가 번역)
       try {
-        if (!localStorage.getItem('meow.office.treatHintShown')) { localStorage.setItem('meow.office.treatHintShown', '1'); ui.toast(ui.treatHint); }
+        if (!localStorage.getItem('meow.office.treatHintShown')) { localStorage.setItem('meow.office.treatHintShown', '1'); ui.toast(t(ui.treatHint)); }
       } catch (_) { /* 저장소를 못 쓰면 알림 글은 생략 */ }
     }, () => {});
     pollPermits();
@@ -2076,12 +2079,14 @@
       else if (document.fullscreenElement) await document.exitFullscreen();
     } catch (e) { console.warn('전체 화면 전환 실패', e); }
     fsBtn.innerHTML = svg((await isFull()) ? 'min' : 'max');
-    fsBtn.title = (await isFull()) ? '창 모드로 (Esc)' : '전체 화면 (F11)';
+    fsBtn.dataset.i18nTitle = (await isFull()) ? 'office.fs.exit' : 'office.fs.enter';
+    fsBtn.title = t(fsBtn.dataset.i18nTitle);
   };
   const fsBtn = document.createElement('button');
   fsBtn.id = 'fsBtn';
   fsBtn.type = 'button';
-  fsBtn.title = '전체 화면 (F11)';
+  fsBtn.dataset.i18nTitle = 'office.fs.enter';
+  fsBtn.title = t('office.fs.enter');
   fsBtn.className = 'ib';
   fsBtn.innerHTML = svg('max');
   fsBtn.onclick = async () => setFull(!(await isFull()));
@@ -2113,18 +2118,19 @@
     });
     const gear = document.createElement('button');
     gear.className = 'ib';
-    gear.title = '설정';
+    gear.dataset.i18nTitle = 'office.gear'; gear.title = t('office.gear');
     gear.innerHTML = svg('settings');
     gear.onclick = () => settings.toggle();
     const help = document.createElement('button');
     help.className = 'ib';
-    help.title = '조작 안내 (마우스)';
+    help.dataset.i18nTitle = 'office.help'; help.title = t('office.help');
     help.innerHTML = svg('help');
     // [?] 메뉴: 처음 안내 다시 보기 · 마우스 조작 안내
     const helpMenu = document.createElement('div');
     helpMenu.className = 'help-menu';
     helpMenu.hidden = true;
-    helpMenu.innerHTML = '<button data-h="tour">처음 안내 다시 보기</button><button data-h="mouse">마우스 조작 안내</button><button data-h="layout">패널 위치 초기화</button>';
+    helpMenu.innerHTML = '<button data-h="tour" data-i18n="office.help.tour"></button><button data-h="mouse" data-i18n="office.help.mouse"></button><button data-h="layout" data-i18n="office.help.layout"></button>';
+    I18N.apply(helpMenu);
     help.onclick = (e) => { e.stopPropagation(); helpMenu.hidden = !helpMenu.hidden; };
     helpMenu.onclick = (e) => {
       const b = e.target.closest('[data-h]');
@@ -2184,6 +2190,7 @@
   try { window.__TAURI__ && window.__TAURI__.core.invoke('log_ui', { level: 'error', message: `office: 초기화 실패 ${(e && e.stack) || e}` }); } catch (_) { /* 무시 */ }
   const m = document.createElement('div');
   m.style.cssText = 'position:fixed;inset:0;display:grid;place-items:center;padding:24px;text-align:center;font:600 14px/1.6 Pretendard,system-ui,sans-serif;color:#4a5162;background:#f5f3ff;z-index:99';
-  m.innerHTML = '<div><b style="font-size:16px;color:#1f2430">사무실 화면을 열지 못했습니다</b><br>그래픽(WebGL)을 쓸 수 없는 환경일 수 있습니다. 앱을 다시 실행해 보고, 계속되면 설정 › 정보 › 로그 [보내기]로 알려 주세요.</div>';
+  m.innerHTML = '<div><b style="font-size:16px;color:#1f2430" data-i18n="office.fail.title"></b><br><span data-i18n="office.fail.body"></span></div>';
+  try { I18N.apply(m); } catch (_) { /* 사전 없음 */ }
   document.body.appendChild(m);
 });
