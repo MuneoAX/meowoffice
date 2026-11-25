@@ -290,7 +290,7 @@ const CatModel = (() => {
   /** 눈 크기 배율(모델 원래 눈 대비)과 가장자리 앞으로 내기(m) — remapEyeUV */
   const EYE_SCALE = 1.3, EYE_LIFT = 0.012;
   /** 위팔 뼈 좌우 위치 배율(1 = 모델 그대로) — attach 의 어깨 좁히기 */
-  const SHOULDER = 0.82;
+  const SHOULDER = 0.66; // 사용자 2026-11-25: 0.82 에서 다시 80% 로
 
   /**
    * 체형 → 얼굴 정보(모델 공간 = 정점 좌표): 코끝, 입 선(ω) 경로, 혀 뿌리 자리·방향, 크기 기준(눈 너비). faceGeo 가 채우고 makeMouth 가 쓴다.
