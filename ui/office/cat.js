@@ -568,6 +568,7 @@ const OfficeCat = (() => {
   function walkSpeed(cat) {
     if (cat.skating) return SKATE_SPEED * (0.85 + 0.25 * Math.abs(Math.sin(cat.t * SKATE_STRIDE))); // 지칠 때 빨라졌다 미끄러지며 느려짐
     const cfg = cat.model && cat.model.cfg;
+    if (cfg && cfg.speed) return cfg.speed; // ai 체형: 모델 걷기 동작에 맞춘 속도
     if (cat.quad && (!cfg || cfg.quad)) return SPEED_OUT;
     const g = cfg && cfg.gait && cfg.gait.walk;
     return g ? Math.min(SPEED_IN, (g[1] / g[0]) * BIPED_RATE) : SPEED_IN;

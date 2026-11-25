@@ -105,6 +105,8 @@ const CatModel = (() => {
     standard: { file: 'cat_standard.glb', sitDrop: 0.14, ear: 1, quad: true, gait: { walk: [1.0, 0.246], carry: [1.0, 0.248], walk4: [0.8, 0.238] } },
     foldear: { file: 'cat_foldear.glb', sitDrop: 0.12, ear: 0.3, quad: true, gait: { walk: [1.0, 0.207], carry: [1.0, 0.211], walk4: [0.8, 0.199] } },
     longhair: { file: 'cat_longhair.glb', sitDrop: 0.10, ear: 1, quad: false, gait: { walk: [1.0, 0.187], carry: [1.0, 0.19], walk4: [0.8, 0.187] } },
+    // ai: AI 로 만든 고양이(품종마다 파일·자체 텍스처, 힉스필드 리깅 사람형 뼈). 뼈 회전·크기·위치는 코드로 손대지 않고 동작만 재생한다. speed = 걷는 속도(m/s), 동작 이름은 AI_CLIP 으로 옮긴다
+    ai: { file: null, ai: true, sitDrop: -0.01, ear: 0, quad: false, speed: 0.6, gait: { walk: [1.0, 0.285], carry: [1.0, 0.285], walk4: [1.0, 0.285] } },
     shortleg: { file: 'cat_shortleg.glb', sitDrop: 0.06, ear: 1, quad: false, legScale: 0.7, gait: { walk: [1.0, 0.15], carry: [1.0, 0.151], walk4: [0.8, 0.15] } },
   };
   /**
@@ -115,16 +117,16 @@ const CatModel = (() => {
   const BREEDS = {
     siamese: { body: 'standard' },
     russian_blue: { body: 'standard' },
-    persian: { body: 'longhair' },
-    scottish_fold: { body: 'foldear' },
-    munchkin: { body: 'shortleg' },
+    persian: { body: 'ai', file: 'ai/persian.glb' }, // AI 장모형 기본 모델(Tripo 생성·리깅)
+    scottish_fold: { body: 'ai', file: 'ai/scottish_fold.glb' }, // AI 접힌귀형 기본 모델
+    munchkin: { body: 'ai', file: 'ai/munchkin.glb' }, // AI 짧은다리형 기본 모델
     maine_coon: { body: 'longhair' },
     bengal: { body: 'standard' },
     sphynx: { body: 'standard', ears: 1.35 },
     ragdoll: { body: 'longhair' },
     norwegian_forest: { body: 'longhair' },
     turkish_angora: { body: 'longhair' },
-    korean_cheese: { body: 'standard' },
+    korean_cheese: { body: 'ai', file: 'ai/korean_cheese.glb' },
     korean_tabby: { body: 'standard' },
     korean_calico: { body: 'standard' },
     korean_tuxedo: { body: 'standard' },
@@ -136,6 +138,23 @@ const CatModel = (() => {
    * @type {Object<string, BABYLON.AssetContainer>}
    */
   const containers = {};
+  /**
+   * 품종 → 컨테이너 키 (ai 체형은 파일마다 따로, 그 밖엔 체형 키).
+   * @param {string} breed 품종 키
+   * @param {string} [body] 체형 키 (없으면 품종이 정한 체형)
+   * @returns {string}
+   */
+  const ckey = (breed, body) => { const b = body || (BREEDS[breed] && BREEDS[breed].body); return b === 'ai' ? 'ai:' + (BREEDS[breed] && BREEDS[breed].file) : b; };
+  /**
+   * ai 체형 동작 이름 → 모델이 가진 동작 그룹 (pick 결과를 힉스필드 동작으로 옮김). 없는 것은 idle.
+   * @type {Object<string, string>}
+   */
+  const AI_CLIP = { carry: 'walk', walk4: 'walk', drink: 'sit', sit_talk: 'sit', sleep: 'sit', sit_up: 'sit', roll: 'sit', groom: 'idle', skate: 'walk', hold: 'idle' };
+  /**
+   * ai 체형 뼈 이름 별칭 → 실제 뼈 ('mixamorig:' 접두어와 대소문자를 뗀 이름). 소품·클릭 위치·말풍선 기준점 참조용이며 뼈 회전 보정에는 쓰지 않는다.
+   * @type {Object<string, string>}
+   */
+  const AI_ALIAS = { head: 'head', neck: 'neck', chest: 'spine2', spine: 'spine1', root: 'hips', 'upper_arm.L': 'leftarm', 'upper_arm.R': 'rightarm', 'forearm.L': 'leftforearm', 'forearm.R': 'rightforearm', 'hand.L': 'lefthand', 'hand.R': 'righthand', 'thigh.L': 'leftupleg', 'thigh.R': 'rightupleg', 'shin.L': 'leftleg', 'shin.R': 'rightleg', 'foot.L': 'leftfoot', 'foot.R': 'rightfoot' };
   /** 체형별 추가 동작(스케이트·발라당) 원본 — attach 가 고양이마다 뼈 이름으로 이어 붙인다 */
   const extraAnims = {};
   /**
@@ -454,9 +473,14 @@ const CatModel = (() => {
     t.root.scaling.set(0.7 + 0.3 * k, 1, k);
     t.root.rotationQuaternion = t.base.multiply(Q.RotationAxis(V3.Right(), flick));
   }
-  async function load(scene, body) {
+  async function load(scene, body, key = body, file = BODIES[body].file) {
     try {
-      const c = await BABYLON.LoadAssetContainerAsync(DIR + BODIES[body].file, scene);
+      const c = await BABYLON.LoadAssetContainerAsync(DIR + file, scene);
+      if (BODIES[body].ai) { // 자체 텍스처·재질을 그대로 쓴다: 손질·추가 동작 없음. 재질은 고양이끼리 공유하므로 지울 때 같이 지우지 않게 표시
+        c.materials.forEach((m) => { m.metadata = { ...(m.metadata || {}), shared: true }; });
+        containers[key] = c;
+        return;
+      }
       // 꼬리·귀 트랙은 지운다 (코드가 직접 움직임)
       for (const g of c.animationGroups) {
         for (const ta of g.targetedAnimations.slice()) {
@@ -465,7 +489,7 @@ const CatModel = (() => {
       }
       for (const me of c.meshes) if (me.skeleton) { const p = fixRumpWeights(me); if (p && !tailRing[body]) tailRing[body] = p; }
       for (const me of c.meshes) { remapEyeUV(me); faceGeo(me, body); slimNeck(me); }
-      containers[body] = c;
+      containers[key] = c;
       // 추가 동작(스케이트·발라당): Blender assets/cats/hi3d/extra_actions.py 로 체형마다 만든 뼈대+동작 파일. 꼬리·귀 트랙은 같은 이유로 지운다
       try {
         const a = await BABYLON.LoadAssetContainerAsync(DIR + 'anims_' + body + '.glb', scene);
@@ -485,7 +509,8 @@ const CatModel = (() => {
    */
   async function preload(scene) {
     if (containers.standard) return true;
-    await Promise.all(Object.keys(BODIES).map((b) => load(scene, b)).concat([
+    const aiFiles = [...new Set(Object.values(BREEDS).filter((b) => b.body === 'ai').map((b) => b.file))];
+    await Promise.all(Object.keys(BODIES).filter((b) => !BODIES[b].ai).map((b) => load(scene, b)).concat(aiFiles.map((f) => load(scene, 'ai', 'ai:' + f, f))).concat([
       BABYLON.LoadAssetContainerAsync('models/props/skate.glb', scene).then((c) => { skateC = c; c.materials.forEach((m) => { m.metadata = { ...(m.metadata || {}), shared: true }; }); }, // 스케이트 재질은 모든 고양이가 함께 쓴다 — 고양이 하나 지울 때 같이 지우면 안 됨(cat.js remove)
         (e) => console.warn('스케이트 모델을 불러오지 못했습니다', e && e.message)),
     ]));
@@ -501,12 +526,12 @@ const CatModel = (() => {
    * 불러온 체형 키 목록 (BODIES 에 적힌 정해진 순서, 불러온 순서와 무관).
    * @returns {string[]}
    */
-  const bodies = () => Object.keys(BODIES).filter((b) => containers[b]); // 정해진 순서 (불러온 순서와 무관)
+  const bodies = () => Object.keys(BODIES).filter((b) => containers[b] || (b === 'ai' && Object.keys(containers).some((k) => k.startsWith('ai:')))); // 정해진 순서 (불러온 순서와 무관)
   /**
    * 쓸 수 있는 품종 (대표 제외, 체형 모델이 불러와진 것만)
    * @returns {string[]} 품종 키 목록
    */
-  const breeds = () => Object.keys(BREEDS).filter((k) => k !== 'boss' && containers[BREEDS[k].body]);
+  const breeds = () => Object.keys(BREEDS).filter((k) => k !== 'boss' && containers[ckey(k)]);
   /**
    * 품종의 한글 이름 (모르는 키는 키 그대로).
    * @param {string} k 품종 키
@@ -570,17 +595,19 @@ const CatModel = (() => {
   function attach(scene, cat, breed, body) {
     if (!BREEDS[breed]) breed = 'korean_cheese';
     body = body || BREEDS[breed].body;
-    if (!containers[body]) body = 'standard';
-    const container = containers[body];
+    const key = ckey(breed, body);
+    if (!containers[key]) body = 'standard'; // 불러오지 못했으면 일반형 + 품종 무늬
+    const container = containers[body === 'ai' ? key : body];
+    const ai = !!BODIES[body].ai;
     const inst = container.instantiateModelsToScene((n) => `${cat.id}:${n}`, false, { doNotInstantiate: true });
     const top = inst.rootNodes[0];
     top.parent = cat.root;
     top.rotationQuaternion = Q.Identity();
     top.scaling.set(1, 1, -1);
     const meshes = top.getChildMeshes();
-    const mat = material(scene, breed, body);
+    const mat = ai ? null : material(scene, breed, body); // ai: 모델 자체 재질 유지
     for (const m of meshes) {
-      m.material = mat;
+      if (mat) m.material = mat;
       m.isPickable = false; // 뼈대 메시는 기본 자세 기준으로 판정돼 옆 고양이가 잡힘 → 아래 클릭 상자로
       m.metadata = { catId: cat.id };
       m.alwaysSelectAsActiveMesh = false;
@@ -594,6 +621,11 @@ const CatModel = (() => {
     pick.metadata = { catId: cat.id };
     const nodes = {};
     for (const t of top.getChildTransformNodes(false)) nodes[t.name.replace(cat.id + ':', '')] = t;
+    if (ai) {
+      const low = {};
+      for (const [k, n] of Object.entries(nodes)) low[k.replace(/^mixamorig:/, '').toLowerCase()] = n;
+      for (const [a, b] of Object.entries(AI_ALIAS)) if (low[b]) nodes[a] = low[b];
+    }
     const rest = {};
     for (const k of ['tail_01', 'tail_02', 'tail_03', 'tail_04', 'ear.L', 'ear.R']) {
       const n = nodes[k];
@@ -607,6 +639,7 @@ const CatModel = (() => {
       groups[g.name.replace(cat.id + ':', '')] = g;
     }
     // 추가 동작을 이 고양이 뼈에 이어 붙인다(뼈 이름이 같다)
+    if (ai) for (const [a, b] of Object.entries(AI_CLIP)) if (!groups[a] && groups[b]) groups[a] = groups[b]; // 동작 이름 별칭 (같은 그룹)
     for (const src of extraAnims[body] || []) {
       const g = src.clone(`${cat.id}:${src.name}`, (t) => nodes[t.name] || null);
       for (const ta of g.targetedAnimations.slice()) if (!ta.target) g.removeTargetedAnimation(ta.animation);
@@ -617,7 +650,7 @@ const CatModel = (() => {
     if (ears) for (const k of ['ear.L', 'ear.R']) if (nodes[k]) nodes[k].scaling.setAll(ears);
     const model = { top, meshes, nodes, rest, groups, anim: null, mat, body, breed, cfg: BODIES[body], legDrop: 0 };
     const k = BODIES[body].legScale;
-    if (k && nodes['thigh.L']) {
+    if (k && !ai && nodes['thigh.L']) {
       // 줄어든 다리 길이만큼 몸을 내린다 (발이 바닥에 닿게)
       top.computeWorldMatrix(true);
       const inv = BABYLON.Matrix.Invert(cat.root.computeWorldMatrix(true));
@@ -644,7 +677,7 @@ const CatModel = (() => {
     // 어깨 좁히기(사용자 2026-11-25 "어깨가 너무 넓다"): 위팔 뼈를 몸 가운데 쪽으로 SHOULDER 배. 모델 파일은 그대로.
     // 동작이 뼈 위치를 쓰는 경우 매 프레임 되돌아오므로 동작 계산 직후에 다시 옮긴다(동작이 안 쓰면 처음 값을 기준으로 — 곱이 쌓이지 않게)
     const arms = ['upper_arm.L', 'upper_arm.R'].map((k) => nodes[k]).filter(Boolean).map((n) => ({ n, src: n.position.x, last: NaN }));
-    if (arms.length && SHOULDER !== 1) {
+    if (arms.length && SHOULDER !== 1 && !ai) {
       const ob = scene.onAfterAnimationsObservable.add(() => {
         if (top.isDisposed()) { scene.onAfterAnimationsObservable.remove(ob); return; }
         for (const a of arms) {
@@ -852,7 +885,7 @@ const CatModel = (() => {
     scene.onAfterAnimationsObservable.add(() => {
       for (const cat of HELD) {
         const nodes = cat.model && cat.model.nodes;
-        if (!nodes || !cat.held) { HELD.delete(cat); continue; }
+        if (!nodes || !cat.held || cat.model.cfg.ai) { HELD.delete(cat); continue; }
         for (const [k, d] of LIMP) {
           const n = nodes[k];
           if (n && n.rotationQuaternion) n.rotationQuaternion = n.rotationQuaternion.multiply(d);
@@ -1006,7 +1039,7 @@ const CatModel = (() => {
       m.cupParts.cof.setEnabled(fill > 0.85);
       if (onCounter) m.cup.position.set(0, 0.95, -0.85); // 고양이 앞 조리대 위(커피 머신 아래) — 고양이 자리 기준
       else {
-        if (cat.cup === 'hand' && !SIPPERS.has(cat)) { SIPPERS.add(cat); hookSip(cat.root.getScene()); } // 잔 든 팔 자세
+        if (cat.cup === 'hand' && !m.cfg.ai && !SIPPERS.has(cat)) { SIPPERS.add(cat); hookSip(cat.root.getScene()); } // 잔 든 팔 자세
         const hr = at('hand.R');
         if (hr) m.cup.position.copyFrom(hr).addInPlaceFromFloats(0, 0.02, -0.03);
       }
@@ -1209,7 +1242,7 @@ const CatModel = (() => {
       if (act === 'type' || act === 'stamp') return 'sit_type';
       if (act === 'read') return 'sit_type'; // 앞발을 앞으로 모은 자세로 책을 든다 (아주 느리게 — animate 의 speedRatio)
       if (act === 'talk' || act === 'nod' || act === 'shake') return 'sit_talk';
-      if (act === 'drink' && cat.cup === 'hand') return 'sit'; // 잔을 들었으면 기본 앉은 동작 위에 팔 자세를 덧입힌다 (hookSip) — 마시기 동작과 겹치면 팔이 두 번 돈다
+      if (act === 'drink' && cat.cup === 'hand') return cat.model.cfg.ai ? 'drink' : 'sit'; // 잔을 들었으면 기본 앉은 동작 위에 팔 자세를 덧입힌다 (hookSip) — 마시기 동작과 겹치면 팔이 두 번 돈다
       if (act === 'drink' || act === 'eat') return 'drink'; // 앉아서 간식 먹기는 마시기 동작으로
       if (act === 'highfive') return 'sit_talk';
       return 'sit';
@@ -1289,7 +1322,8 @@ const CatModel = (() => {
       const old = m.groups[m.anim];
       if (old) old.stop();
       const g = m.groups[name] || m.groups.idle;
-      if (g) {
+      if (g && g === old) { /* 같은 동작 그룹(ai 별칭): 다시 시작하지 않음 */ }
+      else if (g) {
         g.speedRatio = 1;
         g.start(true, 1);
         g.goToFrame(Math.random() * (g.to - g.from) + g.from);
@@ -1454,12 +1488,12 @@ const CatModel = (() => {
       n.rotationQuaternion = r.multiply(Q.RotationAxis(V3.Forward(), s * droop * 0.9 * m.cfg.ear));
     });
     // 두 발로 서거나 걷는 중이면 등을 편다 (관절 덮어쓰기는 afterAnimations 에서)
-    const upGoal = UPRIGHT_ACTS.has(name) && !cat.held ? 1 : 0;
+    const upGoal = UPRIGHT_ACTS.has(name) && !cat.held && !m.cfg.ai ? 1 : 0;
     const uk = cat.uprightK || 0;
     cat.uprightK = upGoal > uk ? Math.min(1, uk + dt * 4) : Math.max(0, uk - dt * 4);
     if (cat.uprightK > 0) { hookUpright(cat.root.getScene()); UPRIGHT.add(cat); }
     // 낚시 중(낚시 자리에 앉음): 낚싯대를 잡는 팔 자세를 부드럽게 넣고 뺀다 (관절 덮어쓰기는 afterAnimations 에서)
-    const fishGoal = cat.fishing && cat.pose === 'sit' && !cat.held ? 1 : 0;
+    const fishGoal = cat.fishing && cat.pose === 'sit' && !cat.held && !m.cfg.ai ? 1 : 0;
     const fk = cat.fishK || 0;
     cat.fishK = fishGoal > fk ? Math.min(1, fk + dt * 3) : Math.max(0, fk - dt * 4);
     if (cat.fishK > 0) { hookFish(cat.root.getScene()); FISHERS.add(cat); }
@@ -1467,7 +1501,7 @@ const CatModel = (() => {
     const sg = cat.skating && !cat.held ? 1 : 0;
     const sk = cat.skateK || 0;
     cat.skateK = sg > sk ? Math.min(1, sk + dt * 4) : Math.max(0, sk - dt * 4);
-    if (cat.skateK > 0 && !m.groups.skate) { hookSkate(cat.root.getScene()); SKATING.add(cat); } // 스케이트 동작(anims_*.glb)이 없을 때만 코드로 덮어쓴다
+    if (cat.skateK > 0 && !m.groups.skate && !m.cfg.ai) { hookSkate(cat.root.getScene()); SKATING.add(cat); } // 스케이트 동작(anims_*.glb)이 없을 때만 코드로 덮어쓴다
     // 오류: 털 곤두섬 (살짝 부풀었다 줄었다)
     const puff = err ? 1.05 + Math.sin(t * 20) * 0.01 : 1;
     m.top.scaling.set(puff, puff, -puff); // z 부호 유지 (좌우 뒤집힘 방지)
@@ -1477,12 +1511,12 @@ const CatModel = (() => {
       hookHeld(cat.root.getScene());
       HELD.add(cat); // 관절 굽힘은 동작(idle) 재생이 끝난 뒤에 덮어써야 남는다 → afterAnimations 에서
       // 잡힌 목덜미 가죽이 늘어나고 몸통도 축 늘어진다: 목·가슴·허리 관절을 길이 방향(관절 Y)으로 조금씩 늘린다 (고양이 몸은 늘어난다)
-      for (const [k, sy] of STRETCH) if (m.nodes[k]) m.nodes[k].scaling.set(1, sy, 1);
+      if (!m.cfg.ai) for (const [k, sy] of STRETCH) if (m.nodes[k]) m.nodes[k].scaling.set(1, sy, 1);
     } else {
       HELD.delete(cat);
       if (m.top.rotationQuaternion && (m.top.rotationQuaternion.x || m.top.rotationQuaternion.z)) {
         m.top.rotationQuaternion = Q.Identity();
-        for (const [k] of STRETCH) if (m.nodes[k]) m.nodes[k].scaling.set(1, 1, 1);
+        if (!m.cfg.ai) for (const [k] of STRETCH) if (m.nodes[k]) m.nodes[k].scaling.set(1, 1, 1);
       }
     }
     if (!held && cat.skateK > 0) m.top.rotationQuaternion = Q.RotationAxis(V3.Forward(), Math.max(-0.2, Math.min(0.2, m.turn * 0.09)) * cat.skateK); // 도는 안쪽으로 몸 기울기

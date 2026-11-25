@@ -1,0 +1,109 @@
+// Tripo API(v3) 로 모델 리깅·동작 붙이기. 키는 환경 변수 TRIPO_API_KEY(저장소에 넣지 않음).
+//   node scripts/tripo.mjs upload <파일.glb>                         → file_token
+//   node scripts/tripo.mjs rigcheck <file_token|task_id>              → riggable, rig_type
+//   node scripts/tripo.mjs rig <file_token|task_id> [rig_type=biped] [model=v1.0-20240301] [spec=mixamo]
+//   node scripts/tripo.mjs retarget <rig task_id> <preset,...(최대 5)> [inplace]
+//   node scripts/tripo.mjs wait <task_id> [출력.glb]                  → 끝날 때까지 기다리고 결과를 내려받음
+//   node scripts/tripo.mjs task <task_id>                             → 상태 보기
+// 문서: https://developers.tripo3d.com/en/docs/animations-rig (글로벌 계정은 openapi.tripo3d.ai)
+
+import fs from "node:fs";
+import path from "node:path";
+
+const BASE = process.env.TRIPO_BASE || "https://openapi.tripo3d.ai/v3";
+const KEY = process.env.TRIPO_API_KEY;
+if (!KEY) { console.error("TRIPO_API_KEY 환경 변수가 없습니다"); process.exit(1); }
+const H = { Authorization: `Bearer ${KEY}` };
+
+async function call(method, p, body) {
+  const opt = { method, headers: { ...H } };
+  if (body instanceof FormData) opt.body = body;
+  else if (body) { opt.headers["Content-Type"] = "application/json"; opt.body = JSON.stringify(body); }
+  const r = await fetch(BASE + p, opt);
+  const t = await r.text();
+  let j; try { j = JSON.parse(t); } catch { j = { raw: t.slice(0, 400) }; }
+  if (!r.ok || (j.code != null && j.code !== 0)) throw new Error(`${method} ${p} → ${r.status} ${JSON.stringify(j).slice(0, 400)}`);
+  return j.data ?? j;
+}
+const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+
+const [cmd, a, b, c, d] = process.argv.slice(2);
+if (cmd === "upload") {
+  const fd = new FormData();
+  fd.append("file", new Blob([fs.readFileSync(a)]), path.basename(a));
+  console.log(JSON.stringify(await call("POST", "/files", fd)));
+} else if (cmd === "rigcheck") {
+  console.log(JSON.stringify(await call("POST", "/animations/rig-check", { input: a })));
+} else if (cmd === "rig") {
+  const body = { input: a, rig_type: b || "biped", model: c || "v1.0-20240301", out_format: "glb" };
+  if ((b || "biped") === "biped") body.spec = d || "mixamo";
+  console.log(JSON.stringify(await call("POST", "/animations/rig", body)));
+} else if (cmd === "retarget") {
+  const list = b.split(",").map((s) => s.trim()).filter(Boolean);
+  const body = { input: a, out_format: "glb", animate_in_place: c === "inplace" };
+  if (list.length === 1) body.animation = list[0]; else body.animations = list;
+  console.log(JSON.stringify(await call("POST", "/animations/retarget", body)));
+} else if (cmd === "task") {
+  console.log(JSON.stringify(await call("GET", `/tasks/${a}`), null, 1));
+} else if (cmd === "wait") {
+  for (let i = 0; i < 180; i++) {
+    const t = await call("GET", `/tasks/${a}`);
+    if (["success", "failed", "cancelled", "banned", "expired"].includes(t.status)) {
+      console.log(JSON.stringify({ status: t.status, type: t.type, credits: t.credits_consumed, error: t.error_message, output: t.output }));
+      if (t.status === "success" && b && t.output && t.output.model_url) {
+        const r = await fetch(t.output.model_url);
+        fs.writeFileSync(b, Buffer.from(await r.arrayBuffer()));
+        console.log("내려받음", b, fs.statSync(b).size);
+      }
+      process.exit(t.status === "success" ? 0 : 1);
+    }
+    await sleep(5000);
+  }
+  console.error("시간 초과"); process.exit(1);
+} else if (cmd === "cat") {
+  // 한 번에: 업로드 → 리깅(v1.0 biped, mixamo 이름) → 동작 10개(5개씩 두 번, 제자리) → 합치기 → 앱 동작 이름으로 → 출력
+  //   node scripts/tripo.mjs cat <줄인.glb> <출력.glb>
+  const { execFileSync } = await import("node:child_process");
+  const tmp = path.join((await import("node:os")).tmpdir(), "meow_tripo_" + path.basename(b, ".glb")); // 앱 폴더 밖(중간 파일)
+  fs.mkdirSync(tmp, { recursive: true });
+  const until = async (id) => {
+    for (let i = 0; i < 240; i++) {
+      const t = await call("GET", `/tasks/${id}`);
+      if (t.status === "success") return t;
+      if (["failed", "cancelled", "banned", "expired"].includes(t.status)) throw new Error(`${t.type} ${t.status} ${t.error_message || ""}`);
+      await sleep(5000);
+    }
+    throw new Error("시간 초과 " + id);
+  };
+  const fd = new FormData();
+  fd.append("file", new Blob([fs.readFileSync(a)]), path.basename(a));
+  const tok = (await call("POST", "/files", fd)).file_token;
+  const rig = (await call("POST", "/animations/rig", { input: tok, rig_type: "biped", model: "v1.0-20240301", spec: "mixamo", out_format: "glb" })).task_id;
+  await until(rig);
+  console.log("리깅 완료", rig);
+  const SETS = [["idle", "walk", "sit", "play_video_game", "wave_goodbye_01"], ["standing_relax", "wait", "cheer"]];
+  const files = [];
+  for (const [i, set] of SETS.entries()) {
+    const id = (await call("POST", "/animations/retarget", { input: rig, animations: set.map((s) => "preset:biped:" + s), out_format: "glb", animate_in_place: true })).task_id;
+    const t = await until(id);
+    const f = path.join(tmp, `anims${i}.glb`);
+    fs.writeFileSync(f, Buffer.from(await (await fetch(t.output.model_url)).arrayBuffer()));
+    files.push(f);
+    console.log("동작", set.join(","), "크레딧", t.credits_consumed);
+  }
+  const merged = path.join(tmp, "all.glb");
+  execFileSync(process.execPath, [path.join(path.dirname(new URL(import.meta.url).pathname.replace(/^\/(\w:)/, "$1")), "merge-ai-anims.mjs"), merged, files[0] + "=*", ...files.slice(1).map((f) => f + "=*")], { stdio: "inherit" });
+  // 앱 동작 이름으로(catmodel.js 의 ai 체형 매핑과 같음)
+  const { createRequire } = await import("node:module");
+  const req = createRequire(path.resolve("package.json"));
+  const { NodeIO } = req("@gltf-transform/core"); const { ALL_EXTENSIONS } = req("@gltf-transform/extensions"); const { prune } = req("@gltf-transform/functions");
+  const io = new NodeIO().registerExtensions(ALL_EXTENSIONS);
+  const doc = await io.read(merged);
+  const REN = { idle: "idle", walk: "walk", sit: "sit", play_video_game: "sit_type", wave_goodbye_01: "raise_hand", cheer: "cheer", standing_relax: "hold", wait: "wait" };
+  for (const an of doc.getRoot().listAnimations()) { const n = REN[an.getName()]; if (n) an.setName(n); else an.dispose(); }
+  await doc.transform(prune());
+  await io.write(b, doc);
+  console.log("완료", b, doc.getRoot().listAnimations().map((x) => x.getName()).join(","));
+} else {
+  console.error("명령: upload | rigcheck | rig | retarget | wait | task | cat"); process.exit(1);
+}
