@@ -1,6 +1,6 @@
 [package]
 name = "muneo-claude-usage-tray"
-version = "0.6.5"
+version = "0.6.6"
 edition = "2021"
 description = "문어AI - AI관리: Windows·macOS 트레이 앱 — AI 코딩 에이전트 사용 한도·세션·모델별 사용량 표시 (Tauri)"
 license = "UNLICENSED"

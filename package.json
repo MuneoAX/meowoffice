@@ -1,6 +1,6 @@
 {
   "name": "muneo-claude-usage-tray",
-  "version": "0.6.5",
+  "version": "0.6.6",
   "private": true,
   "scripts": {
     "dev": "tauri dev",
