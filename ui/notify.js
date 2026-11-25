@@ -38,7 +38,7 @@
  * @typedef {Object} CardFormat
  * @property {function(Permit):string} pill 알약 문구
  * @property {string} cls 알약 CSS 클래스
- * @property {string} ok 수락 단추 문구
+ * @property {function():string} ok 수락 단추 문구
  * @property {function(Permit):string} title 카드 제목
  * @property {function(Permit):string} body 본문 HTML
  * @property {function(Permit):(Object<string,string>|null|undefined)} answers 답 모음(null=미완성, undefined=해당 없음)
@@ -46,40 +46,40 @@
 const listEl = $("list");
 // 사용자 입력이 필요한 건(need_input)만 "입력 대기", 로컬 턴 종료(done)는 "응답 완료", 나머지(검토 준비 등)는 일반 알림.
 const STATES = {
-  need_input: { label: "입력 대기", cls: "pill-amber" },
-  done: { label: "응답 완료", cls: "pill-green" },
-  update: { label: "업데이트", cls: "pill-purple" },
-  status: { label: "연결 불안정", cls: "pill-red" },
-  recovered: { label: "복구됨", cls: "pill-green" },
+  need_input: { key: "notify.state.need_input", cls: "pill-amber" },
+  done: { key: "notify.state.done", cls: "pill-green" },
+  update: { key: "notify.state.update", cls: "pill-purple" },
+  status: { key: "notify.state.status", cls: "pill-red" },
+  recovered: { key: "notify.state.recovered", cls: "pill-green" },
 };
 /**
  * 알림 → 카드 하단 단추 정의.
  * 업데이트 → 지금 설치, 로컬 세션 → 확인(열 링크 없음), 연결 불안정 → 상태 페이지,
  * 그 외(클라우드·원격 세션의 검토 대기, 연결 복구 등 일반 상태 알림) → 자세히.
  * @param {Alert} a 알림 (common.js 의 Alert)
- * @returns {{act: "install"|"open", label: string}} 동작과 문구
+ * @returns {{act: "install"|"open", id: "install"|"ok"|"status"|"details", key: string}} 동작·단추 종류(비교용)·사전 키
  * @see footButton, keepOpen, 클릭 핸들러(install_update·open_alert)
  */
 const buttonOf = (a) =>
   a.env === "update"
-    ? { act: "install", label: "지금 설치" }
+    ? { act: "install", id: "install", key: "notify.btn.install" }
     : a.env === "local"
-      ? { act: "open", label: "확인" }
+      ? { act: "open", id: "ok", key: "notify.btn.ok" }
       : a.env === "status" && a.state === "status"
-        ? { act: "open", label: "상태 페이지" }
-        : { act: "open", label: "자세히" };
+        ? { act: "open", id: "status", key: "notify.btn.status_page" }
+        : { act: "open", id: "details", key: "notify.btn.details" };
 /**
  * 알림 카드 하단 주 단추 HTML.
- * buttonOf 결과의 act 를 data-act 속성으로, label 을 글자로 쓴다.
+ * buttonOf 결과의 act 를 data-act 속성으로, key 의 번역 문구를 글자로 쓴다.
  * @param {Alert} a 알림
  * @returns {string} <button> HTML
  * @see buttonOf, render
  */
 const footButton = (a) => {
   const b = buttonOf(a);
-  return `<button class="btn btn-primary" data-act="${b.act}">${b.label}</button>`;
+  return `<button class="btn btn-primary" data-act="${b.act}">${escapeHtml(t(b.key))}</button>`;
 };
-const NOTICE = { label: "알림", cls: "pill-purple" };
+const NOTICE = { key: "notify.state.notice", cls: "pill-purple" };
 
 let alerts = [];
 let permits = [];
@@ -101,7 +101,7 @@ let paused = null;
  */
 const keepOpen = (key) => {
   const a = alerts.find((x) => x.key === key);
-  return !a || a.state === "need_input" || buttonOf(a).label !== "자세히";
+  return !a || a.state === "need_input" || buttonOf(a).id !== "details";
 };
 /**
  * 카드 하나의 자동 숨김 타이머를 (재)설정.
@@ -201,13 +201,13 @@ function questionBody(p) {
         <div class="q" data-q="${qi}">
           <div class="q-head">
             ${q.header ? `<span class="q-chip">${escapeHtml(q.header)}</span>` : ""}
-            <span class="q-hint">${q.multiSelect ? "복수 선택" : "하나 선택"}</span>
+            <span class="q-hint">${escapeHtml(t(q.multiSelect ? "notify.q.multi" : "notify.q.single"))}</span>
           </div>
           <div class="q-text">${escapeHtml(q.question)}</div>
           <div class="q-opts">
             ${(q.options || []).map((o) => opt(o.label, o.label, o.description)).join("")}
-            ${opt(OTHER, "기타", "")}
-            <input class="q-other" placeholder="직접 입력" value="${escapeHtml(other)}"${sel.includes(OTHER) ? "" : " hidden"} />
+            ${opt(OTHER, t("notify.q.other"), "")}
+            <input class="q-other" placeholder="${escapeHtml(t("notify.q.other.placeholder"))}" value="${escapeHtml(other)}"${sel.includes(OTHER) ? "" : " hidden"} />
           </div>
         </div>`;
     })
@@ -228,7 +228,7 @@ const FORMATS = {
      * @param {Permit} p 권한 요청
      * @returns {string} 문구
      */
-    pill: () => "권한 요청", cls: "pill-red", ok: "수락",
+    pill: () => t("notify.pill.permit"), cls: "pill-red", ok: () => t("notify.btn.allow"),
     /**
      * tool 형식 카드 제목.
      * 도구 이름 + (있으면) " · 설명".
@@ -256,12 +256,12 @@ const FORMATS = {
      * question 형식 알약 문구 — 항상 "질문".
      * @returns {string}
      */
-    pill: () => "질문", cls: "pill-purple", ok: "답변",
+    pill: () => t("notify.pill.question"), cls: "pill-purple", ok: () => t("notify.btn.answer"),
     /**
-     * question 형식 카드 제목 — 항상 "Claude 의 질문".
+     * question 형식 카드 제목 — 항상 "Claude 의 질문"(현재 언어).
      * @returns {string}
      */
-    title: () => "Claude 의 질문",
+    title: () => t("notify.title.question"),
     body: questionBody,
     answers: questionAnswers,
   },
@@ -310,8 +310,8 @@ function permitCard(p) {
         <div class="a-title">${escapeHtml(f.title(p))}</div>
         ${f.body(p)}
         <div class="a-foot two">
-          <button class="btn btn-deny" data-act="deny">거절</button>
-          <button class="btn btn-primary" data-act="allow"${f.answers(p) === null ? " disabled" : ""}>${f.ok}</button>
+          <button class="btn btn-deny" data-act="deny">${escapeHtml(t("notify.btn.deny"))}</button>
+          <button class="btn btn-primary" data-act="allow"${f.answers(p) === null ? " disabled" : ""}>${escapeHtml(f.ok())}</button>
         </div>
       </div>`;
 }
@@ -335,11 +335,11 @@ function render() {
       <div class="alert-card" data-key="${escapeHtml(a.key)}">
         <div class="a-top">
           ${svcBadge(a.provider)}
-          <span class="pill sm ${st.cls}"><i class="dot"></i>${st.label}</span>
+          <span class="pill sm ${st.cls}"><i class="dot"></i>${escapeHtml(t(st.key))}</span>
           ${sourceBadges(a)}
           ${projectTag(a.project, a.title)}
           <span class="a-ago">${fmtAgo(a.updated_at)}</span>
-          <button class="a-x" data-act="dismiss" title="닫기">×</button>
+          <button class="a-x" data-act="dismiss" title="${escapeHtml(t("notify.btn.close"))}">×</button>
         </div>
         <div class="a-title" title="${escapeHtml(a.title)}">${escapeHtml(a.title)}</div>
         <div class="a-msg">${escapeHtml(a.message)}</div>
@@ -422,13 +422,13 @@ listEl.addEventListener("click", async (e) => {
   const key = card.dataset.key;
   if (btn.dataset.act === "install") {
     btn.disabled = true;
-    btn.textContent = "설치 중…";
+    btn.textContent = t("notify.btn.installing");
     try {
       await invoke("install_update"); // 성공하면 앱이 다시 시작됨
     } catch (err) {
       btn.disabled = false;
-      btn.textContent = "다시 시도";
-      card.querySelector(".a-msg").textContent = "업데이트 실패: " + String(err);
+      btn.textContent = t("notify.btn.retry");
+      card.querySelector(".a-msg").textContent = t("notify.update.fail", { err: String(err) });
     }
     return;
   }
@@ -490,6 +490,8 @@ document.documentElement.addEventListener("mouseleave", () => {
 });
 listEl.addEventListener("input", (e) => e.target.classList.contains("q-other") && onPick(e));
 
+// 언어가 바뀌면(설정 창·다른 창) 이미 떠 있는 카드도 새 언어로 다시 그린다.
+window.addEventListener("meow-lang", () => render());
 // "n분 전" 표기 갱신.
 setInterval(() => alerts.length + permits.length && render(), 60e3);
 
@@ -499,25 +501,37 @@ setInterval(() => alerts.length + permits.length && render(), 60e3);
  * @returns {Promise<void>}
  * @see get_config, get_permits, get_alerts, setAlerts, setPermits, setShown, setAutoHide
  */
+/**
+ * 브라우저 미리보기용 데모 카드(권한 요청·질문·알림 여러 종류). 문구는 현재 언어 사전에서 가져온다.
+ * @returns {void}
+ * @see setPermits, setAlerts
+ */
+function demo() {
+  const now = () => new Date().toISOString();
+  setPermits([
+    { id: "preview", kind: "tool", provider: "claude", project: "meowoffice", tool: "Bash", detail: "npm run build", description: t("notify.demo.perm.desc"), created_at: now() },
+    { id: "preview-q", kind: "question", provider: "claude", project: "meowoffice", tool: "AskUserQuestion", detail: "", description: "", created_at: now(),
+      questions: [
+        { header: t("notify.demo.q1.header"), question: t("notify.demo.q1.text"), multiSelect: false, options: [{ label: t("notify.demo.q1.o1"), description: t("notify.demo.q1.o1d") }, { label: t("notify.demo.q1.o2"), description: t("notify.demo.q1.o2d") }] },
+        { header: t("notify.demo.q2.header"), question: t("notify.demo.q2.text"), multiSelect: true, options: [{ label: t("notify.demo.q2.o1") }, { label: t("notify.demo.q2.o2") }, { label: t("notify.demo.q2.o3") }] },
+      ] },
+  ]);
+  setAlerts([
+    { key: "s1@1", id: "s1", title: "laptop-quiet-otter", message: t("notify.demo.a1.msg"), state: "need_input", env: "bridge", provider: "claude", project: "shop-api", url: "", updated_at: new Date(Date.now() - 120e3).toISOString() },
+    { key: "s2@1", id: "s2", title: t("notify.demo.a2.title"), message: t("notify.demo.a2.msg"), state: "review_ready", env: "cloud", provider: "claude", url: "", updated_at: now() },
+    { key: "l1@1", id: "l1#a1", title: t("notify.demo.a3.title"), message: t("notify.demo.a3.msg"), state: "done", env: "local", provider: "claude", project: "shop-api", agent: true, url: "", updated_at: now() },
+    { key: "codex:1@1", id: "codex:1", title: t("notify.demo.a4.title"), message: t("notify.demo.a4.msg"), state: "done", env: "local", provider: "chatgpt", project: "shop-api", url: "", updated_at: now() },
+    { key: "agy:1@1", id: "agy:1", title: t("notify.demo.a5.title"), message: t("notify.demo.a5.msg"), state: "done", env: "local", provider: "antigravity", project: "meowoffice", url: "", updated_at: now() },
+    { key: "app-update@1", id: "u", title: t("notify.demo.a6.title"), message: t("notify.demo.a6.msg"), state: "update", env: "update", provider: "app", url: "", updated_at: now() },
+  ]);
+}
+
 (async function init() {
   if (!invoke) {
     // 브라우저 미리보기용 데모.
-    setPermits([
-      { id: "preview", kind: "tool", provider: "claude", project: "meowoffice", tool: "Bash", detail: "npm run build", description: "릴리스 빌드 실행", created_at: new Date().toISOString() },
-      { id: "preview-q", kind: "question", provider: "claude", project: "meowoffice", tool: "AskUserQuestion", detail: "", description: "", created_at: new Date().toISOString(),
-        questions: [
-          { header: "진행 방식", question: "다음 단계를 어떻게 진행할까요?", multiSelect: false, options: [{ label: "병렬 진행", description: "두 작업을 동시에" }, { label: "순차 유지", description: "하나씩 차례로" }] },
-          { header: "검수", question: "검수 항목을 고르세요", multiSelect: true, options: [{ label: "빌드" }, { label: "테스트" }, { label: "문서" }] },
-        ] },
-    ]);
-    return setAlerts([
-      { key: "s1@1", id: "s1", title: "laptop-quiet-otter", message: "변경 사항을 반영할까요?", state: "need_input", env: "bridge", provider: "claude", project: "shop-api", url: "", updated_at: new Date(Date.now() - 120e3).toISOString() },
-      { key: "s2@1", id: "s2", title: "백엔드 포팅 설계 검토", message: "검토할 변경 사항이 준비되었습니다.", state: "review_ready", env: "cloud", provider: "claude", url: "", updated_at: new Date().toISOString() },
-      { key: "l1@1", id: "l1#a1", title: "에이전트 · v25.6 실샘플 E2E", message: "에이전트 작업이 끝났습니다.", state: "done", env: "local", provider: "claude", project: "shop-api", agent: true, url: "", updated_at: new Date().toISOString() },
-      { key: "codex:1@1", id: "codex:1", title: "Codex 응답 완료", message: "리팩터링을 끝냈습니다.", state: "done", env: "local", provider: "chatgpt", project: "shop-api", url: "", updated_at: new Date().toISOString() },
-      { key: "agy:1@1", id: "agy:1", title: "Antigravity 응답 완료", message: "변경 사항을 정리했습니다.", state: "done", env: "local", provider: "antigravity", project: "meowoffice", url: "", updated_at: new Date().toISOString() },
-      { key: "app-update@1", id: "u", title: "새 버전 0.9.0", message: "업데이트할 수 있습니다.", state: "update", env: "update", provider: "app", url: "", updated_at: new Date().toISOString() },
-    ]);
+    demo();
+    window.addEventListener("meow-lang", demo); // 언어가 바뀌면 데모 문구도 다시
+    return;
   }
   TAURI.event.listen("alerts", (ev) => setAlerts(ev.payload));
   TAURI.event.listen("auto_hide", (ev) => setAutoHide(ev.payload));

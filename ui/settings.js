@@ -104,41 +104,44 @@ const MeowSettings = (() => {
             <div class="set-brand-text"><b>Meowffice</b><small>v<span id="side-version">—</span></small></div>
           </div>
           <nav class="set-nav" id="settings-tab">
-            <div class="nav-h">공통</div>
-            <button data-pane="general" class="on"><i class="ic ic-settings"></i>일반</button>
-            <button data-pane="alerts"><i class="ic ic-bell"></i>알림</button>
-            <button data-pane="info"><i class="ic ic-info"></i>정보</button>
-            <div class="nav-h">AI 서비스</div>
+            <div class="nav-h" data-i18n="settings.nav.common"></div>
+            <button data-pane="general" class="on"><i class="ic ic-settings"></i><span data-i18n="settings.nav.general"></span></button>
+            <button data-pane="alerts"><i class="ic ic-bell"></i><span data-i18n="settings.nav.alerts"></span></button>
+            <button data-pane="info"><i class="ic ic-info"></i><span data-i18n="settings.nav.info"></span></button>
+            <div class="nav-h" data-i18n="settings.nav.ai"></div>
             <button data-pane="claude"><i class="svc-logo svc-claude"></i>Claude<span class="nav-state" id="nav-claude-state"></span></button>
             <button data-pane="chatgpt"><i class="svc-logo svc-chatgpt"></i>ChatGPT<span class="nav-state" id="nav-chatgpt-state"></span></button>
             <button data-pane="antigravity"><i class="svc-logo svc-antigravity"></i>Antigravity<span class="nav-state" id="nav-antigravity-state"></span></button>
           </nav>
-          <div class="set-status" id="set-status"><i class="dot"></i><span>확인 중</span></div>
+          <div class="set-status" id="set-status"><i class="dot"></i><span></span></div>
         </aside>
 
         <section class="set-main">
-          <button class="set-close" id="btn-close" title="닫기"><i class="ic ic-x"></i></button>
+          <button class="set-close" id="btn-close" data-i18n-title="settings.close"><i class="ic ic-x"></i></button>
           <div class="set-scroll">
             <!-- 일반 -->
             <div class="settings-pane" data-pane="general">
               <div class="set-head">
                 <i class="ic ic-settings"></i>
-                <div><h2>일반 설정</h2><p>기본 동작과 표시 방식을 관리합니다.</p></div>
+                <div><h2 data-i18n="settings.general.title"></h2><p data-i18n="settings.general.desc"></p></div>
+              </div>
+              <div class="set-card">
+                <div class="set-row">
+                  <i class="ic ic-app-window row-ic"></i>
+                  <div class="row-text"><b data-i18n="settings.lang.title"></b><small data-i18n="settings.lang.desc"></small></div>
+                  <select class="input input-sm" id="in-lang">
+                    <option value="auto" data-i18n="settings.lang.auto"></option>
+                    <option value="ko" data-i18n="settings.lang.ko"></option>
+                    <option value="en" data-i18n="settings.lang.en"></option>
+                  </select>
+                </div>
               </div>
               <div class="set-card">
                 <div class="set-row">
                   <i class="ic ic-clock row-ic"></i>
-                  <div class="row-text"><b>자동 갱신 주기</b><small>플랜 한도와 트레이 아이콘을 다시 불러오는 주기입니다.</small></div>
+                  <div class="row-text"><b data-i18n="settings.interval.title"></b><small data-i18n="settings.interval.desc"></small></div>
                 </div>
-                <select class="input row-under" id="in-interval">
-                  <option value="1">1분</option>
-                  <option value="3">3분</option>
-                  <option value="5">5분</option>
-                  <option value="10">10분</option>
-                  <option value="15">15분</option>
-                  <option value="30">30분</option>
-                  <option value="60">1시간</option>
-                </select>
+                <select class="input row-under" id="in-interval"></select>
               </div>
               <div class="set-card">
                 <div class="set-row">
@@ -160,17 +163,17 @@ const MeowSettings = (() => {
               <div class="set-card">
                 <label class="set-row">
                   <i class="ic ic-power row-ic"></i>
-                  <div class="row-text"><b>Windows 로그인 시 자동 시작</b><small>PC 를 켜면 트레이에 자동으로 실행합니다.</small></div>
+                  <div class="row-text"><b data-i18n="settings.autostart.title"></b><small data-i18n="settings.autostart.desc"></small></div>
                   <input type="checkbox" class="switch" id="in-autostart" />
                 </label>
                 <label class="set-row">
                   <i class="ic ic-app-window row-ic"></i>
-                  <div class="row-text"><b>세션·링크를 Claude 데스크톱 앱으로 열기</b><small id="desktop-hint">Claude 데스크톱 앱이 설치돼 있으면 브라우저 대신 앱에서 엽니다.</small></div>
+                  <div class="row-text"><b data-i18n="settings.desktop.title"></b><small id="desktop-hint"></small></div>
                   <input type="checkbox" class="switch" id="in-desktop" />
                 </label>
                 <label class="set-row">
                   <i class="ic ic-pin row-ic"></i>
-                  <div class="row-text"><b>오피스 창을 항상 위에 표시</b><small>켜면 다른 창을 눌러도 오피스 창이 위에 남습니다.</small></div>
+                  <div class="row-text"><b data-i18n="settings.ontop.title"></b><small data-i18n="settings.ontop.desc"></small></div>
                   <input type="checkbox" class="switch" id="in-on-top" />
                 </label>
               </div>
@@ -180,13 +183,13 @@ const MeowSettings = (() => {
             <div class="settings-pane" data-pane="alerts" hidden>
               <div class="set-head">
                 <i class="ic ic-bell"></i>
-                <div><h2>알림 설정</h2><p>알림 창에 띄울 알림 종류와 표시 방식을 관리합니다.</p></div>
-                <button class="btn btn-soft btn-sm head-btn" id="btn-preview-alert"><i class="ic ic-eye"></i>미리보기</button>
+                <div><h2 data-i18n="settings.alerts.title"></h2><p data-i18n="settings.alerts.desc"></p></div>
+                <button class="btn btn-soft btn-sm head-btn" id="btn-preview-alert"><i class="ic ic-eye"></i><span data-i18n="settings.alerts.preview"></span></button>
               </div>
               <div class="set-card">
-                <div class="card-title"><b>알림 종류</b><small>끈 종류는 알림 창·트레이 숫자·오피스 최근 알림 어디에도 남기지 않습니다.</small></div>
+                <div class="card-title"><b data-i18n="settings.kinds.title"></b><small data-i18n="settings.kinds.desc"></small></div>
                 <div id="alert-kinds"></div>
-                <div class="note" id="kinds-hook-note" hidden><i class="ic ic-info"></i><span>로컬·에이전트 알림은 Claude Code 훅으로 받습니다. <a href="#" data-goto="claude">연동</a>에서 권한 요청 연동을 켜야 받을 수 있습니다.</span></div>
+                <div class="note" id="kinds-hook-note" hidden><i class="ic ic-info"></i><span data-i18n-html="settings.kinds.hooknote"></span></div>
               </div>
               <div class="set-card">
                 <div class="card-title"><b data-i18n="web.card.title"></b><small data-i18n="web.card.desc"></small></div>
@@ -195,15 +198,8 @@ const MeowSettings = (() => {
               <div class="set-card">
                 <div class="set-row">
                   <i class="ic ic-timer row-ic"></i>
-                  <div class="row-text"><b>[자세히] 알림 자동 숨김</b><small>클라우드·원격 세션의 검토 대기, 연결 복구처럼 [자세히] 버튼만 있는 알림에만 적용됩니다. 숨겨도 읽지 않은 알림으로 남습니다.</small></div>
-                  <select class="input input-sm" id="in-auto-hide">
-                    <option value="0">끄기</option>
-                    <option value="5">5초</option>
-                    <option value="10">10초</option>
-                    <option value="20">20초</option>
-                    <option value="30">30초</option>
-                    <option value="60">1분</option>
-                  </select>
+                  <div class="row-text"><b data-i18n="settings.autohide.title"></b><small data-i18n="settings.autohide.desc"></small></div>
+                  <select class="input input-sm" id="in-auto-hide"></select>
                 </div>
               </div>
             </div>
@@ -212,47 +208,47 @@ const MeowSettings = (() => {
             <div class="settings-pane" data-pane="claude" hidden>
               <div class="set-head">
                 <i class="svc-logo svc-claude lg"></i>
-                <div><h2>Claude</h2><p>Claude 계정 한도, 이 PC 의 Claude Code 연동(권한 요청·로컬 세션 알림), API 크레딧을 관리합니다.</p></div>
+                <div><h2>Claude</h2><p data-i18n="settings.claude.desc"></p></div>
               </div>
-              <div class="sub-h">Claude Code 연동</div>
+              <div class="sub-h" data-i18n="settings.claude.hook.h"></div>
               <div class="set-card">
-                <div class="card-top"><span class="state-pill" id="hook-state"><i class="dot"></i>연결 안 됨</span></div>
+                <div class="card-top"><span class="state-pill" id="hook-state"><i class="dot"></i></span></div>
                 <label class="set-row">
                   <i class="ic ic-plug row-ic"></i>
-                  <div class="row-text"><b>권한 요청을 알림에서 수락/거절</b><small>Claude Code 설정(settings.json)에 훅을 등록합니다. 앱이 꺼져 있거나 2분 안에 응답하지 않으면 터미널에서 평소처럼 확인합니다.</small></div>
+                  <div class="row-text"><b data-i18n="settings.permit.title"></b><small data-i18n="settings.permit.desc"></small></div>
                   <input type="checkbox" class="switch" id="in-permit" />
                 </label>
                 <dl class="kv">
-                  <dt><i class="ic ic-folder"></i>Claude 데이터 경로</dt><dd class="mono" id="claude-dir">—</dd>
-                  <dt><i class="ic ic-terminal"></i>수신 주소</dt><dd class="mono" id="hook-addr">—</dd>
+                  <dt><i class="ic ic-folder"></i><span data-i18n="settings.claude.dir"></span></dt><dd class="mono" id="claude-dir">—</dd>
+                  <dt><i class="ic ic-terminal"></i><span data-i18n="settings.claude.addr"></span></dt><dd class="mono" id="hook-addr">—</dd>
                 </dl>
               </div>
               <div class="set-card">
                 <label class="set-row">
                   <i class="ic ic-zap row-ic"></i>
-                  <div class="row-text"><b>자동 수락 모드</b><small>권한 요청을 알림 없이 바로 수락합니다. 질문 선택지(AskUserQuestion)·계획 승인(ExitPlanMode)처럼 직접 골라야 하는 요청만 카드로 띄웁니다.</small></div>
+                  <div class="row-text"><b data-i18n="settings.autoallow.title"></b><small data-i18n="settings.autoallow.desc"></small></div>
                   <input type="checkbox" class="switch" id="in-auto-allow" />
                 </label>
               </div>
-              <div class="sub-h">API 크레딧 (Console)</div>
+              <div class="sub-h" data-i18n="settings.api.h"></div>
               <div class="set-card">
-                <div class="card-top"><span class="state-pill" id="api-key-state"><i class="dot"></i>키 없음</span></div>
+                <div class="card-top"><span class="state-pill" id="api-key-state"><i class="dot"></i></span></div>
                 <div class="set-row">
                   <i class="ic ic-key row-ic"></i>
-                  <div class="row-text"><b>Admin API 키</b><small>Console → Settings → Admin keys 에서 만든 sk-ant-admin… 키. 이 PC 의 현재 사용자 계정으로 암호화해 저장합니다. 일반 API 키(sk-ant-api…)로는 조회되지 않습니다.</small></div>
+                  <div class="row-text"><b data-i18n="settings.apikey.title"></b><small data-i18n="settings.apikey.desc"></small></div>
                 </div>
                 <div class="input-row row-under">
                   <input class="input" id="in-api-key" type="password" autocomplete="off" spellcheck="false" placeholder="sk-ant-admin..." />
-                  <button class="btn btn-soft" id="btn-api-validate">검증</button>
-                  <button class="btn btn-soft" id="btn-api-clear" hidden>키 삭제</button>
+                  <button class="btn btn-soft" id="btn-api-validate" data-i18n="settings.apikey.validate"></button>
+                  <button class="btn btn-soft" id="btn-api-clear" data-i18n="settings.apikey.delete" hidden></button>
                 </div>
               </div>
               <div class="set-card">
                 <div class="set-row">
                   <i class="ic ic-activity row-ic"></i>
-                  <div class="row-text"><b>월 할당 크레딧 (USD)</b><small>남은 선불 잔액을 주는 공개 API 가 없어 직접 입력합니다. 0 이면 사용액만 표시합니다.</small></div>
+                  <div class="row-text"><b data-i18n="settings.alloc.title"></b><small data-i18n="settings.alloc.desc"></small></div>
                 </div>
-                <input class="input row-under" id="in-api-alloc" type="number" min="0" step="1" placeholder="예: 500" />
+                <input class="input row-under" id="in-api-alloc" type="number" min="0" step="1" data-i18n-placeholder="settings.alloc.placeholder" />
               </div>
             </div>
 
@@ -260,33 +256,33 @@ const MeowSettings = (() => {
             <div class="settings-pane" data-pane="chatgpt" hidden>
               <div class="set-head">
                 <i class="svc-logo svc-chatgpt lg"></i>
-                <div><h2>ChatGPT</h2><p>ChatGPT 계정과 이 PC 의 Codex(CLI·앱)를 연결합니다.</p></div>
+                <div><h2>ChatGPT</h2><p data-i18n="settings.chatgpt.desc"></p></div>
               </div>
               <div class="set-card">
-                <div class="card-top"><span class="state-pill" id="pv-chatgpt-state"><i class="dot"></i>확인 중</span></div>
+                <div class="card-top"><span class="state-pill" id="pv-chatgpt-state"><i class="dot"></i><span data-i18n="settings.pill.checking"></span></span></div>
                 <div class="pv-info" id="pv-chatgpt-info"></div>
                 <div class="pv-login" id="pv-chatgpt-login" hidden></div>
                 <div class="note" id="pv-chatgpt-webhint" hidden><i class="ic ic-info"></i><span><span data-i18n="web.hint.chatgpt"></span> <a href="#" data-goto="alerts" data-i18n="web.hint.goto"></a></span></div>
                 <label class="set-row">
                   <i class="ic ic-plug row-ic"></i>
-                  <div class="row-text"><b>ChatGPT 세션을 사무실에 표시</b><small>켜면 ChatGPT 세션이 고양이로 출근하고 사용 한도가 오피스 현황에 나옵니다. 이 PC 에 저장된 Codex 로그인 정보로 chatgpt.com 에 사용량을 묻습니다 (로그인 정보는 바꾸거나 저장하지 않음).</small></div>
+                  <div class="row-text"><b data-i18n="settings.chatgpt.show.title"></b><small data-i18n="settings.chatgpt.show.desc"></small></div>
                   <input type="checkbox" class="switch" id="pv-chatgpt-on" />
                 </label>
               </div>
               <div class="set-card" id="pvh-chatgpt-card">
-                <div class="card-title row-titled"><i class="ic ic-shield-check"></i><b>권한 요청 연동</b><span class="state-pill" id="pvh-chatgpt-state"><i class="dot"></i>꺼짐</span></div>
+                <div class="card-title row-titled"><i class="ic ic-shield-check"></i><b data-i18n="settings.hook.card.title"></b><span class="state-pill" id="pvh-chatgpt-state"><i class="dot"></i><span data-i18n="settings.pill.off"></span></span></div>
                 <label class="set-row">
                   <i class="ic ic-plug row-ic"></i>
-                  <div class="row-text"><b>Codex 권한 요청을 알림 카드에서 수락/거절</b><small>켜면 <code id="pvh-chatgpt-path">~/.codex/hooks.json</code> 에 Meowffice 훅을 추가합니다(기존 훅은 그대로, 처음 한 번 백업, 끄면 이 앱 항목만 삭제). Codex 의 notify 설정은 건드리지 않습니다. Codex 가 승인을 물을 때만 카드가 뜹니다.</small></div>
+                  <div class="row-text"><b data-i18n="settings.chatgpt.hook.title"></b><small><span data-i18n="settings.chatgpt.hook.desc.a"></span><code id="pvh-chatgpt-path">~/.codex/hooks.json</code><span data-i18n="settings.chatgpt.hook.desc.b"></span></small></div>
                   <input type="checkbox" class="switch" id="pvh-chatgpt-on" />
                 </label>
                 <label class="set-row">
                   <i class="ic ic-zap row-ic"></i>
-                  <div class="row-text"><b>자동 수락</b><small>Codex 가 물어보는 승인을 카드 없이 바로 수락합니다. 기본은 꺼짐.</small></div>
+                  <div class="row-text"><b data-i18n="settings.auto.title"></b><small data-i18n="settings.chatgpt.auto.desc"></small></div>
                   <input type="checkbox" class="switch" id="pvh-chatgpt-auto" />
                 </label>
-                <div class="note" id="pvh-chatgpt-trust" hidden><i class="ic ic-info"></i><span><b>Codex 앱에서 훅을 한 번 신뢰해야 동작합니다.</b> Codex 앱의 <b>설정 &gt; 훅(Hooks)</b>(또는 "훅 검토 Review hooks")에서 <b>Meowffice</b> 항목을 열어 <b>신뢰(Trust)</b>를 누르세요. 신뢰하기 전에는 Codex 가 이 훅을 실행하지 않아 평소처럼 Codex 안에서 승인합니다. Meowffice 를 업데이트하거나 옮겨 실행 파일 경로가 바뀌면 훅 명령이 바뀌어 다시 신뢰해야 합니다. 또한 Codex 의 자동 검토가 먼저 승인한 요청은 카드가 뜨지 않을 수 있습니다.</span></div>
-                <div class="note" id="pvh-chatgpt-stale" hidden><i class="ic ic-info"></i><span>등록된 훅의 앱 경로가 지금과 다릅니다. 스위치를 껐다 켜면 갱신되며, 그 뒤 Codex 에서 다시 신뢰해야 합니다. (앱을 켜면 켜져 있는 연동은 자동으로 갱신됩니다.)</span></div>
+                <div class="note" id="pvh-chatgpt-trust" hidden><i class="ic ic-info"></i><span data-i18n-html="settings.chatgpt.trust"></span></div>
+                <div class="note" id="pvh-chatgpt-stale" hidden><i class="ic ic-info"></i><span data-i18n="settings.chatgpt.stale"></span></div>
               </div>
             </div>
 
@@ -294,32 +290,32 @@ const MeowSettings = (() => {
             <div class="settings-pane" data-pane="antigravity" hidden>
               <div class="set-head">
                 <i class="svc-logo svc-antigravity lg"></i>
-                <div><h2>Antigravity</h2><p>Google 계정과 이 PC 의 Antigravity 를 연결합니다.</p></div>
+                <div><h2>Antigravity</h2><p data-i18n="settings.agy.desc"></p></div>
               </div>
               <div class="set-card">
-                <div class="card-top"><span class="state-pill" id="pv-antigravity-state"><i class="dot"></i>확인 중</span></div>
+                <div class="card-top"><span class="state-pill" id="pv-antigravity-state"><i class="dot"></i><span data-i18n="settings.pill.checking"></span></span></div>
                 <div class="pv-info" id="pv-antigravity-info"></div>
                 <div class="pv-login" id="pv-antigravity-login" hidden></div>
                 <div class="note" id="pv-antigravity-webhint" hidden><i class="ic ic-info"></i><span><span data-i18n="web.hint.gemini"></span> <a href="#" data-goto="alerts" data-i18n="web.hint.goto"></a></span></div>
                 <label class="set-row">
                   <i class="ic ic-plug row-ic"></i>
-                  <div class="row-text"><b>Antigravity 세션을 사무실에 표시</b><small>켜면 Antigravity 대화가 고양이로 출근하고 사용 한도가 오피스 현황에 나옵니다. 사용 한도는 이 PC 에서 실행 중인 Antigravity 에게만 묻습니다 (밖으로 보내는 것 없음).</small></div>
+                  <div class="row-text"><b data-i18n="settings.agy.show.title"></b><small data-i18n="settings.agy.show.desc"></small></div>
                   <input type="checkbox" class="switch" id="pv-antigravity-on" />
                 </label>
               </div>
               <div class="set-card" id="pvh-antigravity-card">
-                <div class="card-title row-titled"><i class="ic ic-shield-check"></i><b>권한 요청·응답 완료 연동</b><span class="state-pill" id="pvh-antigravity-state"><i class="dot"></i>꺼짐</span></div>
+                <div class="card-title row-titled"><i class="ic ic-shield-check"></i><b data-i18n="settings.agy.hook.card.title"></b><span class="state-pill" id="pvh-antigravity-state"><i class="dot"></i><span data-i18n="settings.pill.off"></span></span></div>
                 <label class="set-row">
                   <i class="ic ic-plug row-ic"></i>
-                  <div class="row-text"><b>Antigravity 권한 요청을 알림 카드에서 수락/거절, 응답 완료 알림</b><small>켜면 <code id="pvh-antigravity-path">~/.gemini/config/hooks.json</code> 에 Meowffice 훅을 추가합니다(기존 훅은 그대로, 처음 한 번 백업, 끄면 이 앱 항목만 삭제). 권한 카드는 Antigravity 가 직접 물었을 터미널 명령(run_command)에만 뜹니다(Antigravity 의 권한 설정은 읽기만 함). Turbo·터미널 샌드박스 모드처럼 Antigravity 가 묻지 않고 실행하는 설정에서는 카드 훅을 등록하지 않고 '응답 완료' 알림만 켜집니다(설정을 바꾸면 이 앱을 켤 때·스위치를 다시 켤 때 맞춰집니다). 앱이 꺼져 있으면 Antigravity 가 평소대로 동작합니다.</small></div>
+                  <div class="row-text"><b data-i18n="settings.agy.hook.title"></b><small><span data-i18n="settings.agy.hook.desc.a"></span><code id="pvh-antigravity-path">~/.gemini/config/hooks.json</code><span data-i18n="settings.agy.hook.desc.b"></span></small></div>
                   <input type="checkbox" class="switch" id="pvh-antigravity-on" />
                 </label>
                 <label class="set-row">
                   <i class="ic ic-zap row-ic"></i>
-                  <div class="row-text"><b>자동 수락</b><small>터미널 명령 실행 전 확인을 카드 없이 바로 수락합니다. 기본은 꺼짐.</small></div>
+                  <div class="row-text"><b data-i18n="settings.auto.title"></b><small data-i18n="settings.agy.auto.desc"></small></div>
                   <input type="checkbox" class="switch" id="pvh-antigravity-auto" />
                 </label>
-                <div class="note" id="pvh-antigravity-stale" hidden><i class="ic ic-info"></i><span>등록된 훅의 앱 경로가 지금과 다릅니다. 스위치를 껐다 켜면 갱신됩니다. (앱을 켜면 켜져 있는 연동은 자동으로 갱신됩니다.)</span></div>
+                <div class="note" id="pvh-antigravity-stale" hidden><i class="ic ic-info"></i><span data-i18n="settings.agy.stale"></span></div>
               </div>
             </div>
 
@@ -327,58 +323,58 @@ const MeowSettings = (() => {
             <div class="settings-pane" data-pane="info" hidden>
               <div class="set-head">
                 <i class="ic ic-info"></i>
-                <div><h2>정보</h2><p>버전과 시스템 정보, 개발자 정보, 설정·로그 위치를 확인합니다.</p></div>
+                <div><h2 data-i18n="settings.info.title"></h2><p data-i18n="settings.info.desc"></p></div>
               </div>
               <div class="set-grid">
                 <div class="set-card">
-                  <div class="card-title row-titled"><i class="ic ic-package"></i><b>버전 정보</b></div>
+                  <div class="card-title row-titled"><i class="ic ic-package"></i><b data-i18n="settings.info.version.h"></b></div>
                   <dl class="kv kv-right">
-                    <dt>앱 버전</dt><dd id="app-version">—</dd>
-                    <dt>업데이트</dt><dd>상단 버튼에서 확인</dd>
+                    <dt data-i18n="settings.info.version.app"></dt><dd id="app-version">—</dd>
+                    <dt data-i18n="settings.info.version.update"></dt><dd data-i18n="settings.info.version.update.hint"></dd>
                   </dl>
                 </div>
                 <div class="set-card">
-                  <div class="card-title row-titled"><i class="ic ic-cpu"></i><b>시스템 정보</b></div>
+                  <div class="card-title row-titled"><i class="ic ic-cpu"></i><b data-i18n="settings.info.sys.h"></b></div>
                   <dl class="kv kv-right">
-                    <dt>운영체제</dt><dd id="sys-os">—</dd>
-                    <dt>아키텍처</dt><dd id="sys-arch">—</dd>
+                    <dt data-i18n="settings.info.sys.os"></dt><dd id="sys-os">—</dd>
+                    <dt data-i18n="settings.info.sys.arch"></dt><dd id="sys-arch">—</dd>
                   </dl>
                 </div>
               </div>
               <div class="set-card">
-                <div class="card-title row-titled"><i class="ic ic-building"></i><b>개발자 정보</b></div>
+                <div class="card-title row-titled"><i class="ic ic-building"></i><b data-i18n="settings.info.dev.h"></b></div>
                 <dl class="kv kv-right">
-                  <dt>개발사</dt><dd>주식회사 문어AI <span class="kv-sub">Muneo AI Co., Ltd.</span></dd>
-                  <dt>웹사이트</dt><dd><a href="https://muneo.co.kr" class="kv-link" id="dev-web"><i class="ic ic-link"></i>muneo.co.kr</a></dd>
-                  <dt>문의</dt><dd><a href="https://github.com/MuneoAX/meowoffice/issues" class="kv-link" id="dev-mail"><i class="ic ic-link"></i>GitHub Issues</a></dd>
+                  <dt data-i18n="settings.info.dev.company"></dt><dd data-i18n-html="settings.info.dev.company.name"></dd>
+                  <dt data-i18n="settings.info.dev.web"></dt><dd><a href="https://muneo.co.kr" class="kv-link" id="dev-web"><i class="ic ic-link"></i>muneo.co.kr</a></dd>
+                  <dt data-i18n="settings.info.dev.contact"></dt><dd><a href="https://github.com/MuneoAX/meowoffice/issues" class="kv-link" id="dev-mail"><i class="ic ic-link"></i>GitHub Issues</a></dd>
                 </dl>
               </div>
               <div class="set-card">
                 <div class="set-row">
                   <i class="ic ic-file-text row-ic"></i>
-                  <div class="row-text"><b>설정 파일</b><small class="mono" id="config-path">—</small></div>
+                  <div class="row-text"><b data-i18n="settings.info.config"></b><small class="mono" id="config-path">—</small></div>
                 </div>
               </div>
               <div class="set-card">
                 <div class="set-row">
                   <i class="ic ic-activity row-ic"></i>
-                  <div class="row-text"><b>로그</b><small>오늘·어제분을 보관합니다. 문제가 있으면 [보내기]로 바로 접수하거나, 내보내기로 저장해 보내 주세요.</small></div>
+                  <div class="row-text"><b data-i18n="settings.log.title"></b><small data-i18n="settings.log.desc"></small></div>
                   <span class="btn-pair">
-                    <button class="btn btn-soft btn-sm" id="btn-log-dir">폴더 열기</button>
-                    <button class="btn btn-soft btn-sm" id="btn-log-export">내보내기</button>
-                    <button class="btn btn-primary btn-sm" id="btn-log-open-send">보내기</button>
+                    <button class="btn btn-soft btn-sm" id="btn-log-dir" data-i18n="settings.log.folder"></button>
+                    <button class="btn btn-soft btn-sm" id="btn-log-export" data-i18n="settings.log.export"></button>
+                    <button class="btn btn-primary btn-sm" id="btn-log-open-send" data-i18n="settings.log.send"></button>
                   </span>
                 </div>
                 <div class="log-send" id="log-send" hidden>
-                  <label class="field-label" for="in-log-symptom">어떤 문제가 있었나요? <span class="log-count" id="log-symptom-count">0/2000</span></label>
-                  <textarea class="input log-symptom" id="in-log-symptom" maxlength="2000" rows="4" placeholder="예: 권한을 승인했는데 간식이 늘지 않아요. 오후 2시쯤 사무실 창을 열었다 닫았습니다."></textarea>
-                  <p class="log-send-note">보내는 내용: 앱 버전·OS, 이 PC 의 접수를 묶는 무작위 설치 번호, 오늘·어제 로그(사용자 폴더 이름은 가림), 위에 쓴 내용. muneo.co.kr 서버에 90일 보관한 뒤 자동으로 지웁니다(서버는 보낸 곳의 IP 주소도 함께 기록합니다). 로그인 정보(토큰)는 로그에 기록하지 않으며, 보내기 전에 아래에서 로그를 직접 확인할 수 있습니다.</p>
-                  <details class="log-preview" id="log-preview"><summary>보낼 로그 보기 <span id="log-preview-size"></span></summary><pre class="mono log-preview-text" id="log-preview-text">불러오는 중…</pre></details>
-                  <label class="check-row"><input type="checkbox" id="in-log-consent" /> 위 내용을 보내는 데 동의합니다</label>
+                  <label class="field-label" for="in-log-symptom"><span data-i18n="settings.log.symptom.label"></span> <span class="log-count" id="log-symptom-count">0/2000</span></label>
+                  <textarea class="input log-symptom" id="in-log-symptom" maxlength="2000" rows="4" data-i18n-placeholder="settings.log.symptom.placeholder"></textarea>
+                  <p class="log-send-note" data-i18n="settings.log.note"></p>
+                  <details class="log-preview" id="log-preview"><summary><span data-i18n="settings.log.preview"></span> <span id="log-preview-size"></span></summary><pre class="mono log-preview-text" id="log-preview-text"></pre></details>
+                  <label class="check-row"><input type="checkbox" id="in-log-consent" /> <span data-i18n="settings.log.consent"></span></label>
                   <div class="log-send-result" id="log-send-result" role="status" aria-live="polite"></div>
                   <div class="log-send-actions">
-                    <button class="btn btn-soft btn-sm" id="btn-log-cancel">닫기</button>
-                    <button class="btn btn-primary btn-sm" id="btn-log-send" disabled>보내기</button>
+                    <button class="btn btn-soft btn-sm" id="btn-log-cancel" data-i18n="settings.log.cancel"></button>
+                    <button class="btn btn-primary btn-sm" id="btn-log-send" disabled></button>
                   </div>
                 </div>
               </div>
@@ -387,8 +383,8 @@ const MeowSettings = (() => {
 
           <div class="set-foot">
             <span class="conn-state" id="conn"><i class="dot"></i></span>
-            <button class="btn btn-ghost" id="btn-quit">앱 종료</button>
-            <button class="btn btn-primary" id="btn-save">저장</button>
+            <button class="btn btn-ghost" id="btn-quit" data-i18n="settings.quit"></button>
+            <button class="btn btn-primary" id="btn-save" data-i18n="settings.save"></button>
           </div>
         </section>
       </div>
@@ -418,7 +414,46 @@ const MeowSettings = (() => {
     const dropEl = $("settings");
     $("btn-quit").addEventListener("click", () => invoke && invoke("quit_app"));
     // 사무실 위치: 도시 이름 검색(Open-Meteo 지명) · 현재 위치 · 자동(컴퓨터 시간대). 고르면 바로 저장 (저장 단추와 별개)
-    if (typeof I18N !== "undefined") I18N.apply(root);
+    /**
+     * 설정 화면의 문구를 현재 언어로 채운다. data-i18n* 는 I18N.apply, HTML 이 든 문구는 data-i18n-html 로 innerHTML 에 넣는다(사전은 우리가 쓴 고정 문구뿐).
+     * @returns {void}
+     * @see I18N.apply
+     */
+    const applyText = () => {
+      I18N.apply(root);
+      for (const el of root.querySelectorAll("[data-i18n-html]")) el.innerHTML = t(el.dataset.i18nHtml);
+    };
+    /**
+     * select 의 선택지를 다시 만든다(단위 문구가 언어마다 달라서). 고른 값은 유지.
+     * @param {string} id select id
+     * @param {number[]} vals 값 목록
+     * @param {function(number):string} labelOf 값 → 표시 문구
+     * @param {string} dflt 기존 값이 목록에 없을 때 쓸 값
+     * @returns {void}
+     */
+    const fillSelect = (id, vals, labelOf, dflt) => {
+      const el = $(id);
+      if (!el) return;
+      const cur = el.value || dflt;
+      el.innerHTML = vals.map((v) => `<option value="${v}">${escapeHtml(labelOf(v))}</option>`).join("");
+      el.value = cur;
+      if (!el.value) el.value = dflt;
+    };
+    /**
+     * 갱신 주기·알림 자동 숨김 select 를 현재 언어 단위로 채운다.
+     * @returns {void}
+     * @see fillSelect
+     */
+    const fillSelects = () => {
+      fillSelect("in-interval", [1, 3, 5, 10, 15, 30, 60], (v) => (v === 60 ? t("settings.unit.hour", { n: 1 }) : t("settings.unit.min", { n: v })), "5");
+      fillSelect("in-auto-hide", [0, 5, 10, 20, 30, 60], (v) => (v === 0 ? t("settings.off") : v === 60 ? t("settings.unit.min", { n: 1 }) : t("settings.unit.sec", { n: v })), "30");
+    };
+    applyText();
+    fillSelects();
+    /** 마지막으로 읽은 get_config 결과(언어를 바꿀 때 상태 문구를 다시 그리는 데 씀). */
+    let cfgState = null;
+    /** 서비스별 마지막 훅 상태(언어를 바꿀 때 알약을 다시 그리는 데 씀). */
+    const hookState = {};
     const locNow = $("loc-now"), locQ = $("in-loc-q"), locRes = $("loc-res");
     if (locNow && locQ && typeof meowLocation === "function") {
       /**
@@ -444,6 +479,7 @@ const MeowSettings = (() => {
       };
       showNow();
       window.addEventListener("meow-location", showNow);
+      window.addEventListener("meow-lang", showNow); // 도시 이름이 언어를 따름
       let timer = null, seq = 0, found = [];
       /**
        * 도시 검색 입력 처리(디바운스 300ms).
@@ -543,7 +579,7 @@ const MeowSettings = (() => {
        * @see meowProviders.set, refreshProviders
        */
       sw.addEventListener("change", async () => {
-        try { await meowProviders.set(n, sw.checked); } catch (e) { toast("저장하지 못했습니다: " + e); }
+        try { await meowProviders.set(n, sw.checked); } catch (e) { toast(t("settings.toast.save_fail", { err: e })); }
         window.dispatchEvent(new StorageEvent("storage", { key: "meow.provider." + n })); // 같은 창(오피스)도 바로 다시 조회
         refreshProviders();
       });
@@ -559,12 +595,13 @@ const MeowSettings = (() => {
     function renderHook(n, st) {
       const pill = $(`pvh-${n}-state`), on = $(`pvh-${n}-on`), auto = $(`pvh-${n}-auto`);
       if (!pill || !on) return;
+      hookState[n] = st;
       const enabled = !!(st && st.enabled);
       on.checked = enabled;
       auto.checked = enabled && !!st.auto_allow;
       auto.disabled = !enabled;
       pill.className = "state-pill" + (enabled ? " ok" : "");
-      pill.innerHTML = `<i class="dot"></i>${enabled ? (st.stale ? "경로 갱신 필요" : "연결됨") : st && st.installed ? "꺼짐(항목 남음)" : "꺼짐"}`;
+      pill.innerHTML = `<i class="dot"></i>${escapeHtml(t(enabled ? (st.stale ? "settings.pill.stale" : "settings.pill.connected") : st && st.installed ? "settings.pill.off_left" : "settings.pill.off"))}`;
       if (st && st.path) $(`pvh-${n}-path`).textContent = st.path;
       const trust = $(`pvh-${n}-trust`);
       if (trust) trust.hidden = !enabled;
@@ -593,7 +630,7 @@ const MeowSettings = (() => {
         const ov = document.createElement("div");
         ov.className = "overlay";
         ov.style.cssText = "position:fixed;z-index:60";
-        ov.innerHTML = `<div class="modal" role="alertdialog" aria-modal="true"><b style="font-size:14px"></b><p style="margin:10px 0 16px;font-size:12px;line-height:1.6;color:var(--text2);white-space:pre-line"></p><div style="display:flex;justify-content:flex-end;gap:8px"><button class="btn btn-soft" data-k="0">취소</button><button class="btn btn-ghost" data-k="1">켜기</button></div></div>`;
+        ov.innerHTML = `<div class="modal" role="alertdialog" aria-modal="true"><b style="font-size:14px"></b><p style="margin:10px 0 16px;font-size:12px;line-height:1.6;color:var(--text2);white-space:pre-line"></p><div style="display:flex;justify-content:flex-end;gap:8px"><button class="btn btn-soft" data-k="0">${escapeHtml(t("settings.confirm.cancel"))}</button><button class="btn btn-ghost" data-k="1">${escapeHtml(t("settings.confirm.on"))}</button></div></div>`;
         ov.querySelector("b").textContent = title;
         ov.querySelector("p").textContent = body;
         const done = (ok) => { document.removeEventListener("keydown", onKey, true); ov.remove(); resolve(ok); };
@@ -604,12 +641,12 @@ const MeowSettings = (() => {
         ov.querySelector('[data-k="0"]').focus();
       });
     }
-    /** 자동 수락을 켤 때 확인 창에 보이는 경고 */
-    const AUTO_ALLOW_WARN = "AI 가 요청하는 파일 수정·명령 실행이 묻지 않고 바로 실행됩니다.\n잘못된 명령이나 악성 지시(프롬프트 주입)도 그대로 실행될 수 있습니다. 믿을 수 있는 작업에서만 켜세요.";
+    /** 자동 수락을 켤 때 확인 창에 보이는 경고(그때그때 현재 언어로) */
+    const autoAllowWarn = () => t("settings.autoallow.warn");
     $("in-auto-allow").addEventListener("change", async () => {
       const sw = $("in-auto-allow"); // 그림자 DOM 에선 이벤트가 끝나면 e.target 이 비워지므로 요소를 직접 잡는다
       if (!sw.checked) return;
-      if (!(await confirmRisk("자동 수락 모드를 켤까요?", AUTO_ALLOW_WARN))) sw.checked = false;
+      if (!(await confirmRisk(t("settings.autoallow.confirm.title"), autoAllowWarn()))) sw.checked = false;
     });
     for (const n of PV) {
       const on = $(`pvh-${n}-on`), auto = $(`pvh-${n}-auto`);
@@ -626,10 +663,10 @@ const MeowSettings = (() => {
         try {
           const st = await invoke("set_provider_hook", { name: n, enabled: on.checked, autoAllow: auto.checked });
           renderHook(n, st);
-          toast(st.warning ? st.warning : on.checked ? (n === "chatgpt" ? "연동했습니다. Codex 앱에서 훅을 신뢰해 주세요" : "연동했습니다") : "연동을 껐습니다");
+          toast(st.warning ? st.warning : on.checked ? (n === "chatgpt" ? t("settings.toast.linked.trust") : t("settings.toast.linked")) : t("settings.toast.unlinked"));
         } catch (e) {
           revert();
-          toast("적용하지 못했습니다: " + e);
+          toast(t("settings.toast.apply_fail", { err: e }));
           await refreshHook(n);
         }
         on.disabled = false;
@@ -637,14 +674,14 @@ const MeowSettings = (() => {
       };
       on.addEventListener("change", () => apply(() => { on.checked = !on.checked; }));
       auto.addEventListener("change", async () => {
-        if (auto.checked && !(await confirmRisk("자동 수락을 켤까요?", AUTO_ALLOW_WARN))) { auto.checked = false; return; }
+        if (auto.checked && !(await confirmRisk(t("settings.autoallow.confirm.title2"), autoAllowWarn()))) { auto.checked = false; return; }
         apply(() => { auto.checked = !auto.checked; });
       });
     }
     // 로그인 안내: 켜 둔 서비스가 설치돼 있는데 로그아웃·만료일 때만 보인다. 버튼을 눌러야만 실행 (자동 실행 없음)
     const PV_LOGIN = {
-      chatgpt: { btn: "Codex 로그인", how: "버튼을 누르면 터미널에서 codex login 을 실행합니다. Codex CLI 를 찾지 못하면 Codex 앱을 엽니다." },
-      antigravity: { btn: "Antigravity 앱 열기", how: "버튼을 누르면 Antigravity 앱을 엽니다. 앱에서 Google 계정으로 로그인하세요." },
+      chatgpt: { btn: "settings.login.chatgpt.btn", how: "settings.login.chatgpt.how" }, // 사전 키
+      antigravity: { btn: "settings.login.agy.btn", how: "settings.login.agy.how" },
     };
     /**
      * 로그인 안내 상자 표시.
@@ -658,15 +695,15 @@ const MeowSettings = (() => {
       const box = $(`pv-${n}-login`), g = PV_LOGIN[n];
       if (!box || !g) return;
       box.hidden = false;
-      box.innerHTML = `<b>${expired ? "로그인이 만료되었습니다" : "로그인이 필요합니다"}</b><p>${escapeHtml(g.how)}</p><button class="btn btn-primary btn-sm" data-pv-login="${n}">${escapeHtml(g.btn)}</button><small class="pv-login-msg"></small>`;
+      box.innerHTML = `<b>${escapeHtml(t(expired ? "settings.login.expired" : "settings.login.needed"))}</b><p>${escapeHtml(t(g.how))}</p><button class="btn btn-primary btn-sm" data-pv-login="${n}">${escapeHtml(t(g.btn))}</button><small class="pv-login-msg"></small>`;
       box.querySelector("button").addEventListener("click", async (ev) => {
         const b = ev.currentTarget, msg = box.querySelector(".pv-login-msg");
         b.disabled = true;
         try {
           const how = await invoke("provider_login", { name: n });
-          msg.textContent = how === "cli" ? "터미널 창에서 로그인을 진행하세요. 끝나면 이 화면이 자동으로 갱신됩니다." : "앱을 열었습니다. 앱에서 로그인하세요.";
+          msg.textContent = t(how === "cli" ? "settings.login.cli" : "settings.login.app");
           setTimeout(refreshProviders, 15000);
-        } catch (e) { msg.textContent = "실행하지 못했습니다: " + e; }
+        } catch (e) { msg.textContent = t("settings.login.fail", { err: e }); }
         setTimeout(() => { b.disabled = false; }, 4000);
       });
     }
@@ -688,7 +725,7 @@ const MeowSettings = (() => {
           // 웹만 쓰는 사용자는 연동을 켜지 않으므로, 꺼진 상태에서도 웹 안내를 보인다
           if (hint) hint.hidden = false;
           pill.className = "state-pill";
-          pill.innerHTML = `<i class="dot"></i>꺼짐`;
+          pill.innerHTML = `<i class="dot"></i>${escapeHtml(t("settings.pill.off"))}`;
           if (nav) { nav.textContent = ""; nav.className = "nav-state"; }
           info.innerHTML = "";
           return;
@@ -699,14 +736,14 @@ const MeowSettings = (() => {
         const ok = st === "connected" || st === "degraded";
         pill.className = "state-pill" + (ok ? " ok" : "");
         pill.innerHTML = `<i class="dot"></i>${escapeHtml(I18N.t("conn." + st))}`;
-        if (nav) { nav.textContent = ok ? "연동" : st === "not_installed" ? "" : "로그인"; nav.className = "nav-state" + (ok ? "" : " soon"); }
+        if (nav) { nav.textContent = ok ? t("settings.nav.linked") : st === "not_installed" ? "" : t("settings.nav.signin"); nav.className = "nav-state" + (ok ? "" : " soon"); }
         if (hint) hint.hidden = st !== "not_installed";
         const rows = [];
-        if (snap && snap.account) rows.push(["계정", snap.account]);
-        if (snap && snap.plan) rows.push(["요금제", snap.plan]);
-        for (const l of (snap && snap.limits) || []) if (l.percent != null) rows.push([l.label || l.kind, `${Math.round(l.percent)}% 사용`]);
-        if (snap) rows.push(["최근 세션", `${(snap.sessions || []).filter((x) => x.status).length}개 진행 중`]);
-        if (snap && snap.error) rows.push(["참고", snap.error]);
+        if (snap && snap.account) rows.push([t("settings.pv.account"), snap.account]);
+        if (snap && snap.plan) rows.push([t("settings.pv.plan"), snap.plan]);
+        for (const l of (snap && snap.limits) || []) if (l.percent != null) rows.push([l.label || l.kind, t("settings.pv.used", { pct: Math.round(l.percent) })]);
+        if (snap) rows.push([t("settings.pv.sessions"), t("settings.pv.running", { n: (snap.sessions || []).filter((x) => x.status).length })]);
+        if (snap && snap.error) rows.push([t("settings.pv.note"), snap.error]);
         info.innerHTML = rows.map(([k, v]) => `<div><span>${escapeHtml(k)}</span><b>${escapeHtml(v)}</b></div>`).join("");
         if (st === "logged_out" || st === "expired") showLoginGuide(n, st === "expired");
       }));
@@ -719,6 +756,7 @@ const MeowSettings = (() => {
      * @see Tauri 명령 get_config, refreshHook, refreshProviders, renderKinds, syncAutoAllow, syncApiKey, setSideStatus, setSettingsPane
      */
     async function openSettings(pane) {
+      syncLangSelect();
       // 연동 켬 여부는 설정 파일 기준으로 맞춘 뒤 표시
       for (const n of PV) refreshHook(n);
       meowProviders.sync().then(() => { for (const n of PV) { const sw = $(`pv-${n}-on`); if (sw) sw.checked = pvOn(n); } refreshProviders(); });
@@ -727,6 +765,7 @@ const MeowSettings = (() => {
       if (invoke) {
         try {
           const c = await invoke("get_config");
+          cfgState = c;
           apiCfgLoaded = true;
           const sel = $("in-interval");
           sel.value = String(c.refresh_interval_minutes || 5);
@@ -747,26 +786,35 @@ const MeowSettings = (() => {
           $("in-api-alloc").value = c.api_allocated_usd > 0 ? String(c.api_allocated_usd) : "";
           syncApiKey();
           $("in-desktop").disabled = !c.desktop_app && !c.open_in_desktop;
-          $("desktop-hint").textContent = c.desktop_app
-            ? "Claude 데스크톱 앱이 설치돼 있으면 브라우저 대신 앱에서 엽니다."
-            : "Claude 데스크톱 앱이 설치돼 있지 않습니다 — 브라우저로 엽니다.";
           $("app-version").textContent = c.version || "—";
           $("side-version").textContent = c.version || "—";
           $("sys-os").textContent = c.os || "—";
           $("sys-arch").textContent = c.arch || "—";
           $("claude-dir").textContent = c.claude_dir;
           $("hook-addr").textContent = `127.0.0.1:${c.hook_port}`;
-          $("nav-claude-state").textContent = c.permission_hook ? "연동" : "";
           $("config-path").textContent = c.config_path;
-          const hs = $("hook-state");
-          hs.className = "state-pill" + (c.permission_hook ? " ok" : "");
-          hs.innerHTML = `<i class="dot"></i>${c.permission_hook ? "연결됨" : "연결 안 됨"}`;
+          paintCfg();
         } catch (_) {}
       }
       setConn("", "");
       setSideStatus();
       setSettingsPane(pane || "general");
       dropEl.hidden = false;
+    }
+    /**
+     * 설정값(get_config)에 따라 달라지는 문구를 현재 언어로 그린다: 데스크톱 앱 안내·Claude 메뉴 상태·Claude Code 연동 알약.
+     * 설정을 아직 못 읽었으면(미리보기) 기본 문구. 언어가 바뀌면 다시 부른다.
+     * @returns {void}
+     * @see cfgState, openSettings
+     */
+    function paintCfg() {
+      const c = cfgState;
+      const on = !!(c && c.permission_hook);
+      $("desktop-hint").textContent = t(c && !c.desktop_app ? "settings.desktop.hint.off" : "settings.desktop.hint.on");
+      $("nav-claude-state").textContent = on ? t("settings.nav.linked") : "";
+      const hs = $("hook-state");
+      hs.className = "state-pill" + (on ? " ok" : "");
+      hs.innerHTML = `<i class="dot"></i>${escapeHtml(t(on ? "settings.pill.connected" : "settings.pill.disconnected"))}`;
     }
     /**
      * 설정 왼쪽 아래 상태: 마지막 플랜 조회 결과.
@@ -781,7 +829,7 @@ const MeowSettings = (() => {
       const ok = st ? st === "connected" : !!lastPlan?.plan,
         err = !ok && (!!st || !!lastPlan?.error);
       el.className = "set-status" + (ok ? " ok" : err ? " err" : "");
-      el.querySelector("span").textContent = ok ? "정상 동작 중" : err ? "연결 확인 필요" : "확인 중";
+      el.querySelector("span").textContent = t(ok ? "settings.side.ok" : err ? "settings.side.err" : "settings.side.checking");
     }
     /**
      * 웹 서비스 장애 알림 카드(알림 메뉴)를 새로 그린다.
@@ -849,8 +897,8 @@ const MeowSettings = (() => {
     };
     const KIND_ORIGINS = {
       local: ORIGIN_BADGES.local,
-      remote: { label: "원격·클라우드", cls: "tag-remote" },
-      app: { label: "앱", cls: "tag-app" },
+      remote: { get label() { return t("settings.kinds.origin.remote"); }, cls: "tag-remote" }, // 언어가 바뀌어도 그릴 때마다 새 문구
+      app: { get label() { return t("settings.kinds.origin.app"); }, cls: "tag-app" },
     };
     /**
      * 알림 종류 토글 목록 그리기.
@@ -904,11 +952,11 @@ const MeowSettings = (() => {
      */
     function syncApiKey(text, ok) {
       const has = apiKeySet && !apiClear;
-      $("in-api-key").placeholder = apiClear ? "저장하면 키를 삭제합니다" : has ? "저장됨 — 바꾸려면 새 키 입력" : "sk-ant-admin...";
+      $("in-api-key").placeholder = apiClear ? t("settings.apikey.ph.delete") : has ? t("settings.apikey.ph.saved") : "sk-ant-admin...";
       $("btn-api-clear").hidden = !has;
       const st = $("api-key-state");
       st.className = "state-pill" + ((ok ?? has) ? " ok" : "");
-      st.innerHTML = `<i class="dot"></i>${escapeHtml(text || (apiClear ? "삭제 예정" : has ? "저장됨" : "키 없음"))}`;
+      st.innerHTML = `<i class="dot"></i>${escapeHtml(text || t(apiClear ? "settings.pill.delete_pending" : has ? "settings.pill.saved" : "settings.pill.nokey"))}`;
     }
     /**
      * [키 삭제]: 저장 때 키를 지우도록 표시.
@@ -939,11 +987,11 @@ const MeowSettings = (() => {
     $("btn-api-validate").addEventListener("click", async () => {
       if (!invoke) return;
       const key = $("in-api-key").value.trim();
-      if (!key && (!apiKeySet || apiClear)) return syncApiKey("키를 입력하세요", false);
-      syncApiKey("확인 중…", false);
+      if (!key && (!apiKeySet || apiClear)) return syncApiKey(t("settings.apikey.enter"), false);
+      syncApiKey(t("settings.apikey.checking"), false);
       try {
         await invoke("validate_api_key", { key });
-        syncApiKey("연결됨", true);
+        syncApiKey(t("settings.pill.connected"), true);
       } catch (e) {
         syncApiKey(String(e), false);
       }
@@ -1032,10 +1080,10 @@ const MeowSettings = (() => {
           });
         }
         if (opts.onSaved) opts.onSaved(interval, apiCfgLoaded);
-        setConn("저장됨 (갱신 주기는 다음 주기부터 적용)", "ok");
+        setConn(t("settings.conn.saved"), "ok");
         setTimeout(closeSettings, 700);
       } catch (e) {
-        setConn("저장 실패: " + String(e), "err");
+        setConn(t("settings.conn.save_fail", { err: String(e) }), "err");
       }
     });
 
@@ -1064,7 +1112,7 @@ const MeowSettings = (() => {
       e.preventDefault();
       const url = $("dev-mail").href;
       invoke("open_url", { url }).catch(() =>
-        navigator.clipboard.writeText(url).then(() => toast("주소를 복사했습니다"), () => toast(url)));
+        navigator.clipboard.writeText(url).then(() => toast(t("settings.toast.addr_copied")), () => toast(url)));
     });
     /**
      * [폴더 열기]: 로그 폴더를 연다(문제 제보 시 이 폴더의 파일을 전달).
@@ -1082,9 +1130,9 @@ const MeowSettings = (() => {
       if (!invoke) return;
       try {
         const path = await invoke("export_log");
-        toast("로그를 저장했습니다: " + path.split(/[\\/]/).pop());
+        toast(t("settings.log.saved", { file: path.split(/[\\/]/).pop() }));
       } catch (e) {
-        toast("로그 내보내기 실패: " + String(e));
+        toast(t("settings.log.export.fail", { err: String(e) }));
       }
     });
 
@@ -1096,7 +1144,7 @@ const MeowSettings = (() => {
      * 보내기 단추를 켤지 정한다: 동의에 체크했고 보내는 중이 아닐 때만.
      * @returns {void}
      */
-    const logSyncBtn = () => { logBtn.disabled = logSending || !logConsent.checked; logBtn.textContent = logSending ? "보내는 중…" : "보내기"; };
+    const logSyncBtn = () => { logBtn.disabled = logSending || !logConsent.checked; logBtn.textContent = t(logSending ? "settings.log.sending" : "settings.log.send"); };
     /**
      * 바이트 수를 읽기 쉬운 크기 글자로.
      * @param {number} n 바이트 수
@@ -1124,11 +1172,11 @@ const MeowSettings = (() => {
       if (!e.target.open || logPreviewLoaded || !invoke) return;
       try {
         const p = await invoke("log_send_preview");
-        $("log-preview-text").textContent = p.text + (p.cut ? "\n…(화면에는 앞부분만 표시, 보낼 때는 전체)" : "");
+        $("log-preview-text").textContent = p.text + (p.cut ? "\n" + t("settings.log.preview.cut") : "");
         $("log-preview-size").textContent = `(${sizeText(p.bytes)})`;
         logPreviewLoaded = true;
       } catch (err) {
-        $("log-preview-text").textContent = "로그를 불러오지 못했습니다: " + String(err);
+        $("log-preview-text").textContent = t("settings.log.preview.fail", { err: String(err) });
       }
     });
     /**
@@ -1143,11 +1191,11 @@ const MeowSettings = (() => {
       logRes.textContent = "";
       if (!ok) { logRes.textContent = text; return; }
       const b = document.createElement("b"); b.textContent = text;
-      const copy = document.createElement("button"); copy.className = "btn btn-soft btn-sm"; copy.textContent = "복사";
+      const copy = document.createElement("button"); copy.className = "btn btn-soft btn-sm"; copy.textContent = t("settings.log.copy");
       copy.addEventListener("click", async () => {
-        try { await navigator.clipboard.writeText(text); copy.textContent = "복사됨"; setTimeout(() => (copy.textContent = "복사"), 1200); } catch (_) { toast("복사하지 못했습니다"); }
+        try { await navigator.clipboard.writeText(text); copy.textContent = t("settings.log.copied"); setTimeout(() => (copy.textContent = t("settings.log.copy")), 1200); } catch (_) { toast(t("settings.log.copy.fail")); }
       });
-      logRes.append("접수됐습니다. 접수번호 ", b, " ", copy, trimmed ? " (로그가 커서 오래된 앞부분은 빼고 보냈습니다)" : "");
+      logRes.append(t("settings.log.received"), b, " ", copy, trimmed ? t("settings.log.trimmed") : "");
     };
     /**
      * [보내기](작성 칸): 증상·동의를 넘겨 서버에 접수한다. 자동 재시도는 하지 않는다(중복 접수 방지).
@@ -1160,13 +1208,69 @@ const MeowSettings = (() => {
       logRes.className = "log-send-result"; logRes.textContent = "";
       try {
         const r = await invoke("send_log", { symptom: logSym.value, consent: true });
-        logShow(true, r.id || "(번호 없음)", r.trimmed);
+        logShow(true, r.id || t("settings.log.noid"), r.trimmed);
         logSym.value = ""; $("log-symptom-count").textContent = "0/2000"; logConsent.checked = false;
       } catch (err) {
         logShow(false, String(err));
       } finally {
         logSending = false; logSyncBtn();
       }
+    });
+
+    // ── 언어 ─────────────────────────────────────────────
+    /**
+     * 언어 선택 칸을 저장된 값(localStorage meow.lang, 없으면 auto)에 맞춘다.
+     * @returns {void}
+     */
+    function syncLangSelect() {
+      let v = "auto";
+      try { v = localStorage.getItem("meow.lang") || "auto"; } catch (_) { /* 저장소 없음 */ }
+      const sel = $("in-lang");
+      sel.value = v;
+      if (!sel.value) sel.value = "auto";
+    }
+    /**
+     * 고른 언어를 바로 적용(저장 단추와 별개). 화면 갱신은 meow-lang 이벤트 처리에서.
+     * @returns {void}
+     * @see I18N.setLang
+     */
+    $("in-lang").addEventListener("change", () => I18N.setLang($("in-lang").value));
+    /**
+     * 언어에 따라 달라지는 동적 문구를 다시 그린다(설정값·상태에서 만든 문구, 단추 글자).
+     * @returns {void}
+     */
+    function paintDynamic() {
+      paintCfg();
+      setSideStatus();
+      syncApiKey();
+      logSyncBtn();
+      if (!logPreviewLoaded) $("log-preview-text").textContent = t("settings.log.loading");
+    }
+    syncLangSelect();
+    paintDynamic();
+    /**
+     * 언어가 바뀌면(이 창·다른 창) 설정 화면을 다시 채운다.
+     * 정적 문구·select 단위·상태 문구·서비스 카드·웹 서비스 줄을 다시 그리고, 알림 종류(이름·설명은 Rust 에서 오므로 본체가 새 언어를 받은 뒤)는 잠시 뒤 get_config 로 다시 받는다. 사용자가 바꾼 스위치 값(끈 종류)은 유지.
+     * @returns {void}
+     * @see applyText, fillSelects, paintDynamic
+     */
+    window.addEventListener("meow-lang", () => {
+      applyText();
+      fillSelects();
+      syncLangSelect();
+      paintDynamic();
+      for (const n of PV) if (n in hookState) renderHook(n, hookState[n]);
+      if (!invoke) return;
+      refreshProviders();
+      refreshWeb();
+      setTimeout(async () => {
+        if (dropEl.hidden || !cfgState) return;
+        try {
+          const c = await invoke("get_config");
+          renderKinds(c.alert_kinds || [], mutedKinds());
+          syncAutoAllow();
+        } catch (_) { /* 다음에 열 때 갱신 */ }
+      }, 400);
     });
 
     return {

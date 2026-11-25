@@ -56,21 +56,23 @@ const $ = (id) => document.getElementById(id);
 const escapeHtml = (s) =>
   String(s).replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
 /**
- * 경과 시간 표기.
- * "방금" / "3분 전" / "2시간 전" / "3일 전"(7일 미만), 그 이상은 "10/18" 형태 월/일. 값이 없으면 빈 문자열.
+ * 경과 시간 표기(현재 언어, Intl 사용).
+ * "방금" / "3분 전"·"3 minutes ago" / "2시간 전" / "3일 전"(7일 미만), 그 이상은 월/일(예: "10월 18일"·"Oct 18"). 값이 없으면 빈 문자열.
  * @param {string} iso 시각(ISO 8601)
  * @returns {string} 표기 문자열
- * @see notify.js · panel.js 의 카드 경과 표시
+ * @see notify.js · panel.js 의 카드 경과 표시, I18N.lang
  */
 const fmtAgo = (iso) => {
   if (!iso) return "";
   const d = new Date(iso);
   const s = (Date.now() - d.getTime()) / 1000;
-  if (s < 60) return "방금";
-  if (s < 3600) return `${Math.floor(s / 60)}분 전`;
-  if (s < 86400) return `${Math.floor(s / 3600)}시간 전`;
-  if (s < 86400 * 7) return `${Math.floor(s / 86400)}일 전`;
-  return `${d.getMonth() + 1}/${d.getDate()}`;
+  const lang = typeof I18N !== "undefined" ? I18N.lang() : "ko";
+  if (s < 60) return t("common.ago.now");
+  const rtf = (n, unit) => new Intl.RelativeTimeFormat(lang, { numeric: "always", style: "short" }).format(-n, unit);
+  if (s < 3600) return rtf(Math.floor(s / 60), "minute");
+  if (s < 86400) return rtf(Math.floor(s / 3600), "hour");
+  if (s < 86400 * 7) return rtf(Math.floor(s / 86400), "day");
+  return new Intl.DateTimeFormat(lang, { month: "short", day: "numeric" }).format(d);
 };
 
 // 화면 오류도 앱 로그에 남김(문제 제보용). 로그 머리말 = 창 이름.
@@ -90,12 +92,12 @@ if (invoke) {
 // ── 출처 뱃지(카드·목록) ───────────────────────────────────────
 /** 알림 출처(Alert.env) → 뱃지. 앱 자체 알림(update·status)은 뱃지 대신 이름만. */
 const ORIGIN_BADGES = {
-  local: { label: "로컬", cls: "tag-local" },
-  bridge: { label: "원격 제어", cls: "tag-remote" },
-  cloud: { label: "클라우드", cls: "tag-cloud" },
+  local: { get label() { return t("common.origin.local"); }, cls: "tag-local" }, // getter: 언어가 바뀌어도 그릴 때마다 현재 언어
+  bridge: { get label() { return t("common.origin.bridge"); }, cls: "tag-remote" },
+  cloud: { get label() { return t("common.origin.cloud"); }, cls: "tag-cloud" },
 };
-const APP_SOURCES = { update: "Meowffice", status: "Claude 상태" };
-const AGENT_BADGE = { label: "에이전트", cls: "tag-agent" };
+const APP_SOURCES = { update: "Meowffice", get status() { return t("common.src.status"); } };
+const AGENT_BADGE = { get label() { return t("common.badge.agent"); }, cls: "tag-agent" };
 
 /**
  * 출처 이름(목록 부제용).
@@ -115,7 +117,7 @@ const sourceName = (a) => ORIGIN_BADGES[a.env]?.label || APP_SOURCES[a.env] || a
  * @see escapeHtml
  */
 const projectTag = (name, title) =>
-  name && name !== title ? `<span class="tag tag-proj" title="프로젝트: ${escapeHtml(name)}">${escapeHtml(name)}</span>` : "";
+  name && name !== title ? `<span class="tag tag-proj" title="${escapeHtml(t("common.project.title", { name }))}">${escapeHtml(name)}</span>` : "";
 
 /**
  * 카드 뱃지 HTML.
@@ -133,21 +135,21 @@ function sourceBadges(a) {
 
 // ── 사무실 위치·시간대 (오피스 해·달·시각 기준). 이 PC 에만 저장(localStorage) ──────────
 const MEOW_LOCATIONS = [
-  { id: "auto", name: "이 컴퓨터 시간대 (자동)" },
-  { id: "seoul", name: "서울 (UTC+9)", lat: 37.57, lon: 126.98, tz: "Asia/Seoul" },
-  { id: "busan", name: "부산 (UTC+9)", lat: 35.18, lon: 129.08, tz: "Asia/Seoul" },
-  { id: "tokyo", name: "도쿄 (UTC+9)", lat: 35.68, lon: 139.69, tz: "Asia/Tokyo" },
-  { id: "shanghai", name: "상하이 (UTC+8)", lat: 31.23, lon: 121.47, tz: "Asia/Shanghai" },
-  { id: "taipei", name: "타이베이 (UTC+8)", lat: 25.03, lon: 121.56, tz: "Asia/Taipei" },
-  { id: "hongkong", name: "홍콩 (UTC+8)", lat: 22.32, lon: 114.17, tz: "Asia/Hong_Kong" },
-  { id: "singapore", name: "싱가포르 (UTC+8)", lat: 1.35, lon: 103.82, tz: "Asia/Singapore" },
-  { id: "hanoi", name: "하노이 (UTC+7)", lat: 21.03, lon: 105.85, tz: "Asia/Bangkok" },
-  { id: "bangkok", name: "방콕 (UTC+7)", lat: 13.76, lon: 100.5, tz: "Asia/Bangkok" },
-  { id: "sydney", name: "시드니 (UTC+10/+11)", lat: -33.87, lon: 151.21, tz: "Australia/Sydney" },
-  { id: "berlin", name: "베를린 (UTC+1/+2)", lat: 52.52, lon: 13.4, tz: "Europe/Berlin" },
-  { id: "london", name: "런던 (UTC+0/+1)", lat: 51.51, lon: -0.13, tz: "Europe/London" },
-  { id: "newyork", name: "뉴욕 (UTC−5/−4)", lat: 40.71, lon: -74.01, tz: "America/New_York" },
-  { id: "la", name: "로스앤젤레스·샌프란시스코 (UTC−8/−7)", lat: 37.77, lon: -122.42, tz: "America/Los_Angeles" },
+  { id: "auto", get name() { return t("common.loc.auto_tz"); } },
+  { id: "seoul", get name() { return t("common.city.seoul"); }, lat: 37.57, lon: 126.98, tz: "Asia/Seoul" },
+  { id: "busan", get name() { return t("common.city.busan"); }, lat: 35.18, lon: 129.08, tz: "Asia/Seoul" },
+  { id: "tokyo", get name() { return t("common.city.tokyo"); }, lat: 35.68, lon: 139.69, tz: "Asia/Tokyo" },
+  { id: "shanghai", get name() { return t("common.city.shanghai"); }, lat: 31.23, lon: 121.47, tz: "Asia/Shanghai" },
+  { id: "taipei", get name() { return t("common.city.taipei"); }, lat: 25.03, lon: 121.56, tz: "Asia/Taipei" },
+  { id: "hongkong", get name() { return t("common.city.hongkong"); }, lat: 22.32, lon: 114.17, tz: "Asia/Hong_Kong" },
+  { id: "singapore", get name() { return t("common.city.singapore"); }, lat: 1.35, lon: 103.82, tz: "Asia/Singapore" },
+  { id: "hanoi", get name() { return t("common.city.hanoi"); }, lat: 21.03, lon: 105.85, tz: "Asia/Bangkok" },
+  { id: "bangkok", get name() { return t("common.city.bangkok"); }, lat: 13.76, lon: 100.5, tz: "Asia/Bangkok" },
+  { id: "sydney", get name() { return t("common.city.sydney"); }, lat: -33.87, lon: 151.21, tz: "Australia/Sydney" },
+  { id: "berlin", get name() { return t("common.city.berlin"); }, lat: 52.52, lon: 13.4, tz: "Europe/Berlin" },
+  { id: "london", get name() { return t("common.city.london"); }, lat: 51.51, lon: -0.13, tz: "Europe/London" },
+  { id: "newyork", get name() { return t("common.city.newyork"); }, lat: 40.71, lon: -74.01, tz: "America/New_York" },
+  { id: "la", get name() { return t("common.city.la"); }, lat: 37.77, lon: -122.42, tz: "America/Los_Angeles" },
 ];
 /**
  * 사무실 위치·시간대 읽기(오피스 해·달·시각·날씨 기준).
@@ -169,7 +171,7 @@ function meowLocation() {
   if (picked) return picked;
   const tz = Intl.DateTimeFormat().resolvedOptions().timeZone || "Asia/Seoul";
   const same = MEOW_LOCATIONS.find((l) => l.tz === tz);
-  const autoName = (n) => (typeof t === "function" ? t("loc.auto.name", { name: n }) : "자동 · " + n);
+  const autoName = (n) => (typeof t === "function" ? t("loc.auto.name", { name: n }) : n);
   if (same) return { ...same, id: "auto", name: autoName(same.name) };
   const off = -new Date().getTimezoneOffset() / 60;
   return { id: "auto", name: autoName(tz), lat: 37.5, lon: off * 15, tz };
