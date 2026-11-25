@@ -1,6 +1,7 @@
 // 릴리스: (버전 올림) → 서명 빌드 → (커밋·태그) → latest.json 생성 → muneo.co.kr 업로드(scp) → (git push).
 //   npm run release -- --bump patch --notes "변경 내용"   버전 올림(patch|minor|major|x.y.z) + 빌드 + 커밋·태그 + 업로드 + push
 //   npm run release -- --notes "변경 내용"                현재 버전 그대로 빌드 + 업로드
+//   npm run release -- --bump patch --notes-file notes.md   여러 줄 노트(## 제목 + - 항목)는 파일로 — --notes 는 셸에서 첫 줄만 남을 수 있다
 //   npm run release -- --skip-build                       이미 빌드된 결과물로 업로드만
 //   npm run release -- --no-upload / --no-push            업로드 / git push 생략
 // --bump 은 작업 트리가 깨끗해야 함(.idea 제외) — 버전 커밋에 다른 변경이 섞이지 않도록.
@@ -108,7 +109,8 @@ fs.copyFileSync(path.join(nsisDir, setup), path.join(outDir, fileName));
 
 const latest = {
   version,
-  notes: opt("--notes") || "",
+  // 여러 줄 노트는 --notes-file 로(셸·npm 을 거치면 --notes 의 줄바꿈이 잘린다). --notes 안의 \\n 글자도 줄바꿈으로 바꾼다.
+  notes: opt("--notes-file") ? fs.readFileSync(path.resolve(opt("--notes-file")), "utf8").trim() : (opt("--notes") || "").replace(/\\n/g, "\n"),
   pub_date: new Date().toISOString().replace(/\.\d{3}Z$/, "Z"),
   platforms: {
     "windows-x86_64": {

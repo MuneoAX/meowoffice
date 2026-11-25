@@ -2,8 +2,8 @@
 name = "muneo-claude-usage-tray"
 version = "0.6.6"
 edition = "2021"
-description = "문어AI - AI관리: Windows·macOS 트레이 앱 — AI 코딩 에이전트 사용 한도·세션·모델별 사용량 표시 (Tauri)"
-license = "UNLICENSED"
+description = "Meowffice: AI 코딩 세션이 고양이 직원으로 출근하는 데스크톱 사무실 — 사용 한도·세션·알림 (Tauri)"
+license = "MIT"
 
 [build-dependencies]
 tauri-build = { version = "2", features = [] }
