@@ -714,11 +714,11 @@ const OfficeDemo = (() => {
       if (!state.unlocked && state.points >= 10) {
         state.unlocked = true;
         office.unlock('catTower');
-        ui.toast('간식 10개! 라운지에 고양이 타워가 생겼어요');
+        ui.toast(t('office.demo.tower'));
       } else if (up) {
-        ui.toast(`${CatModel.breedName(br)} Lv.${up} 달성! · 간식 +${n}`);
+        ui.toast(t('office.demo.levelUp', { breed: CatModel.breedName(br), lv: up, n }));
         OfficeCat.hop(a.cat, 1.2);
-      } else if (why) ui.toast(`${why} · 간식 +${n}`);
+      } else if (why) ui.toast(t('office.demo.gain', { why, n }));
     }
 
     // 1) 권한 요청 → 결재판을 대표 책상에 내려놓기
@@ -781,7 +781,7 @@ const OfficeDemo = (() => {
       goTo(a, a.desk, Infinity, () => {
         if (a.alert !== al) return;
         OfficeCat.setAct(a.cat, 'type');
-        if (!al.autoApproved) { OfficeCat.setSignal(a.cat, 'permission'); a.cat.signalText = al.q ? '답변 대기' : '결재 대기'; } // 질문 요청은 결재가 아니라 답을 기다린다
+        if (!al.autoApproved) { OfficeCat.setSignal(a.cat, 'permission'); a.cat.signalText = t(al.q ? 'office.demo.sig.answer' : 'office.demo.sig.permit'); } // 질문 요청은 결재가 아니라 답을 기다린다
       }, office.drop.exit); // 줄 선 고양이들을 거슬러 가지 않게 서쪽 길목으로 빠진다
       advanceLine();
     }
@@ -881,7 +881,7 @@ const OfficeDemo = (() => {
       if (approved) {
         OfficeCat.setMood(a.cat, a.cat.mood + 0.4);
         if (!a.at) OfficeCat.hop(a.cat, 1.0); // 앉아 있으면 뛰지 않는다
-        addPoints(treats, '결재 완료', a); // 빠를수록 더 주지 않음 (서둘러 승인하게 만들지 않도록)
+        addPoints(treats, t('office.demo.why.approved'), a); // 빠를수록 더 주지 않음 (서둘러 승인하게 만들지 않도록)
         timer(0.9, () => { if (!a.alert) { a.busy = false; settle(a); drainAuto(a); } });
       } else {
         OfficeCat.setMood(a.cat, a.cat.mood - 0.1);
@@ -925,7 +925,7 @@ const OfficeDemo = (() => {
       a.cat.signalText = null;
       OfficeCat.setProp(a.cat, null);
       OfficeCat.setMood(a.cat, a.cat.mood + 0.3);
-      addPoints(1, '답변 완료', a);
+      addPoints(1, t('office.demo.why.answered'), a);
       // 줄에 서 있던 고양이는 대표 책상 앞에 남지 않게 자리로 돌려보낸다 (결재와 같은 흐름)
       briefly(a.cat, 'nod', 1.2, () => { if (queued) { settle(a); drainAuto(a); return; } OfficeCat.setAct(a.cat, 'type'); a.what = 'work'; a.until = rnd(15, 30); drainAuto(a); });
     }
@@ -969,7 +969,7 @@ const OfficeDemo = (() => {
         sfx('five', a);
         briefly(a.cat, 'highfive', 1.2, () => { OfficeCat.hop(a.cat, 0.8); work(a); });
         OfficeCat.setMood(a.cat, a.cat.mood + 0.4);
-        addPoints(2, '하이파이브', a);
+        addPoints(2, t('office.demo.why.highfive'), a);
       } else {
         work(a);
       }
@@ -1004,7 +1004,7 @@ const OfficeDemo = (() => {
       OfficeCat.setAct(a.cat, 'type');
       a.what = 'work';
       a.until = rnd(15, 30);
-      addPoints(1, '오류 확인', a);
+      addPoints(1, t('office.demo.why.errorSeen'), a);
     }
 
     /**
@@ -1051,9 +1051,9 @@ const OfficeDemo = (() => {
         if (al.kind === 'permission') {
           const pos = queue.indexOf(a) + 1;
           const r = await ui.card({
-            kind: 'permission', title: '결재 서류', project: a.project, cat: a.cat,
-            rows: [['요청', `${al.tool}${al.desc ? ' · ' + al.desc : ''}`], ['내용', al.detail || '-'], ['대기', `${pos}번째 · ${Math.round(al.t)}초`]],
-            buttons: [['approve', '승인'], ['deny', '반려']],
+            kind: 'permission', title: t('office.demo.card.permit'), project: a.project, cat: a.cat,
+            rows: [[t('office.demo.row.request'), `${al.tool}${al.desc ? ' · ' + al.desc : ''}`], [t('office.demo.row.detail'), al.detail || '-'], [t('office.demo.row.wait'), t('office.demo.wait', { pos, sec: Math.round(al.t) })]],
+            buttons: [['approve', t('office.demo.approve')], ['deny', t('office.demo.deny')]],
           });
           if (r && a.alert === al) {
             if (al.permitId && opts.answer) {
@@ -1063,10 +1063,10 @@ const OfficeDemo = (() => {
             serve(a, r === 'approve');
           }
         } else if (al.kind === 'question') {
-          if (al.multi) { ui.toast('여러 개를 고르는 질문은 알림 카드에서 답해 주세요'); return; }
+          if (al.multi) { ui.toast(t('office.demo.multi')); return; }
           const r = await ui.card({
-            kind: 'question', title: '질문이 있어요', project: a.project, cat: a.cat,
-            rows: [['질문', al.q]], buttons: al.options.map((o, i) => ['o' + i, o]),
+            kind: 'question', title: t('office.demo.card.question'), project: a.project, cat: a.cat,
+            rows: [[t('office.demo.row.question'), al.q]], buttons: al.options.map((o, i) => ['o' + i, o]),
           });
           if (r && a.alert === al) {
             if (al.permitId && opts.answer) {
@@ -1078,14 +1078,14 @@ const OfficeDemo = (() => {
           }
         } else if (al.kind === 'deliver' && al.arrived) {
           const r = await ui.card({
-            kind: 'complete', title: '작업 완료 배달', project: a.project, cat: a.cat,
-            rows: [['결과', '변경 4개 파일, 테스트 통과']], buttons: [['five', '하이파이브 🐾'], ['ok', '확인']],
+            kind: 'complete', title: t('office.demo.card.complete'), project: a.project, cat: a.cat,
+            rows: [[t('office.demo.row.result'), t('office.demo.result')]], buttons: [['five', t('office.demo.five')], ['ok', t('office.demo.ok')]],
           });
           if (r && a.alert === al) receive(a, r === 'five');
         } else if (al.kind === 'error') {
           const r = await ui.card({
-            kind: 'error', title: '오류 발생', project: a.project, cat: a.cat,
-            rows: [['내용', al.msg]], buttons: [['ok', '확인']],
+            kind: 'error', title: t('office.demo.card.error'), project: a.project, cat: a.cat,
+            rows: [[t('office.demo.row.detail'), al.msg]], buttons: [['ok', t('office.demo.ok')]],
           });
           if (r && a.alert === al) fixError(a);
         }
@@ -1099,7 +1099,7 @@ const OfficeDemo = (() => {
      */
     function clickDesk() {
       const n = office.pileClear();
-      if (n) { briefly(boss, 'nod', 1.0); addPoints(n, `완료 상자 ${n}개 정리`); }
+      if (n) { briefly(boss, 'nod', 1.0); addPoints(n, t('office.demo.why.boxes', { n })); }
     }
 
     // ── 매 프레임 ─────────────────────────────────────────────
@@ -1222,7 +1222,7 @@ const OfficeDemo = (() => {
       const p = key.slice(0, i), sid = key.slice(i + 1);
       const id = p === 'claude' ? `L:${sid}` : `P:${p}:${sid}`;
       const a = agents.find((x) => x.cat.id === id);
-      if (!a || a.leaving) { addPoints(1, '작업 완료'); return; } // 고양이가 없으면(빈 책상 없음 등) 간식만
+      if (!a || a.leaving) { addPoints(1, t('office.demo.why.done')); return; } // 고양이가 없으면(빈 책상 없음 등) 간식만
       const now = performance.now();
       a.donePending = false; // 조회로 기다리던 완료 판정은 이 이벤트로 대신
       if (a.reportAt != null && now - a.reportAt < REPORT_GAP_MS) return;
@@ -1255,7 +1255,7 @@ const OfficeDemo = (() => {
       // 권한·질문을 기다리는 중이면 작업이 끝난 게 아니다 (세션 상태가 잠시 쉼으로 보여도) — 세지 않는다
       if (a.alert && (a.alert.kind === 'permission' || a.alert.kind === 'question')) { a.reportAt = null; return; }
       const spot = free('deliver')[0];
-      if (!spot || a.alert || a.held || a.cat.landing || queue.includes(a)) { addPoints(1, '작업 완료 보고', a); return; }
+      if (!spot || a.alert || a.held || a.cat.landing || queue.includes(a)) { addPoints(1, t('office.demo.why.report'), a); return; }
       const al = (a.alert = { kind: 'report', t: 0 });
       a.what = 'alert';
       OfficeCat.setProp(a.cat, 'board'); // 결재판(보고서)을 들고 간다
@@ -1285,7 +1285,7 @@ const OfficeDemo = (() => {
       OfficeCat.setAct(a.cat, 'idle');
       boss.heading = office.boss.rotY;
       if (!boss.landing) briefly(boss, 'nod', 1.0);
-      addPoints(1, '작업 완료 보고', a);
+      addPoints(1, t('office.demo.why.report'), a);
     }
     /**
      * 세션의 바쁨 여부와 정보를 갱신한다 (바쁘면 책상에 붙어 일하고, 쉬면 일과를 고름).
@@ -1329,7 +1329,7 @@ const OfficeDemo = (() => {
       if (a.alert && a.alert.kind === 'report') finishReport(a); // 보고하러 가던 중이면 간식은 준다
       if (a.alert) { leaveQueue(a); a.alert = null; OfficeCat.setSignal(a.cat, null); a.cat.signalText = null; OfficeCat.setProp(a.cat, null); }
       a.autoN = 0;
-      if (owed) addPoints(owed, '자동 수락', a);
+      if (owed) addPoints(owed, t('office.demo.why.auto'), a);
       a.leaving = true;
       /**
        * 퇴근 마무리: 일꾼을 목록·줄·자리에서 빼고 gone 을 부른다.
@@ -1370,7 +1370,7 @@ const OfficeDemo = (() => {
         const q = (p.questions || [])[0] || {};
         const multi = (p.questions || []).length > 1 || !!q.multiSelect;
         // 도구 요청과 같이 결재 줄에 선다 (답은 카드에서)
-        joinQueue(a, { q: q.question || '질문', options: (q.options || []).map((o) => o.label || String(o)), permitId, question: q.question, multi });
+        joinQueue(a, { q: q.question || t('office.demo.question'), options: (q.options || []).map((o) => o.label || String(o)), permitId, question: q.question, multi });
       } else {
         joinQueue(a, { tool: p.tool, detail: p.detail, desc: p.description, permitId, autoApproved });
       }
@@ -1387,7 +1387,7 @@ const OfficeDemo = (() => {
       const id = p.provider && p.provider !== 'claude' ? `P:${p.provider}:${p.session}` : `L:${p.session}`;
       const a = agents.find((x) => x.cat.id === id);
       // 고양이가 없거나 퇴근 중이면 왕복 연출 없이 간식만 바로 준다 (오피스가 닫혀 있을 때와 같은 몫)
-      if (!a || a.leaving) { addPoints(1, '자동 수락'); return; }
+      if (!a || a.leaving) { addPoints(1, t('office.demo.why.auto')); return; }
       a.autoN = (a.autoN || 0) + 1;
       a.autoLast = p;
       drainAuto(a);
@@ -1469,7 +1469,7 @@ const OfficeDemo = (() => {
           if (a.alert && a.alert.autoApproved) a.alert.treats = 0;
           if (a.alert && a.alert.kind === 'report') a.alert = null;
         }
-        if (owed) addPoints(owed, '창 닫기 전 정산', a);
+        if (owed) addPoints(owed, t('office.demo.why.settle'), a);
       });
     }
     /**
@@ -1482,7 +1482,7 @@ const OfficeDemo = (() => {
     function giveTreats(n) {
       if (!(n > 0)) return;
       briefly(boss, 'nod', 1.0);
-      addPoints(n, `오피스 밖에서 모인 간식 ${n}개`);
+      addPoints(n, t('office.demo.why.outside', { n }));
     }
     /**
      * 공개 API (DemoApi): tick, click, clickDesk, state, queue, agents, add, setBusy, remove, syncPermits, autoPermit, giveTreats, markDone, turnDone, grab, drop.
@@ -1532,7 +1532,7 @@ const OfficeDemo = (() => {
     function feed(id) {
       const a = agents.find((x) => x.cat.id === id);
       if (!a) return false;
-      if (balance() <= 0) { ui.toast('남은 간식이 없어요 — 결재·작업 완료로 모을 수 있어요'); return false; }
+      if (balance() <= 0) { ui.toast(t('office.demo.noTreats')); return false; }
       state.spent = (state.spent || 0) + 1;
       const br = a.cat.breed, before = levelFromXp(state.cats[br] || 0);
       state.cats[br] = (state.cats[br] || 0) + 1;
@@ -1545,7 +1545,7 @@ const OfficeDemo = (() => {
         if (cat.skating) { sfx('eat', a); briefly(cat, 'eat', 3.0); }
         else react(a);
       }
-      ui.toast(after > before ? `${CatModel.breedName(br)} Lv.${after} 달성! · 남은 간식 ${balance()}개` : `${CatModel.breedName(br)}에게 간식 · 남은 간식 ${balance()}개`);
+      ui.toast(after > before ? t('office.demo.fedUp', { breed: CatModel.breedName(br), lv: after, n: balance() }) : t('office.demo.fed', { breed: CatModel.breedName(br), n: balance() }));
       return true;
     }
     /**
