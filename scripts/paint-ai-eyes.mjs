@@ -41,6 +41,7 @@ const mix = (a, b, t) => a.map((v, i) => v + (b[i] - v) * t);
 // 참고 그림(사용자 2026-11-25): 크림색 흰자 동그라미 안에 검은 남색 눈동자가 코 쪽 위로 치우쳐 바깥 아래로 흰자 초승달이 보이고,
 // 위 바깥쪽에 두꺼운 눈꺼풀(속눈썹) 선이 끝이 살짝 삐치며, 눈동자 아래에 밝은 보라갈색 반사, 왼쪽 위에 흰 반짝임 하나.
 const AA = 0.03;
+const SX = 1.25; // 가로로 넓힘: 눈은 머리 옆으로 둥글게 꺾인 면에 있어 정면에서 가로가 줄어 보인다(그대로 칠하면 세로로 긴 타원)
 const SCLERA = hex("#fbf5ec"), SCL_SH = hex("#d9d3d6"), EDGE = hex("#3a3344"), PUPIL = hex("#1d1a2b"), REFL = hex("#4c3f52"), LID = hex("#17141f");
 const inside = (d, r) => 1 - ss(r - AA, r + AA, d);
 function eyeAt(s, t, inner) {
@@ -49,11 +50,11 @@ function eyeAt(s, t, inner) {
   const th = Math.atan2(t, s * -inner); // 0 = 바깥 옆, π/2 = 위
   let lid = 0;
   {
-    const a0 = 0.08, a1 = Math.PI * 0.8; // 바깥 옆 조금 아래 ~ 꼭대기 지나 코 쪽
+    const a0 = -0.15, a1 = Math.PI * 0.95; // 바깥 8시 반(눈꼬리) ~ 꼭대기(12시) ~ 코 쪽 3시 가까이: 가로로 길게
     if (th > a0 - 0.3 && th < a1) {
       const u = Math.min(1, Math.max(0, (th - a0) / (a1 - a0)));
-      const w = 0.22 * Math.sin(Math.PI * Math.min(1, u * 1.08)) ** 0.6; // 두께(위쪽은 둥글게 꺾여 줄어 보이므로 그림보다 두껍게)
-      const r0 = 0.93 + (u < 0.12 ? (0.12 - u) * 0.8 : 0); // 흰자 가장자리에 바짝, 바깥 끝은 바깥으로 삐침
+      const w = 0.27 * Math.sin(Math.PI * Math.min(1, u * 1.08)) ** 0.6; // 두께(위쪽은 둥글게 꺾여 줄어 보이므로 그림보다 두껍게)
+      const r0 = 0.93 + (u < 0.14 ? (0.14 - u) * 1.3 : 0); // 흰자 가장자리에 바짝, 바깥 끝은 바깥으로 삐침
       lid = inside(Math.abs(d - (r0 + w / 2)), w / 2) * (w > 0.01 ? 1 : 0);
     }
   }
@@ -125,7 +126,7 @@ for (const eye of mf.eyes.filter(Boolean)) {
     const [A, B, C, ua, ub, uc] = tri(f);
     const w = bary(ua, ub, uc, (i % W) + 0.5, Math.floor(i / W) + 0.5);
     const q = sub([0, 1, 2].map((k) => pos[A][k] * w[0] + pos[B][k] * w[1] + pos[C][k] * w[2]), c);
-    st.set(i, [dot(q, right) / R, dot(q, up) / R]);
+    st.set(i, [dot(q, right) / (R * SX), dot(q, up) / R]);
   }
   // 둘레 털색: 방향(30칸)마다 카툰 눈 바깥 1.35~1.6 고리의 평균색 — 원래 눈이 카툰 눈보다 큰 곳(1.0~1.32)을 같은 방향 털색으로 덮는다
   const NB = 30, acc = Array.from({ length: NB }, () => [0, 0, 0, 0]);
