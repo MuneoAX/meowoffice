@@ -110,6 +110,8 @@ if (cmd === "upload") {
   execFileSync(process.execPath, [path.join(here, "spread-ai-arms.mjs"), b, b, "45"], { stdio: "inherit" }); // 팔이 둥근 몸통에 파묻히지 않게 45° 이상 벌림
   // 카툰 눈: 눈 자리 찾기 → 눈 둘레 메시 펴기(볼록한 눈알·홈 주름 없애기) → 펴진 자리로 다시 찾기 → 텍스처에 카툰 눈 칠하기(2048)
   for (const s of ["ai-face-marks.mjs", "smooth-ai-eyes.mjs", "ai-face-marks.mjs", "paint-ai-eyes.mjs"]) execFileSync(process.execPath, [path.join(here, s), b, b], { stdio: "inherit" });
+  // 입: ω 입 선을 따라 갈라 위·아래 입술 + 아래턱이 내려가는 모양 변형(하품·말하기·먹기)
+  execFileSync(process.execPath, [path.join(here, "mouth-ai.mjs"), b, b], { stdio: "inherit" });
   console.log("완료", b, doc.getRoot().listAnimations().map((x) => x.getName()).join(","));
 } else {
   console.error("명령: upload | rigcheck | rig | retarget | wait | task | cat"); process.exit(1);

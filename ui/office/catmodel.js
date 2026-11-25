@@ -449,9 +449,27 @@ const CatModel = (() => {
     const nx = pos[nose * 3]; // 얼굴이 정가운데가 아닐 수 있어(장모종) 코의 좌우 위치에 맞춘다
     face[key] = { ai: true, mouthAt: [nx, my, mz + ew * 0.05], tongueAt: [nx, my, mz - ew * 0.05], tongueDir: [0, -0.35, 1], ew };
   }
-  /** 입 벌리기 0(닫힘)~1. AI 모델은 입 속(어두운 빨강 타원)을 세로로 키워 벌린 입처럼 보인다(옛 모델은 입 선이 그대로라 무시) */
+  /**
+   * 입 벌리기 0(닫힘)~1(하품). 입을 모델링한 AI 모델은 아래턱 모양 변형(mouthOpen)을 움직이고(벌어진 틈으로 머리 안 입속이 보임),
+   * 그 전 모델은 입 속(어두운 빨강 타원)을 세로로 키운다. 옛 모델은 입 선이 그대로라 무시.
+   * @param {Cat} cat 고양이
+   * @param {number} k 벌림 0~1
+   * @returns {void}
+   */
   function mouthOpen(cat, k) {
-    const mo = cat.model && cat.model.mouthIn;
+    const m = cat.model;
+    if (!m) return;
+    if (m.mouthMorph) {
+      for (const t of m.mouthMorph) if (t.influence !== k) t.influence = k;
+      const mi = m.mouthIn, md = mi && mi.metadata;
+      if (md && md.top) {
+        const on = k > 0.03;
+        if (mi.isEnabled() !== on) mi.setEnabled(on);
+        if (on) { V3.LerpToRef(md.top, md.bot, 0.5 * k, mi.position); mi.scaling.y = md.h * k; } // 윗입술 바로 뒤 ~ 내려간 아랫입술 뒤
+      }
+      return;
+    }
+    const mo = m.mouthIn;
     if (!mo) return;
     const on = k > 0.03;
     if (mo.isEnabled() !== on) mo.setEnabled(on);
@@ -488,6 +506,7 @@ positionUpdated += normalUpdated * ${OUTLINE_W.toFixed(4)};
       new P(outlineMat);
     }
     const ol = mesh.clone(mesh.name + ':outline', mesh.parent, true);
+    if (mesh.morphTargetManager) ol.morphTargetManager = mesh.morphTargetManager; // 입 벌림(모양 변형)을 외곽선도 같이
     ol.skeleton = mesh.skeleton;
     ol.material = outlineMat;
     ol.isPickable = false;
@@ -518,13 +537,32 @@ positionUpdated += normalUpdated * ${OUTLINE_W.toFixed(4)};
         mouthInMat = new BABYLON.StandardMaterial('cat:mouthIn', scene);
         mouthInMat.diffuseColor = BABYLON.Color3.FromHexString('#6b2433'); mouthInMat.specularColor = new BABYLON.Color3(0.05, 0.02, 0.03); mouthInMat.metadata = { shared: true };
       }
-      const mi = BABYLON.MeshBuilder.CreateSphere(`${cat.id}:mouthIn`, { segments: 8 }, scene);
-      mi.parent = head; mi.position = toHead(f.mouthAt);
-      const h = f.ew * 0.42;
-      mi.scaling.set(f.ew * 0.55, h, f.ew * 0.14);
-      mi.metadata = { h };
-      mi.material = mouthInMat; mi.isPickable = false;
-      mi.setEnabled(false);
+      const mi = BABYLON.MeshBuilder.CreateSphere(`${cat.id}:mouthIn`, { segments: 10 }, scene);
+      mi.parent = head; mi.material = mouthInMat; mi.isPickable = false;
+      const mo = f.mouth;
+      if (mo) {
+        // 입을 모델링한 모델: 입속은 머리 안쪽 입 선 바로 뒤에 늘 둔다(닫혀 있으면 얼굴에 가려 안 보임). 벌림은 모양 변형(mouthOpen)
+        const [x, y, z] = mo.c;
+        // 벌린 만큼만 아래로 키운다(닫혀 있으면 끔): 크게 두면 뒤로 물러난 턱 겉면 밖으로 비친다
+        const top = toHead([x, y + mo.D * 0.1, z - mo.hw * 1.2]), bot = toHead([x, y - mo.D * 1.05, z - mo.hw * 1.2]);
+        mi.position = top.clone();
+        mi.scaling.set(mo.hw * 2.0, 0.001, mo.hw * 1.5);
+        mi.metadata = { top, bot, h: V3.Distance(top, bot) };
+        mi.setEnabled(false);
+        model.mouthMorph = [];
+        for (const me of model.meshes) {
+          const mm = me.morphTargetManager;
+          if (!mm) continue;
+          for (let i = 0; i < mm.numTargets; i++) { const t = mm.getTarget(i); if (!t.name || /mouthOpen/i.test(t.name) || mm.numTargets === 1) model.mouthMorph.push(t); }
+        }
+        if (!model.mouthMorph.length) model.mouthMorph = null;
+      } else {
+        mi.position = toHead(f.mouthAt);
+        const h = f.ew * 0.42;
+        mi.scaling.set(f.ew * 0.55, h, f.ew * 0.14);
+        mi.metadata = { h };
+        mi.setEnabled(false);
+      }
       model.mouthIn = mi;
     }
     const lines = (f.ai ? [] : [f.philtrum, f.mouth]).map((pts, i) => {
@@ -540,7 +578,7 @@ positionUpdated += normalUpdated * ${OUTLINE_W.toFixed(4)};
     const base = new Q();
     Q.FromUnitVectorsToRef(V3.Forward(), dir, base);
     root.rotationQuaternion = base.clone();
-    const len = f.ew * 0.62, wid = f.ew * 0.42;
+    const len = f.mouth ? f.mouth.hw * 1.5 : f.ew * 0.62, wid = f.mouth ? f.mouth.hw * 1.05 : f.ew * 0.42; // 입을 모델링한 모델은 입 너비에 맞춤
     const tg = BABYLON.MeshBuilder.CreateSphere(`${cat.id}:tongue`, { segments: 10 }, scene);
     tg.scaling.set(wid, f.ew * 0.11, len);
     tg.position.z = len * 0.5;
@@ -611,6 +649,13 @@ positionUpdated += normalUpdated * ${OUTLINE_W.toFixed(4)};
           if (TP && m instanceof BABYLON.PBRMaterial) { new TP(m); m.specularIntensity = 0.3; } // 카툰 명암, 번들거림 줄임
         });
         for (const me of c.meshes) if (me.skeleton && !face[key]) faceAI(me, key);
+        // 입(scripts/mouth-ai.mjs): 입 선을 따라 갈라 둔 메시 + 아래턱이 내려가는 모양 변형 mouthOpen. 입속·혀를 그 자리에 둔다
+        for (const me of c.meshes) {
+          const mo = me.metadata && me.metadata.gltf && me.metadata.gltf.extras && me.metadata.gltf.extras.meowFace && me.metadata.gltf.extras.meowFace.mouth;
+          if (!mo || !face[key]) continue;
+          const [x, y, z] = mo.c;
+          Object.assign(face[key], { mouth: mo, tongueAt: [x, y - mo.D * 0.3, z - mo.hw * 0.5], tongueDir: [0, -0.3, 1] });
+        }
         containers[key] = c;
         return;
       }
@@ -1488,7 +1533,13 @@ positionUpdated += normalUpdated * ${OUTLINE_W.toFixed(4)};
       let mk = 0;
       if (cat.act === 'groom') mk = 0.4 + 0.6 * Math.max(0, Math.sin(tt * 3.4)) ** 0.6;
       else if (cat.act === 'eat') mk = 0.25 + 0.55 * Math.max(0, Math.sin(tt * 7));
-      else if (cat.act === 'talk' || cat.act === 'present' || cat.act === 'sign' || cat.act === 'highfive' || m.anim === 'raise_hand') mk = 0.6 * Math.max(0, Math.sin(tt * 5.5)) ** 0.8;
+      else if (cat.act === 'talk' || cat.act === 'present' || cat.act === 'sign' || cat.act === 'highfive' || m.anim === 'raise_hand') mk = 0.45 * Math.max(0, Math.sin(tt * 5.5)) ** 0.8;
+      else if (m.mouthMorph && (cat.act === 'doze' || cat.pose === 'sleep' || cat.signal === 'waiting')) {
+        // 하품: 졸거나 기다릴 때 9초마다 한 번(고양이마다 때가 다르게) 2.6초 동안 크게 벌렸다 닫음
+        const ph = (tt + (cat.id ? [...String(cat.id)].reduce((a, ch) => a + ch.charCodeAt(0), 0) % 9 : 0)) % 9;
+        if (ph < 2.6) mk = Math.sin((Math.PI * ph) / 2.6) ** 0.7;
+      }
+      if (m.mouthMorph && (cat.act === 'groom' || cat.act === 'eat')) mk *= 0.55; // 모델링한 입은 1 이 하품만큼 크게 벌어짐 → 핥기·먹기는 반쯤
       mouthOpen(cat, mk);
     }
     const g = m.groups[m.anim];
