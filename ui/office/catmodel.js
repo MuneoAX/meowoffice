@@ -457,6 +457,42 @@ const CatModel = (() => {
     if (mo.isEnabled() !== on) mo.setEnabled(on);
     if (on) mo.scaling.y = mo.metadata.h * k;
   }
+  /**
+   * 카툰 외곽선(뒤집은 껍질): 몸 메시를 복제해(정점·뼈대 공유) 법선 방향으로 OUTLINE_W 만큼 부풀리고 앞면은 그리지 않는다 →
+   * 몸 뒤로 숨은 껍질 안쪽 면이 윤곽에서만 진한 선으로 보인다. Babylon 기본 외곽선(renderOutline)은 좌우 뒤집힌 모델에서
+   * 껍질 깊이를 앞면으로 써서 얼굴 위 카툰 눈을 가리므로 쓰지 않는다.
+   * @param {BABYLON.Scene} scene 장면
+   * @param {BABYLON.Mesh} mesh 뼈대 있는 몸 메시
+   * @param {Cat} cat 고양이
+   * @returns {void}
+   */
+  let outlineMat = null;
+  function toonOutline(scene, mesh, cat) {
+    if (!outlineMat) {
+      outlineMat = new BABYLON.StandardMaterial('cat:outline', scene);
+      // 조명은 켜 둬야 셰이더에 법선이 들어온다(확산·반사색이 검정이라 빛은 안 받고 자체 발광색만)
+      outlineMat.emissiveColor = OUTLINE_C; outlineMat.diffuseColor = BABYLON.Color3.Black(); outlineMat.specularColor = BABYLON.Color3.Black();
+      outlineMat.cullBackFaces = false; // 앞면을 버리고 안쪽(뒷면)만
+      outlineMat.metadata = { shared: true };
+      const P = class extends BABYLON.MaterialPluginBase {
+        constructor(m) { super(m, 'MeowOutline', 200, { MEOWOUTLINE: false }, true, true); }
+        prepareDefines(d) { d.MEOWOUTLINE = true; }
+        getClassName() { return 'MeowOutlinePlugin'; }
+        isCompatible(lang) { return lang === BABYLON.ShaderLanguage.GLSL; }
+        getCustomCode(type) { return type === 'vertex' ? { CUSTOM_VERTEX_UPDATE_POSITION: `
+#if defined(MEOWOUTLINE) && defined(NORMAL)
+positionUpdated += normalUpdated * ${OUTLINE_W.toFixed(4)};
+#endif
+` } : null; }
+      };
+      new P(outlineMat);
+    }
+    const ol = mesh.clone(mesh.name + ':outline', mesh.parent, true);
+    ol.skeleton = mesh.skeleton;
+    ol.material = outlineMat;
+    ol.isPickable = false;
+    ol.metadata = { catId: cat.id };
+  }
   function makeMouth(scene, cat, model, body) {
     const f = face[model.ckey || body] || face[body], head = model.nodes.head, top = model.top;
     if (!f || !head || !top) return;
@@ -530,11 +566,50 @@ const CatModel = (() => {
     t.root.scaling.set(0.7 + 0.3 * k, 1, k);
     t.root.rotationQuaternion = t.base.multiply(Q.RotationAxis(V3.Right(), flick));
   }
+  /**
+   * 카툰 렌더링(사용자 2026-11-25 "2D 카툰처럼, 카툰렌더링"): 재질 플러그인으로 받은 빛의 밝기를 몇 단계로 끊는다(경계는 살짝 부드럽게).
+   * 단계는 빛의 세기에 비례해 나누므로 낮·밤 조명이 바뀌어도 그대로 맞는다. 색(텍스처)은 그대로, 명암만 만화처럼.
+   */
+  let ToonPlugin = null;
+  const TOON_BANDS = 3;
+  const OUTLINE_W = 0.006, OUTLINE_C = BABYLON.Color3.FromHexString('#3a2824'); // 외곽선 굵기(m)·색
+  function toonPlugin() {
+    if (ToonPlugin || !BABYLON.MaterialPluginBase) return ToonPlugin;
+    ToonPlugin = class extends BABYLON.MaterialPluginBase {
+      constructor(material) { super(material, 'MeowToon', 200, { MEOWTOON: false }, true, true); }
+      prepareDefines(defines) { defines.MEOWTOON = true; }
+      getClassName() { return 'MeowToonPlugin'; }
+      isCompatible(lang) { return lang === BABYLON.ShaderLanguage.GLSL; }
+      getCustomCode(type) {
+        if (type !== 'fragment') return null;
+        return {
+          CUSTOM_FRAGMENT_BEFORE_FINALCOLORCOMPOSITION: `
+            #ifdef MEOWTOON
+            {
+              vec3 alb = max(surfaceAlbedo.rgb, vec3(0.002));
+              vec3 lit = finalDiffuse / alb;
+              float l = dot(lit, vec3(0.299, 0.587, 0.114));
+              float f = l * ${TOON_BANDS.toFixed(1)};
+              float q = (floor(f) + smoothstep(0.42, 0.58, fract(f))) / ${TOON_BANDS.toFixed(1)};
+              q = max(q, l * 0.35); // 가장 어두운 쪽이 새까맣게 뭉개지지 않게
+              finalDiffuse = alb * lit * (q / max(l, 0.0001));
+            }
+            #endif
+          `,
+        };
+      }
+    };
+    return ToonPlugin;
+  }
   async function load(scene, body, key = body, file = BODIES[body].file) {
     try {
       const c = await BABYLON.LoadAssetContainerAsync(DIR + file, scene);
       if (BODIES[body].ai) { // 자체 텍스처·재질을 그대로 쓴다: 손질·추가 동작 없음. 재질은 고양이끼리 공유하므로 지울 때 같이 지우지 않게 표시
-        c.materials.forEach((m) => { m.metadata = { ...(m.metadata || {}), shared: true }; });
+        const TP = toonPlugin();
+        c.materials.forEach((m) => {
+          m.metadata = { ...(m.metadata || {}), shared: true };
+          if (TP && m instanceof BABYLON.PBRMaterial) { new TP(m); m.specularIntensity = 0.3; } // 카툰 명암, 번들거림 줄임
+        });
         for (const me of c.meshes) if (me.skeleton && !face[key]) faceAI(me, key);
         containers[key] = c;
         return;
@@ -751,6 +826,9 @@ const CatModel = (() => {
     if (breed === 'boss') makeTie(scene, cat, model);
     model.ckey = key;
     makeMouth(scene, cat, model, body);
+    if (ai) {
+      for (const m of meshes) if (m.skeleton) toonOutline(scene, m, cat);
+    }
     return model;
   }
 
