@@ -289,6 +289,35 @@ const CatModel = (() => {
   }
   /** 눈 크기 배율(모델 원래 눈 대비)과 가장자리 앞으로 내기(m) — remapEyeUV */
   const EYE_SCALE = 1.3, EYE_LIFT = 0.012;
+  /** 목 둘레 배율(1 = 모델 그대로) — slimNeck */
+  const NECK = 0.8;
+  /**
+   * 목 둘레 줄이기(사용자 2026-11-25 "목이 너무 두껍다"): 목 뼈 가중치가 있는 정점을 목 가운데 축(x 0, 목 가중 평균 z) 쪽으로 당긴다.
+   * 가중치만큼만 당겨 머리·가슴 쪽 이음새는 부드럽게 이어진다. 높이(y)는 그대로. 모델 파일은 그대로, 체형마다 한 번.
+   * @param {BABYLON.AbstractMesh} mesh 체형 메시(뼈대 있음)
+   * @returns {void}
+   */
+  function slimNeck(mesh) {
+    if (NECK === 1 || !mesh.skeleton || !mesh.getVerticesData) return;
+    const bi = mesh.skeleton.getBoneIndexByName('neck');
+    const pos = mesh.getVerticesData(BABYLON.VertexBuffer.PositionKind);
+    const mi = mesh.getVerticesData(BABYLON.VertexBuffer.MatricesIndicesKind), mw = mesh.getVerticesData(BABYLON.VertexBuffer.MatricesWeightsKind);
+    if (bi < 0 || !pos || !mi || !mw) return;
+    const n = pos.length / 3, w = new Float32Array(n);
+    for (let i = 0; i < n; i++) for (let j = 0; j < 4; j++) if (mi[i * 4 + j] === bi) w[i] += mw[i * 4 + j];
+    // 목 가중치는 머리·가슴과 나눠 가져 0.6 을 넘는 정점이 없다 → 가장 큰 목 가중치로 나눠 0~1 로 맞추고, 축 z 는 가중 평균
+    let cz = 0, cw = 0, wmax = 0;
+    for (let i = 0; i < n; i++) { wmax = Math.max(wmax, w[i]); if (w[i] > 0.02) { cz += pos[i * 3 + 2] * w[i]; cw += w[i]; } }
+    if (!cw || !wmax) return;
+    cz /= cw;
+    for (let i = 0; i < n; i++) {
+      if (w[i] < 0.02) continue;
+      const f = 1 - (1 - NECK) * Math.min(1, w[i] / wmax);
+      pos[i * 3] *= f;
+      pos[i * 3 + 2] = cz + (pos[i * 3 + 2] - cz) * f;
+    }
+    mesh.setVerticesData(BABYLON.VertexBuffer.PositionKind, pos, false);
+  }
   /** 위팔 뼈 좌우 위치 배율(1 = 모델 그대로) — attach 의 어깨 좁히기 */
   const SHOULDER = 0.66; // 사용자 2026-11-25: 0.82 에서 다시 80% 로
 
@@ -435,7 +464,7 @@ const CatModel = (() => {
         }
       }
       for (const me of c.meshes) if (me.skeleton) { const p = fixRumpWeights(me); if (p && !tailRing[body]) tailRing[body] = p; }
-      for (const me of c.meshes) { remapEyeUV(me); faceGeo(me, body); }
+      for (const me of c.meshes) { remapEyeUV(me); faceGeo(me, body); slimNeck(me); }
       containers[body] = c;
       // 추가 동작(스케이트·발라당): Blender assets/cats/hi3d/extra_actions.py 로 체형마다 만든 뼈대+동작 파일. 꼬리·귀 트랙은 같은 이유로 지운다
       try {
