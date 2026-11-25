@@ -242,6 +242,40 @@ const CatModel = (() => {
    * @returns {Promise<void>}
    * @see fixRumpWeights
    */
+  /**
+   * 눈 그림 칸 (털 무늬 1024px 기준). scripts/paint-cat-face.mjs 의 EYE_RECT 와 같아야 한다 — 그 스크립트가 품종마다 이 칸에 홍채·동공·반짝임을 그린다.
+   * @type {{x:number, y:number, w:number, h:number}}
+   */
+  const EYE_RECT = { x: 980, y: 24, w: 36, h: 54 };
+  /**
+   * 눈 조각의 UV 를 눈 그림 칸으로 편다(모델 파일은 그대로, 불러온 뒤 한 번).
+   * 모델의 눈은 따로 떨어진 타원 조각이고 UV 가 색 띠의 한 점(u > 0.94, v 0.58~0.72)을 가리켜 단색이었다.
+   * 왼쪽·오른쪽 눈(정점 x 부호)마다 앞에서 본 x·y 범위를 칸 안으로 옮겨, 눈 하나에 칸 그림 하나가 앞모습 그대로 입혀지게 한다.
+   * 같은 체형의 고양이는 이 기하를 함께 쓰므로 체형마다 한 번이면 된다.
+   * @param {BABYLON.AbstractMesh} mesh 체형 메시
+   * @returns {void}
+   */
+  function remapEyeUV(mesh) {
+    if (!mesh.getVerticesData) return;
+    const uv = mesh.getVerticesData(BABYLON.VertexBuffer.UVKind), pos = mesh.getVerticesData(BABYLON.VertexBuffer.PositionKind);
+    if (!uv || !pos) return;
+    const sides = [[], []];
+    for (let i = 0; i < uv.length / 2; i++) {
+      const u = uv[i * 2], v = uv[i * 2 + 1];
+      if (u > 0.94 && v > 0.58 && v < 0.72) sides[pos[i * 3] < 0 ? 0 : 1].push(i);
+    }
+    if (!sides[0].length || !sides[1].length) return;
+    for (const ids of sides) {
+      let x0 = Infinity, x1 = -Infinity, y0 = Infinity, y1 = -Infinity;
+      for (const i of ids) { x0 = Math.min(x0, pos[i * 3]); x1 = Math.max(x1, pos[i * 3]); y0 = Math.min(y0, pos[i * 3 + 1]); y1 = Math.max(y1, pos[i * 3 + 1]); }
+      for (const i of ids) {
+        const nu = (pos[i * 3] - x0) / (x1 - x0 || 1), nv = (pos[i * 3 + 1] - y0) / (y1 - y0 || 1);
+        uv[i * 2] = (EYE_RECT.x + 0.5 + nu * (EYE_RECT.w - 1)) / 1024;
+        uv[i * 2 + 1] = (EYE_RECT.y + 0.5 + (1 - nv) * (EYE_RECT.h - 1)) / 1024; // 무늬는 위가 v 0 — 눈 위쪽이 칸 위쪽
+      }
+    }
+    mesh.setVerticesData(BABYLON.VertexBuffer.UVKind, uv, false);
+  }
   async function load(scene, body) {
     try {
       const c = await BABYLON.LoadAssetContainerAsync(DIR + BODIES[body].file, scene);
@@ -252,6 +286,7 @@ const CatModel = (() => {
         }
       }
       for (const me of c.meshes) if (me.skeleton) { const p = fixRumpWeights(me); if (p && !tailRing[body]) tailRing[body] = p; }
+      for (const me of c.meshes) remapEyeUV(me);
       containers[body] = c;
       // 추가 동작(스케이트·발라당): Blender assets/cats/hi3d/extra_actions.py 로 체형마다 만든 뼈대+동작 파일. 꼬리·귀 트랙은 같은 이유로 지운다
       try {
