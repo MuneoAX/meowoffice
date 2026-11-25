@@ -32,7 +32,6 @@ mod appserver;
 mod applog;
 mod autostart;
 mod chatlog;
-#[cfg(windows)]
 mod codex;
 mod config;
 mod crypto;
@@ -3317,7 +3316,7 @@ fn toggle_panel(app: &AppHandle) {
 /// → 업데이트 후/첫 설치 여부 판단 순으로 준비한 뒤 Tauri 를 만든다. 단일 인스턴스 플러그인(두 번째 실행은 오피스를 앞으로),
 /// `AppState` 등록, 업데이터 플러그인, setup(트레이 메뉴·아이콘, 첫 실행 안내, 백그라운드 스레드),
 /// 창 이벤트 핸들러, `invoke_handler`(UI 명령 등록) 순으로 구성하고 실행한다.
-/// setup 의 스레드: 플랜 갱신(`refresh_interval_minutes`마다), 1분마다 툴팁·초기화 시각 점검, 권한 요청 서버(`permit::serve`), Windows 제어 배너 숨김 점검(2초),
+/// setup 의 스레드: 플랜 갱신(`refresh_interval_minutes`마다), 1분마다 툴팁·초기화 시각 점검, 권한 요청 서버(`permit::serve`),
 /// 업데이트 확인(`update::FIRST_CHECK` 후 `update::INTERVAL` 마다), 연결 상태 확인(20초 후 `health::INTERVAL` 마다), 다른 서비스 폴링(25초 후 15초마다), 세션 알림 폴링(`alert_poll_seconds`, 최소 10초).
 /// 창 닫기는 알림 창 등 일반 창은 숨기고, 오피스 창은 위치를 저장하고 없앤다.
 ///

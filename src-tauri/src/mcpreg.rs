@@ -70,7 +70,10 @@ fn remove_at(path: &Path) -> Result<bool, String> {
     }
     let bak = path.with_extension("json.muneo-bak");
     if !bak.exists() {
-        std::fs::copy(path, &bak).map_err(|e| format!("백업 실패: {e}"))?;
+        if let Err(e) = std::fs::copy(path, &bak) {
+            let _ = std::fs::remove_file(&tmp);
+            return Err(format!("백업 실패: {e}"));
+        }
     }
     std::fs::rename(&tmp, path).map_err(|e| {
         let _ = std::fs::remove_file(&tmp);
