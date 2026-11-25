@@ -94,10 +94,15 @@ if (!setup || !fs.existsSync(path.join(nsisDir, setup + ".sig"))) {
   throw new Error(`${version} 설치 파일/서명이 없습니다 (${nsisDir}) — 서명 키로 빌드했는지 확인`);
 }
 
+// 여러 줄 노트는 --notes-file 로(셸·npm 을 거치면 --notes 의 줄바꿈이 잘린다). --notes 안의 \\n 글자도 줄바꿈으로 바꾼다.
+const notes = opt("--notes-file") ? fs.readFileSync(path.resolve(opt("--notes-file")), "utf8").trim() : (opt("--notes") || "").replace(/\\n/g, "\n");
+
 if (bump) {
   git("add", ...COMMIT_FILES);
   git("commit", "-m", `버전 ${version}`);
-  git("tag", `v${version}`);
+  // 노트를 주석 태그 메시지로 — GitHub Actions(release.yml)가 이 메시지를 릴리스 본문·latest.json 노트로 쓴다.
+  // verbatim: 기본 정리 모드는 '#' 으로 시작하는 줄(## 새 기능)을 지운다.
+  git("tag", "-a", `v${version}`, "--cleanup=verbatim", "-m", notes || `버전 ${version}`);
   console.log(`커밋·태그: v${version}`);
 }
 
@@ -109,8 +114,7 @@ fs.copyFileSync(path.join(nsisDir, setup), path.join(outDir, fileName));
 
 const latest = {
   version,
-  // 여러 줄 노트는 --notes-file 로(셸·npm 을 거치면 --notes 의 줄바꿈이 잘린다). --notes 안의 \\n 글자도 줄바꿈으로 바꾼다.
-  notes: opt("--notes-file") ? fs.readFileSync(path.resolve(opt("--notes-file")), "utf8").trim() : (opt("--notes") || "").replace(/\\n/g, "\n"),
+  notes,
   pub_date: new Date().toISOString().replace(/\.\d{3}Z$/, "Z"),
   platforms: {
     "windows-x86_64": {

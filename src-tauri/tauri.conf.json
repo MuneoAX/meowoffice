@@ -34,7 +34,7 @@
   "plugins": {
     "updater": {
       "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IDYzQzBCMTgwREJGRjA2QzAKUldUQUJ2L2JnTEhBWXpHeEFQRlVyZkRhVEoxbjdVbmtJK0RtS2locHlnSEN5QnNqaEtNdjZSYXoK",
-      "endpoints": ["https://muneo.co.kr/downloads/claude-tray/latest.json"],
+      "endpoints": ["https://github.com/MuneoAX/meowoffice/releases/latest/download/latest.json", "https://muneo.co.kr/downloads/claude-tray/latest.json"],
       "windows": { "installMode": "passive" }
     }
   },

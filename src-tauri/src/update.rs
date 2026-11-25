@@ -72,7 +72,7 @@ pub async fn install(app: &AppHandle) -> Result<(), String> {
     app.restart();
 }
 
-/// 업데이트 피드(latest.json) 주소. tauri.conf.json 의 plugins.updater.endpoints 와 같은 주소.
+/// 변경 내역(노트)을 읽을 업데이트 피드(latest.json) 주소. tauri.conf.json 의 plugins.updater.endpoints 중 자체 서버 주소(업데이트 확인은 GitHub 릴리스가 먼저).
 ///
 /// # 참조
 /// `feed_notes` 가 조회.
