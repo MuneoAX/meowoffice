@@ -1,0 +1,72 @@
+{
+ "siamese": {
+  "src": "texture/_relayout/siamese.png",
+  "body": "standard",
+  "painted": "texture/seamless.png"
+ },
+ "russian_blue": {
+  "src": "texture/_relayout/russian_blue.png",
+  "body": "standard",
+  "painted": "texture/RussianBlue.png"
+ },
+ "persian": {
+  "src": "texture/_relayout/persian.png",
+  "body": "longhair",
+  "painted": "texture/Persian.png"
+ },
+ "scottish_fold": {
+  "src": "texture/_relayout/scottish_fold.png",
+  "body": "foldear",
+  "painted": "texture/ScottishFold_fixed.png"
+ },
+ "munchkin": {
+  "src": "texture/_relayout/munchkin.png",
+  "body": "shortleg",
+  "painted": "texture/Munchkin.png"
+ },
+ "maine_coon": {
+  "src": "texture/_relayout/maine_coon.png",
+  "body": "longhair",
+  "painted": "texture/MaineCoon.png"
+ },
+ "bengal": {
+  "src": "texture/Bengal.png",
+  "body": "standard"
+ },
+ "sphynx": {
+  "src": "texture/Sphynx.png",
+  "body": "standard"
+ },
+ "korean_cheese": {
+  "src": "texture/KoreanCheese.png",
+  "body": "standard"
+ },
+ "korean_tabby": {
+  "src": "texture/KoreanTabby.png",
+  "body": "standard"
+ },
+ "korean_calico": {
+  "src": "texture/KoreanCalico.png",
+  "body": "standard"
+ },
+ "korean_tuxedo": {
+  "src": "texture/KoreanTuxedo.png",
+  "body": "standard"
+ },
+ "american_shorthair": {
+  "src": "texture/AmericanShorthair.png",
+  "body": "standard"
+ },
+ "ragdoll": {
+  "src": "texture/Ragdoll.png",
+  "body": "longhair"
+ },
+ "norwegian_forest": {
+  "src": "texture/NorwegianForest.png",
+  "body": "longhair"
+ },
+ "turkish_angora": {
+  "src": "texture/TurkishAngora.png",
+  "body": "longhair"
+ }
+}

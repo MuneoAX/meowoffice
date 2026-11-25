@@ -1,0 +1,4 @@
+{
+  "base_url": "https://example.com/downloads/meowffice/",
+  "scp_target": "user@host:/var/www/downloads/meowffice/"
+}

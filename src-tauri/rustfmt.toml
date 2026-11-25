@@ -1,0 +1,4 @@
+# rustfmt 설정 — 기존 손 정렬(긴 줄) 스타일에 가장 가깝게: 줄 폭 140, 짧은 식은 한 줄 유지.
+# 편집기 저장 시 포맷도 이 파일을 따름. 검사: cargo fmt --check
+max_width = 140
+use_small_heuristics = "Max"

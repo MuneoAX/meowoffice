@@ -1,0 +1,48 @@
+[package]
+name = "muneo-claude-usage-tray"
+version = "0.6.5"
+edition = "2021"
+description = "문어AI - AI관리: Windows·macOS 트레이 앱 — AI 코딩 에이전트 사용 한도·세션·모델별 사용량 표시 (Tauri)"
+license = "UNLICENSED"
+
+[build-dependencies]
+tauri-build = { version = "2", features = [] }
+
+[dependencies]
+tauri = { version = "2", features = ["tray-icon", "macos-private-api"] }
+tauri-plugin-single-instance = "2"
+serde = { version = "1", features = ["derive"] }
+serde_json = { version = "1", features = ["preserve_order"] }
+ureq = { version = "3", features = ["json"] }
+toml = "0.9"
+directories = "6"
+chrono = { version = "0.4", features = ["serde"] }
+rusqlite = { version = "0.32", features = ["bundled"] }
+tauri-plugin-updater = "2"
+log = { version = "0.4", features = ["std"] }
+base64 = "0.22"
+# 공식 내보내기 파일 리포트: zip 읽기(이미 업데이터가 쓰는 크레이트, deflate 만 켬).
+zip = { version = "4", default-features = false, features = ["deflate-flate2-zlib-rs"] }
+
+[target.'cfg(windows)'.dependencies]
+winreg = "0.55"
+windows-sys = { version = "0.59", features = [
+    "Win32_Foundation",
+    "Win32_System_Threading",
+    "Win32_System_JobObjects",
+    "Win32_Storage_FileSystem",
+    "Win32_System_SystemInformation",
+    "Win32_System_Power",
+] }
+
+[target.'cfg(any(windows, target_os = "macos"))'.dependencies]
+# 내보내기 파일 고르기 창.
+rfd = { version = "0.15", default-features = false }
+
+[target.'cfg(unix)'.dependencies]
+libc = "0.2"
+
+[profile.release]
+opt-level = "z"
+lto = true
+strip = true

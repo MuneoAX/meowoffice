@@ -1,0 +1,16 @@
+{
+  "$schema": "../gen/schemas/desktop-schema.json",
+  "identifier": "default",
+  "description": "세션 알림 창·오피스 창 기본 권한: 기본 코어 + 창 숨김 + 헤더 드래그 이동 + 오피스 전체 화면.",
+  "windows": [
+    "notify",
+    "office"
+  ],
+  "permissions": [
+    "core:default",
+    "core:window:allow-hide",
+    "core:window:allow-start-dragging",
+    "core:window:allow-set-fullscreen",
+    "core:window:allow-is-fullscreen"
+  ]
+}

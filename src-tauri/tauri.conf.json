@@ -1,0 +1,63 @@
+{
+  "$schema": "https://schema.tauri.app/config/2",
+  "productName": "Meowffice",
+  "mainBinaryName": "muneo-claude-usage-tray",
+  "version": "0.6.5",
+  "identifier": "co.kr.muneo.usage-tray",
+  "build": {
+    "frontendDist": "../ui"
+  },
+  "app": {
+    "withGlobalTauri": true,
+    "macOSPrivateApi": true,
+    "windows": [
+      {
+        "label": "notify",
+        "title": "AI 세션 알림",
+        "url": "notify.html",
+        "width": 368,
+        "height": 140,
+        "resizable": false,
+        "decorations": false,
+        "transparent": true,
+        "alwaysOnTop": true,
+        "skipTaskbar": true,
+        "shadow": false,
+        "visible": false,
+        "focus": false
+      }
+    ],
+    "security": {
+      "csp": "default-src 'self'; script-src 'self' 'wasm-unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; media-src 'self' data: blob:; font-src 'self' data:; connect-src 'self' ipc: http://ipc.localhost blob: data: https://api.open-meteo.com https://geocoding-api.open-meteo.com; worker-src 'self' blob:; object-src 'none'; base-uri 'self'; frame-src 'none'"
+    }
+  },
+  "plugins": {
+    "updater": {
+      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IDYzQzBCMTgwREJGRjA2QzAKUldUQUJ2L2JnTEhBWXpHeEFQRlVyZkRhVEoxbjdVbmtJK0RtS2locHlnSEN5QnNqaEtNdjZSYXoK",
+      "endpoints": ["https://muneo.co.kr/downloads/claude-tray/latest.json"],
+      "windows": { "installMode": "passive" }
+    }
+  },
+  "bundle": {
+    "active": true,
+    "createUpdaterArtifacts": true,
+    "targets": "all",
+    "icon": [
+      "icons/32x32.png",
+      "icons/128x128.png",
+      "icons/128x128@2x.png",
+      "icons/icon.icns",
+      "icons/icon.ico"
+    ],
+    "category": "Utility",
+    "publisher": "muneo",
+    "copyright": "© 2026 Muneo AI Co., Ltd. (주식회사 문어AI)",
+    "windows": {
+      "nsis": { "installerHooks": "./installer-hooks.nsh" },
+      "wix": { "language": "ko-KR", "upgradeCode": "29b5d8b0-097c-50ab-a28e-e47e6ccd5d78" }
+    },
+    "macOS": {
+      "minimumSystemVersion": "11.0"
+    }
+  }
+}

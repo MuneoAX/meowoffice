@@ -1,0 +1,2 @@
+Babylon.js 9.36.0 (npm: babylonjs, babylonjs-loaders), Apache-2.0 — license.md
+babylon.js, babylon.glTF2FileLoader.min.js 원본 그대로. 판올림 시 두 파일을 같은 버전으로 함께 교체.

@@ -1,0 +1,22 @@
+{
+  "name": "muneo-claude-usage-tray",
+  "version": "0.6.5",
+  "private": true,
+  "scripts": {
+    "dev": "tauri dev",
+    "build": "tauri build",
+    "tauri": "tauri",
+    "release": "node scripts/release.mjs",
+    "optimize-assets": "node scripts/optimize-assets.mjs"
+  },
+  "devDependencies": {
+    "@gltf-transform/extensions": "^4.5.1",
+    "@gltf-transform/functions": "^4.5.1",
+    "@tauri-apps/cli": "^2",
+    "meshoptimizer": "^1.3.0",
+    "sharp": "0.34.5"
+  },
+  "overrides": {
+    "sharp": "0.34.5"
+  }
+}

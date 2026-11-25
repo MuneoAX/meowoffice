@@ -1,0 +1,75 @@
+# 릴리스: v* 태그를 올리면 Windows·macOS 설치 파일을 만들어 GitHub 릴리스 초안에 올린다.
+#   git tag v0.6.6 && git push origin v0.6.6   → Actions 가 끝나면 Releases 의 초안을 확인하고 [Publish]
+# 서명: 저장소 비밀값 TAURI_SIGNING_PRIVATE_KEY 가 있으면 자동 업데이트용 서명(.sig)·latest.json 까지 만든다.
+#       없으면 업데이트 산출물을 끄고 설치 파일만 만든다(앱의 자동 업데이트 피드는 따로 운영).
+# 방식: tauri-apps/tauri-action (Tauri 공식). macOS 는 Intel·Apple Silicon 겸용(universal) 하나.
+name: release
+
+on:
+  push:
+    tags: ["v*"]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: windows-latest
+            args: ""
+            rust_targets: ""
+          - os: macos-latest
+            args: "--target universal-apple-darwin"
+            rust_targets: "aarch64-apple-darwin,x86_64-apple-darwin"
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 60
+    env:
+      HAS_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY != '' }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.rust_targets }}
+
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: "./src-tauri -> target"
+
+      - run: npm ci
+
+      # 서명 키가 없으면 업데이트 산출물(.sig) 생성을 끈다 — 켜 둔 채 키가 없으면 빌드가 실패한다
+      - name: 서명 없음 설정
+        if: env.HAS_KEY != 'true'
+        shell: bash
+        run: |
+          f="$RUNNER_TEMP/no-updater.json"
+          echo '{"bundle":{"createUpdaterArtifacts":false}}' > "$f"
+          echo "NO_UPDATER_ARGS=--config $f" >> "$GITHUB_ENV"
+
+      - uses: tauri-apps/tauri-action@v0
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
+        with:
+          tagName: ${{ github.ref_type == 'tag' && github.ref_name || '' }}
+          releaseName: "Meowffice ${{ github.ref_name }}"
+          releaseBody: "설치: Windows 는 *-setup.exe, macOS 는 *.dmg. 변경 내용은 커밋 기록을 참고하세요."
+          releaseDraft: true
+          prerelease: false
+          includeUpdaterJson: ${{ env.HAS_KEY == 'true' }}
+          args: ${{ matrix.args }} ${{ env.NO_UPDATER_ARGS }}
