@@ -405,7 +405,7 @@ const CatModel = (() => {
   }
 
   /** 입·혀 재질(모든 고양이 공유) */
-  let mouthMat = null, tongueMat = null;
+  let mouthMat = null, tongueMat = null, mouthInMat = null;
   /**
    * 입 선(ω·세로선)과 혀를 머리 뼈에 붙인다. 혀는 입 안에 숨어 있다가 tongue() 로 내민다.
    * 위치는 face[body](모델 공간)를 머리 뼈 국소 좌표로 옮겨 놓는다 — 머리를 따라 움직임.
@@ -415,8 +415,50 @@ const CatModel = (() => {
    * @param {string} body 체형 키
    * @returns {void}
    */
+  /**
+   * AI 모델(Tripo 등)의 입 자리를 메시에서 찾는다: 코끝(가운데 세로줄에서 가장 앞) → 그 조금 아래 얼굴 겉면이 입.
+   * 결과는 face[key] = { ai, mouthAt, tongueAt, tongueDir, ew } (모델 공간). makeMouth 가 입 속·혀를 머리 뼈에 붙인다.
+   * @param {BABYLON.AbstractMesh} mesh 뼈대 있는 메시
+   * @param {string} key 컨테이너 키
+   * @returns {void}
+   */
+  function faceAI(mesh, key) {
+    const pos = mesh.getVerticesData && mesh.getVerticesData(BABYLON.VertexBuffer.PositionKind);
+    const mi = mesh.getVerticesData && mesh.getVerticesData(BABYLON.VertexBuffer.MatricesIndicesKind), mw = mesh.getVerticesData && mesh.getVerticesData(BABYLON.VertexBuffer.MatricesWeightsKind);
+    if (!pos || !mi || !mw || !mesh.skeleton) return;
+    const hb = mesh.skeleton.bones.findIndex((b) => /(^|:)Head$/i.test(b.name));
+    // 머리 뼈에 주로 묶인 정점 = 머리. 털이 긴 품종은 이마·정수리 털이 가장 앞으로 나오므로, 코는 머리 높이의 아래쪽 10~35% 에서만 찾는다(장모종은 50% 높이 이마 털이 코보다 앞으로 나옴)
+    const isHead = (v) => { let w = 0; for (let j = 0; j < 4; j++) if (mi[v * 4 + j] === hb) w += mw[v * 4 + j]; return w > 0.5; };
+    let y0 = Infinity, y1 = -Infinity, hx0 = Infinity, hx1 = -Infinity;
+    for (let v = 0; v < pos.length / 3; v++) if (isHead(v)) { const x = pos[v * 3], y = pos[v * 3 + 1]; y0 = Math.min(y0, y); y1 = Math.max(y1, y); hx0 = Math.min(hx0, x); hx1 = Math.max(hx1, x); }
+    if (!isFinite(y0)) return;
+    const H = y1 - y0, ew = (hx1 - hx0) * 0.16; // 눈 하나 너비 정도(크기 기준)
+    let nose = -1;
+    for (let v = 0; v < pos.length / 3; v++) {
+      const x = pos[v * 3], y = pos[v * 3 + 1], z = pos[v * 3 + 2];
+      if (Math.abs(x) < 0.015 && y > y0 + H * 0.1 && y < y0 + H * 0.35 && isHead(v) && (nose < 0 || z > pos[nose * 3 + 2])) nose = v;
+    }
+    if (nose < 0) return;
+    const ny = pos[nose * 3 + 1];
+    let mz = -Infinity, my = ny - ew * 0.35;
+    for (let v = 0; v < pos.length / 3; v++) {
+      const x = pos[v * 3], y = pos[v * 3 + 1], z = pos[v * 3 + 2];
+      if (Math.abs(x - pos[nose * 3]) < ew * 0.15 && y < ny - ew * 0.2 && y > ny - ew * 0.55 && z > mz) { mz = z; my = y; }
+    }
+    if (!isFinite(mz)) mz = pos[nose * 3 + 2] - ew * 0.1;
+    const nx = pos[nose * 3]; // 얼굴이 정가운데가 아닐 수 있어(장모종) 코의 좌우 위치에 맞춘다
+    face[key] = { ai: true, mouthAt: [nx, my, mz + ew * 0.05], tongueAt: [nx, my, mz - ew * 0.05], tongueDir: [0, -0.35, 1], ew };
+  }
+  /** 입 벌리기 0(닫힘)~1. AI 모델은 입 속(어두운 빨강 타원)을 세로로 키워 벌린 입처럼 보인다(옛 모델은 입 선이 그대로라 무시) */
+  function mouthOpen(cat, k) {
+    const mo = cat.model && cat.model.mouthIn;
+    if (!mo) return;
+    const on = k > 0.03;
+    if (mo.isEnabled() !== on) mo.setEnabled(on);
+    if (on) mo.scaling.y = mo.metadata.h * k;
+  }
   function makeMouth(scene, cat, model, body) {
-    const f = face[body], head = model.nodes.head, top = model.top;
+    const f = face[model.ckey || body] || face[body], head = model.nodes.head, top = model.top;
     if (!f || !head || !top) return;
     const chain = [];
     for (let nd = head; nd; nd = nd.parent) chain.unshift(nd);
@@ -434,7 +476,22 @@ const CatModel = (() => {
       tongueMat.metadata = { shared: true };
     }
     const rad = f.ew * 0.03;
-    const lines = [f.philtrum, f.mouth].map((pts, i) => {
+    if (f.ai) {
+      // AI 모델: 입 선은 무늬에 이미 그려져 있다 → 벌릴 때 보이는 입 속(어두운 빨강 납작한 타원)만 입 자리에 붙인다(평소엔 숨김)
+      if (!mouthInMat) {
+        mouthInMat = new BABYLON.StandardMaterial('cat:mouthIn', scene);
+        mouthInMat.diffuseColor = BABYLON.Color3.FromHexString('#6b2433'); mouthInMat.specularColor = new BABYLON.Color3(0.05, 0.02, 0.03); mouthInMat.metadata = { shared: true };
+      }
+      const mi = BABYLON.MeshBuilder.CreateSphere(`${cat.id}:mouthIn`, { segments: 8 }, scene);
+      mi.parent = head; mi.position = toHead(f.mouthAt);
+      const h = f.ew * 0.42;
+      mi.scaling.set(f.ew * 0.55, h, f.ew * 0.14);
+      mi.metadata = { h };
+      mi.material = mouthInMat; mi.isPickable = false;
+      mi.setEnabled(false);
+      model.mouthIn = mi;
+    }
+    const lines = (f.ai ? [] : [f.philtrum, f.mouth]).map((pts, i) => {
       const tube = BABYLON.MeshBuilder.CreateTube(`${cat.id}:mouth${i}`, { path: pts.map(toHead), radius: rad, tessellation: 6, cap: BABYLON.Mesh.CAP_ALL }, scene);
       tube.material = mouthMat; tube.parent = head; tube.isPickable = false;
       return tube;
@@ -478,6 +535,7 @@ const CatModel = (() => {
       const c = await BABYLON.LoadAssetContainerAsync(DIR + file, scene);
       if (BODIES[body].ai) { // 자체 텍스처·재질을 그대로 쓴다: 손질·추가 동작 없음. 재질은 고양이끼리 공유하므로 지울 때 같이 지우지 않게 표시
         c.materials.forEach((m) => { m.metadata = { ...(m.metadata || {}), shared: true }; });
+        for (const me of c.meshes) if (me.skeleton && !face[key]) faceAI(me, key);
         containers[key] = c;
         return;
       }
@@ -691,6 +749,7 @@ const CatModel = (() => {
     // 소품: 결재판·상자는 몸 앞, 팻말은 오른손
     model.props = makeProps(scene, cat, model);
     if (breed === 'boss') makeTie(scene, cat, model);
+    model.ckey = key;
     makeMouth(scene, cat, model, body);
     return model;
   }
@@ -1344,6 +1403,15 @@ const CatModel = (() => {
       if (cat.act === 'groom') { tk = Math.max(0, Math.sin(tt * 3.4)) ** 0.6; fl = -0.35 * Math.sin(tt * 10.2); }
       else if (cat.act === 'eat') { const s = Math.sin(tt * 2.2); tk = s > 0.75 ? (s - 0.75) * 2.4 : 0; fl = -0.4 * Math.sin(tt * 12); }
       if (tk || m.tongue.k) tongue(cat, tk, fl);
+    }
+    // 입 벌리기(AI 모델): 핥을 때는 혀와 함께, 먹을 때는 씹듯이, 말하기·손들기·환호 때는 야옹 하듯 열었다 닫았다
+    if (m.mouthIn) {
+      const tt = cat.t || 0;
+      let mk = 0;
+      if (cat.act === 'groom') mk = 0.4 + 0.6 * Math.max(0, Math.sin(tt * 3.4)) ** 0.6;
+      else if (cat.act === 'eat') mk = 0.25 + 0.55 * Math.max(0, Math.sin(tt * 7));
+      else if (cat.act === 'talk' || cat.act === 'present' || cat.act === 'sign' || cat.act === 'highfive' || m.anim === 'cheer' || m.anim === 'raise_hand') mk = 0.6 * Math.max(0, Math.sin(tt * 5.5)) ** 0.8;
+      mouthOpen(cat, mk);
     }
     const g = m.groups[m.anim];
     if (g) {
