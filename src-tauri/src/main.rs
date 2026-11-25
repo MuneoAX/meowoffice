@@ -3312,19 +3312,19 @@ fn toggle_panel(app: &AppHandle) {
 
 /// 화면이 시작할 때·언어를 바꿀 때 부르는 명령: 본체의 언어를 맞추고 선택값을 저장한다.
 ///
-/// `choice` 가 "auto"|"ko"|"en" 이 아니면 "auto" 로 본다. `lang` 이 "ko"|"en" 이 아니면 `choice` 에서 다시 정한다(auto 면 OS 언어).
+/// `choice` 가 "auto"|"ko"|"en"|"ja" 가 아니면 "auto" 로 본다. `lang` 이 "ko"|"en"|"ja" 가 아니면 `choice` 에서 다시 정한다(auto 면 OS 언어).
 /// 선택값이 바뀐 경우에만 설정 파일에 쓴다. 현재 언어가 바뀌면 트레이 메뉴 글자를 바꾸고 툴팁을 다시 그리며,
 /// 한도 조회 문구(라벨·오류)가 새 언어로 나오도록 플랜을 한 번 다시 조회한다(백그라운드).
 ///
 /// # 인자
-/// - `choice`: 사용자가 고른 값 "auto" | "ko" | "en"
-/// - `lang`: 화면이 실제로 쓰는 언어 "ko" | "en"
+/// - `choice`: 사용자가 고른 값 "auto" | "ko" | "en" | "ja"
+/// - `lang`: 화면이 실제로 쓰는 언어 "ko" | "en" | "ja"
 ///
 /// # 참조
 /// `i18n::set`, `config::save`, `redraw_tray`, `refresh_plan`. UI 의 `invoke('set_lang')`(i18n/i18n.js) 가 호출.
 #[tauri::command]
 fn set_lang(app: AppHandle, choice: String, lang: String) {
-    let choice = if matches!(choice.as_str(), "ko" | "en") { choice } else { "auto".to_string() };
+    let choice = if matches!(choice.as_str(), "ko" | "en" | "ja") { choice } else { "auto".to_string() };
     let new = i18n::Lang::parse(&lang).unwrap_or_else(|| i18n::resolve(&choice));
     let changed = i18n::lang() != new;
     i18n::set(new);

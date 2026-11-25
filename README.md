@@ -30,7 +30,7 @@ Other versions: [all releases](https://github.com/MuneoAX/meowoffice/releases). 
 - **Session alerts**: cards for finished replies, waiting for input, and waiting for review; accept/deny permission requests right from the card (optional)
 - **Cat office**: one cat clocks in per session — it works, brings approvals (permission requests) to you, and levels up when you give it treats. Weather and seasons follow your real location
 - **Chat**: talk to Claude Code · Codex sessions inside the office (uses the CLIs you already have installed)
-- **Languages**: Korean and English (follows your system language; change it in Settings)
+- **Languages**: Korean, English, and Japanese (follows your system language; change it in Settings)
 
 ## Install
 

@@ -128,7 +128,7 @@ pub struct Config {
     /// 기본값 false.
     #[serde(default)]
     pub agy_auto_allow: bool,
-    /// 화면·알림 언어 선택: "auto"(OS 언어 — 한국어면 ko, 그 밖은 en) | "ko" | "en".
+    /// 화면·알림 언어 선택: "auto"(OS 언어 — 한국어면 ko, 일본어면 ja, 그 밖은 en) | "ko" | "en" | "ja".
     ///
     /// 기본값 "auto". 화면이 `set_lang` 명령으로 바꾼다. 실제 언어 판정은 `i18n::resolve`.
     #[serde(default = "default_lang")]
