@@ -268,14 +268,27 @@ const CatModel = (() => {
     for (const ids of sides) {
       let x0 = Infinity, x1 = -Infinity, y0 = Infinity, y1 = -Infinity;
       for (const i of ids) { x0 = Math.min(x0, pos[i * 3]); x1 = Math.max(x1, pos[i * 3]); y0 = Math.min(y0, pos[i * 3 + 1]); y1 = Math.max(y1, pos[i * 3 + 1]); }
+      let z1 = -Infinity;
+      for (const i of ids) z1 = Math.max(z1, pos[i * 3 + 2]);
+      const cx = (x0 + x1) / 2, cy = (y0 + y1) / 2;
       for (const i of ids) {
         const nu = (pos[i * 3] - x0) / (x1 - x0 || 1), nv = (pos[i * 3 + 1] - y0) / (y1 - y0 || 1);
         uv[i * 2] = (EYE_RECT.x + 0.5 + nu * (EYE_RECT.w - 1)) / 1024;
         uv[i * 2 + 1] = (EYE_RECT.y + 0.5 + (1 - nv) * (EYE_RECT.h - 1)) / 1024; // 무늬는 위가 v 0 — 눈 위쪽이 칸 위쪽
+        // 눈 키우기: 눈 가운데 기준으로 가로·세로를 EYE_SCALE 배. 가장자리가 얼굴 곡면에 묻히지 않게 바깥쪽일수록 조금 앞으로(z) 낸다
+        const dx = pos[i * 3] - cx, dy = pos[i * 3 + 1] - cy;
+        const edge = Math.min(1, Math.hypot(dx / ((x1 - x0) / 2 || 1), dy / ((y1 - y0) / 2 || 1)));
+        pos[i * 3] = cx + dx * EYE_SCALE;
+        pos[i * 3 + 1] = cy + dy * EYE_SCALE;
+        pos[i * 3 + 2] += EYE_LIFT * edge * edge;
       }
     }
     mesh.setVerticesData(BABYLON.VertexBuffer.UVKind, uv, false);
+    mesh.setVerticesData(BABYLON.VertexBuffer.PositionKind, pos, false);
+    mesh.refreshBoundingInfo && mesh.refreshBoundingInfo(true);
   }
+  /** 눈 크기 배율(모델 원래 눈 대비)과 가장자리 앞으로 내기(m) — remapEyeUV */
+  const EYE_SCALE = 1.3, EYE_LIFT = 0.012;
   async function load(scene, body) {
     try {
       const c = await BABYLON.LoadAssetContainerAsync(DIR + BODIES[body].file, scene);

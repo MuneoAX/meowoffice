@@ -56,7 +56,7 @@ function eyeSvg(iris) {
   <defs><radialGradient id="g" cx="50%" cy="70%" r="65%"><stop offset="0" stop-color="${light}"/><stop offset="0.55" stop-color="${iris}"/><stop offset="1" stop-color="${dark}"/></radialGradient></defs>
   <rect width="100" height="100" fill="${rim}"/>
   <ellipse cx="50" cy="50" rx="46" ry="46" fill="url(#g)"/>
-  <ellipse cx="50" cy="46" rx="22" ry="27" fill="#120d0a"/>
+  <ellipse cx="50" cy="48" rx="13" ry="36" fill="#120d0a"/><!-- 고양이 동공: 세로로 긴 타원 -->
   <ellipse cx="50" cy="50" rx="46" ry="46" fill="none" stroke="${rim}" stroke-width="5"/>
   <ellipse cx="36" cy="31" rx="13" ry="11" fill="#ffffff"/>
   <ellipse cx="64" cy="67" rx="6" ry="5" fill="#ffffff" fill-opacity="0.9"/>
