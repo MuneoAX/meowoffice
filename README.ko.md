@@ -9,12 +9,12 @@ AI 코딩 세션 하나하나가 **고양이 직원**이 되어 출근하는 데
 Windows 10/11 · macOS (Rust + Tauri v2, 바닐라 HTML·CSS·JS, Babylon.js)
 
 <!-- download:start — 버전은 scripts/release.mjs 가 릴리스 때 바꾼다 -->
-### ⬇ 최신 버전 v0.6.7 다운로드
+### ⬇ 최신 버전 v0.6.8 다운로드
 
 | OS | 받을 파일 |
 |---|---|
-| Windows 10/11 | [Meowffice_0.6.7_x64-setup.exe](https://github.com/MuneoAX/meowoffice/releases/download/v0.6.7/Meowffice_0.6.7_x64-setup.exe) |
-| macOS (Intel·Apple Silicon) | [Meowffice_0.6.7_universal.dmg](https://github.com/MuneoAX/meowoffice/releases/download/v0.6.7/Meowffice_0.6.7_universal.dmg) |
+| Windows 10/11 | [Meowffice_0.6.8_x64-setup.exe](https://github.com/MuneoAX/meowoffice/releases/download/v0.6.8/Meowffice_0.6.8_x64-setup.exe) |
+| macOS (Intel·Apple Silicon) | [Meowffice_0.6.8_universal.dmg](https://github.com/MuneoAX/meowoffice/releases/download/v0.6.8/Meowffice_0.6.8_universal.dmg) |
 
 다른 버전은 [전체 릴리스](https://github.com/MuneoAX/meowoffice/releases), 설치 방법·주의사항은 [설치](#설치) 를 보세요.
 <!-- download:end -->

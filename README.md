@@ -9,12 +9,12 @@ and pops up **alert cards** when a session is waiting for a permission, an answe
 Windows 10/11 · macOS (Rust + Tauri v2, vanilla HTML·CSS·JS, Babylon.js)
 
 <!-- download:start — scripts/release.mjs updates the version on each release -->
-### ⬇ Download the latest version v0.6.7
+### ⬇ Download the latest version v0.6.8
 
 | OS | File |
 |---|---|
-| Windows 10/11 | [Meowffice_0.6.7_x64-setup.exe](https://github.com/MuneoAX/meowoffice/releases/download/v0.6.7/Meowffice_0.6.7_x64-setup.exe) |
-| macOS (Intel · Apple Silicon) | [Meowffice_0.6.7_universal.dmg](https://github.com/MuneoAX/meowoffice/releases/download/v0.6.7/Meowffice_0.6.7_universal.dmg) |
+| Windows 10/11 | [Meowffice_0.6.8_x64-setup.exe](https://github.com/MuneoAX/meowoffice/releases/download/v0.6.8/Meowffice_0.6.8_x64-setup.exe) |
+| macOS (Intel · Apple Silicon) | [Meowffice_0.6.8_universal.dmg](https://github.com/MuneoAX/meowoffice/releases/download/v0.6.8/Meowffice_0.6.8_universal.dmg) |
 
 Other versions: [all releases](https://github.com/MuneoAX/meowoffice/releases). See [Install](#install) for setup notes.
 <!-- download:end -->
