@@ -3,7 +3,7 @@
  * 쓰는 법
  *   - 스크립트: I18N.t("weather.rain") · 자리표시: I18N.t("loc.changed", { name: "서울" }) → "{name}" 자리에 넣음
  *   - HTML: <b data-i18n="loc.title"></b> · 속성은 data-i18n-title / data-i18n-placeholder / data-i18n-aria-label. I18N.apply(root) 로 채움
- * 언어: localStorage meow.lang ("auto" | "ko" | "en" …). auto = 브라우저(OS) 언어, 사전에 없으면 ko.
+ * 언어: localStorage meow.lang ("auto" | "ko" | "en" …). auto = 브라우저(OS) 언어, 사전에 없으면 en.
  * 문구가 없으면: 현재 언어 → ko → 키 그대로. 새 문구는 반드시 ko.js 에 먼저 넣고, 다른 언어는 비어도 된다.
  * 규칙·키 이름: docs/I18N.md
  * 공개 API: I18N.{ add, t, lang, setLang, apply, apiLang, languages } 와 전역 단축 t(key, params).
@@ -29,7 +29,7 @@ const I18N = (() => {
   function add(lang, dict) { dicts[lang] = Object.assign(dicts[lang] || {}, dict); }
   /**
    * 쓸 언어 고르기.
-   * localStorage meow.lang 이 사전에 있는 값이면 그것, "auto"면 브라우저 언어(전체 → 앞부분) → 없으면 ko.
+   * localStorage meow.lang 이 사전에 있는 값이면 그것, "auto"면 브라우저 언어(전체 → 앞부분) → 없으면 en(영어 사전이 없으면 ko).
    * @returns {string} 언어 코드
    */
   function pick() {
@@ -38,7 +38,7 @@ const I18N = (() => {
     if (want !== 'auto' && dicts[want]) return want;
     const nav = (navigator.language || FALLBACK).toLowerCase();
     const base = nav.split('-')[0];
-    return dicts[nav] ? nav : dicts[base] ? base : FALLBACK;
+    return dicts[nav] ? nav : dicts[base] ? base : dicts.en ? 'en' : FALLBACK; // 사전에 없는 언어(일본어 등)는 영어로
   }
   /**
    * 현재 언어 코드(처음 부르면 pick 으로 정해 캐시).
@@ -55,9 +55,32 @@ const I18N = (() => {
    */
   function setLang(l) {
     try { localStorage.setItem('meow.lang', l); } catch (_) { /* 이번만 */ }
+    changed();
+    syncNative();
+  }
+  /**
+   * 언어가 바뀐 뒤 이 창을 다시 채운다(캐시 비움 → html lang → data-i18n → "meow-lang" 이벤트).
+   * setLang(이 창에서 바꿈)과 storage 이벤트(다른 창에서 바꿈 — 오피스 창 설정 → 알림 창)가 부른다.
+   * @returns {void}
+   */
+  function changed() {
     cur = null;
+    document.documentElement.lang = lang();
     apply(document);
     window.dispatchEvent(new CustomEvent('meow-lang', { detail: lang() }));
+  }
+  /**
+   * 앱 본체(Rust)에 언어를 알린다 — 트레이 메뉴·알림 카드·오류 문구가 화면과 같은 언어를 쓰도록.
+   * Tauri 밖(브라우저 미리보기)이면 아무것도 하지 않는다.
+   * @returns {void}
+   * @see Tauri 명령 set_lang(choice: "auto"|코드, lang: 실제로 쓰는 코드)
+   */
+  function syncNative() {
+    const tauri = window.__TAURI__;
+    if (!tauri || !tauri.core) return;
+    let choice = 'auto';
+    try { choice = localStorage.getItem('meow.lang') || 'auto'; } catch (_) { /* 저장소 없음 */ }
+    tauri.core.invoke('set_lang', { choice, lang: lang() }).catch(() => { /* 옛 본체 — 무시 */ });
   }
   /**
    * 키 → 문구 번역.
@@ -98,6 +121,15 @@ const I18N = (() => {
    * @returns {string[]} 언어 코드들
    */
   function languages() { return Object.keys(dicts); }
+
+  // 다른 창에서 언어를 바꾸면(같은 저장소 공유) 이 창도 따라간다. storage 이벤트는 바꾼 창 자신에게는 오지 않는다.
+  window.addEventListener('storage', (e) => { if (e.key === 'meow.lang') changed(); });
+  // 사전·화면 스크립트가 모두 실린 뒤: html lang, 정적 data-i18n 채우기, 본체에 언어 알림.
+  document.addEventListener('DOMContentLoaded', () => {
+    document.documentElement.lang = lang();
+    apply(document);
+    syncNative();
+  });
 
   return { add, t, lang, setLang, apply, apiLang, languages };
 })();
