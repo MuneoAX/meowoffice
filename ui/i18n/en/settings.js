@@ -21,6 +21,7 @@ I18N.add('en', {
   "settings.lang.auto": "Auto (system language)",
   "settings.lang.ko": "한국어",
   "settings.lang.en": "English",
+  "settings.lang.ja": "日本語",
   "settings.interval.title": "Auto-refresh interval",
   "settings.interval.desc": "How often plan limits and the tray icon are reloaded.",
   "settings.unit.min": "{n} min",

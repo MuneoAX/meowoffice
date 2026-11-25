@@ -21,6 +21,7 @@ I18N.add('ko', {
   "settings.lang.auto": "자동 (시스템 언어)",
   "settings.lang.ko": "한국어",
   "settings.lang.en": "English",
+  "settings.lang.ja": "日本語",
   "settings.interval.title": "자동 갱신 주기",
   "settings.interval.desc": "플랜 한도와 트레이 아이콘을 다시 불러오는 주기입니다.",
   "settings.unit.min": "{n}분",

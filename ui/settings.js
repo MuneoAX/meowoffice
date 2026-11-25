@@ -133,6 +133,7 @@ const MeowSettings = (() => {
                     <option value="auto" data-i18n="settings.lang.auto"></option>
                     <option value="ko" data-i18n="settings.lang.ko"></option>
                     <option value="en" data-i18n="settings.lang.en"></option>
+                    <option value="ja" data-i18n="settings.lang.ja"></option>
                   </select>
                 </div>
               </div>

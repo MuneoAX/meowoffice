@@ -37,7 +37,7 @@
 html, body {
   background: transparent;
   overflow: hidden;
-  font-family: "Pretendard", system-ui, sans-serif;
+  font-family: "Pretendard", system-ui, "Yu Gothic UI", "Hiragino Sans", sans-serif; /* Pretendard 에 없는 일본어 글자는 시스템 글꼴로 */
   color: var(--text);
   height: 100%;
 }

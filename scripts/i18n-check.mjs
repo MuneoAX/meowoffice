@@ -16,8 +16,10 @@ const rel = (p) => path.relative(root, p).split(path.sep).join("/");
 
 const dicts = {};
 const I18N = { add: (l, d) => { dicts[l] = Object.assign(dicts[l] || {}, d); } };
-const dictFiles = [path.join(ui, "i18n/ko.js"), path.join(ui, "i18n/en.js")];
-for (const l of ["ko", "en"]) {
+// 언어 = ui/i18n/<코드>.js 가 있는 코드(ko 가 기준). 각 언어의 영역 사전은 ui/i18n/<코드>/*.js
+const LANGS = fs.readdirSync(path.join(ui, "i18n")).filter((f) => /^[a-z]{2}(-[A-Z]{2})?\.js$/.test(f)).map((f) => f.slice(0, -3)).sort((a, b) => (a === "ko" ? -1 : b === "ko" ? 1 : a.localeCompare(b)));
+const dictFiles = LANGS.map((l) => path.join(ui, "i18n", `${l}.js`));
+for (const l of LANGS) {
   const dir = path.join(ui, "i18n", l);
   if (fs.existsSync(dir)) for (const f of fs.readdirSync(dir)) if (f.endsWith(".js")) dictFiles.push(path.join(dir, f));
 }
@@ -43,11 +45,13 @@ for (const f of codeFiles) {
   lines.forEach((l, i) => { for (const m of l.matchAll(keyRe)) { const k = m[1] || m[2]; if (k.endsWith(".")) continue; if (!used.has(k)) used.set(k, `${rel(f)}:${i + 1}`); } });
 }
 
-const ko = dicts.ko || {}, en = dicts.en || {};
+const ko = dicts.ko || {};
+const others = LANGS.filter((l) => l !== "ko");
 const missingKo = [...used].filter(([k]) => !(k in ko));
-const missingEn = Object.keys(ko).filter((k) => !(k in en));
+const missing = Object.fromEntries(others.map((l) => [l, Object.keys(ko).filter((k) => !(k in (dicts[l] || {})))]));
 const dup = Object.entries(seen).filter(([, fs_]) => fs_.length > 1).map(([k, fs_]) => `${k.replace("\u0000", ":")} (${fs_.join(", ")})`);
-const placeholderMismatch = Object.keys(ko).filter((k) => k in en && JSON.stringify((ko[k].match(/\{\w+\}/g) || []).sort()) !== JSON.stringify((en[k].match(/\{\w+\}/g) || []).sort()));
+const ph = (s) => JSON.stringify((s.match(/\{\w+\}/g) || []).sort());
+const placeholderMismatch = others.flatMap((l) => Object.keys(ko).filter((k) => k in (dicts[l] || {}) && ph(ko[k]) !== ph(dicts[l][k])).map((k) => `${l}: ${k}`));
 
 // 하드코딩 한국어 줄(주석 제외)
 const hangul = /[가-힣]/;
@@ -72,11 +76,11 @@ if (only.length) { console.log(hard.join("\n") || "(하드코딩 한국어 없�
 
 const byFile = {};
 for (const h of hard) { const f = h.split(":")[0]; byFile[f] = (byFile[f] || 0) + 1; }
-console.log(`사전 키: ko ${Object.keys(ko).length} · en ${Object.keys(en).length} · 코드가 쓰는 키 ${used.size}`);
+console.log(`사전 키: ${LANGS.map((l) => `${l} ${Object.keys(dicts[l] || {}).length}`).join(" · ")} · 코드가 쓰는 키 ${used.size}`);
 console.log(`코드가 쓰는데 ko 에 없는 키: ${missingKo.length}`); missingKo.slice(0, 50).forEach(([k, at]) => console.log(`  ${k}  ← ${at}`));
-console.log(`ko 에 있는데 en 에 없는 키: ${missingEn.length}`); missingEn.slice(0, 50).forEach((k) => console.log(`  ${k}`));
+for (const l of others) { console.log(`ko 에 있는데 ${l} 에 없는 키: ${missing[l].length}`); missing[l].slice(0, 50).forEach((k) => console.log(`  ${k}`)); }
 console.log(`자리표시({이름}) 불일치: ${placeholderMismatch.length}`); placeholderMismatch.forEach((k) => console.log(`  ${k}`));
 console.log(`두 파일에 정의된 키: ${dup.length}`); dup.slice(0, 30).forEach((d) => console.log(`  ${d}`));
 console.log(`하드코딩 한국어 줄: ${hard.length}`);
 Object.entries(byFile).sort((a, b) => b[1] - a[1]).forEach(([f, n]) => console.log(`  ${f} ${n}`));
-process.exitCode = missingKo.length || missingEn.length || placeholderMismatch.length || dup.length ? 1 : 0;
+process.exitCode = missingKo.length || others.some((l) => missing[l].length) || placeholderMismatch.length || dup.length ? 1 : 0;
