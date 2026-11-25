@@ -1378,6 +1378,7 @@ fn turn_done_treat(app: &AppHandle, why: &str, provider: &str, session: &str) {
         m.retain(|_, t| t.elapsed() < Duration::from_secs(600));
         let key = format!("{provider}:{session}");
         if m.get(&key).is_some_and(|t| t.elapsed() < Duration::from_secs(30)) {
+            log::debug!("작업 완료 간식 건너뜀(30초 안 중복): {key}");
             return;
         }
         m.insert(key, Instant::now());
@@ -1517,6 +1518,10 @@ fn take_treats(app: AppHandle) -> TreatsTaken {
     if n > 0 {
         save_treats(0);
     }
+    // 제보 분석용: 오피스를 열 때 "밖에서 모인 몫"과 간식이 들어오는 길(연동)이 켜져 있는지 남긴다 (모두 꺼져 있으면 간식이 안 쌓이는 게 정상)
+    let c = config::load().config;
+    let (perm, codex, agy) = (c.permission_hook, c.codex_hook, c.agy_hook);
+    log::debug!("간식 몫 꺼냄: {n}개 (연동 — Claude {perm}, Codex {codex}, Antigravity {agy})");
     let recent = TURN_DONE_LAST
         .lock()
         .unwrap()
@@ -3388,14 +3393,16 @@ fn main() {
         loaded.note.as_deref().map(|n| format!(" · {n}")).unwrap_or_default()
     );
     log::info!(
-        "설정: 세션 알림 {}, 확인 주기 {}초, 자동 숨김 {}초, 끈 알림 [{}], 권한 연동 {}, 자동 수락 {}, 포트 {}",
+        "설정: 세션 알림 {}, 확인 주기 {}초, 자동 숨김 {}초, 끈 알림 [{}], 권한 연동 {}, 자동 수락 {}, 포트 {}, Codex 연동 {}, Antigravity 연동 {}",
         loaded.config.alerts,
         loaded.config.alert_poll_seconds,
         loaded.config.alert_auto_hide_seconds,
         alerts::muted_kinds(&loaded.config).join(", "),
         loaded.config.permission_hook,
         loaded.config.auto_allow,
-        loaded.config.hook_port
+        loaded.config.hook_port,
+        loaded.config.codex_hook,
+        loaded.config.agy_hook
     );
     if let Err(e) = autostart::apply(loaded.config.autostart) {
         log::warn!("자동시작 적용 실패: {e}");
