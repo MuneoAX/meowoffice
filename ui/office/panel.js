@@ -942,7 +942,8 @@ const OfficePanel = (() => {
         <div class="al-s">${esc(e.resolved ? t('panel.state.resolved') : t(STATE_KEY[e.state] || 'panel.state.other'))}${e.project ? ' · ' + esc(e.project) : ''} · ${esc(agoText(e.updated_at))}</div></div>`).join('')
       : `<div class="wg-empty">${t('panel.al.none')}</div>`;
     if (alHtml !== lastAlerts) { wAlerts.querySelector('.wg-b').innerHTML = alHtml; lastAlerts = alHtml; }
-    const openN = (data.alerts || []).filter((e) => !e.resolved).length;
+    // 숫자는 안 읽은 알림 수 — 카드를 펼쳐 확인하면(mark_alerts_read) 사라짐. 끝난(resolved) 건은 읽음으로 침
+    const openN = (data.alerts || []).filter((e) => !e.resolved && !e.read).length;
     wAlerts.querySelector('.wg-n').textContent = openN || '';
     const b = bellBtn.querySelector('.bad'); b.hidden = !openN; b.textContent = openN;
     // 고른 고양이 상세
