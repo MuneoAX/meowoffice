@@ -54,6 +54,8 @@ const OfficeIntro = (() => {
   const WING = { claude: '#e8915a', chatgpt: '#3fae8c', antigravity: '#5b8def' };
   const UNDER = '#7aa2f0';
   const LOGO_DIR = 'models/logos/';
+  /** 서비스별 로고 파일 확장자(models/logos 에 실제로 있는 것). 없는 서비스는 svg → png 순서로 찾는다 */
+  const LOGO_EXT = { claude: 'svg', chatgpt: 'svg', gemini: 'svg', antigravity: 'png' };
 
   const mats = new Map();
   /**
@@ -153,7 +155,7 @@ const OfficeIntro = (() => {
       img.onerror = () => tryLoad(exts.slice(1));
       img.src = LOGO_DIR + provider + '.' + exts[0];
     };
-    tryLoad(['svg', 'png']);
+    tryLoad(LOGO_EXT[provider] ? [LOGO_EXT[provider]] : ['svg', 'png']); // 있는 파일 확장자부터(없는 svg 를 먼저 찾아 404 가 나지 않게)
     m.metadata = { shared: true };
     mats.set(key, m);
     return m;
