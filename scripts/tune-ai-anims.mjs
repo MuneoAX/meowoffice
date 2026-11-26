@@ -1,5 +1,5 @@
 // AI 리깅 동작(사람 체형용 프리셋)을 큰 머리 고양이에 맞게 다듬는다 — 서기·걷기 동작에서 허리·목·머리가 앞으로 숙는 정도를 줄인다.
-//   node scripts/tune-ai-anims.mjs <입력.glb> <출력.glb> [허리·목 남길 비율=0.3]
+//   node scripts/tune-ai-anims.mjs <입력.glb> <출력.glb> [허리·목 남길 비율=0.3] [동작,동작...]
 // 뼈대·다른 뼈·앉기 동작은 그대로. 대상 뼈의 회전 키를 쉬는 자세(바인드 회전) 쪽으로 slerp 해 굽힘을 비율만큼만 남긴다.
 
 import path from "node:path";
@@ -11,9 +11,9 @@ const require = createRequire(path.join(root, "package.json"));
 const { NodeIO } = require("@gltf-transform/core");
 const { ALL_EXTENSIONS } = require("@gltf-transform/extensions");
 
-const [inp, out, keepArg = "0.3"] = process.argv.slice(2);
+const [inp, out, keepArg = "0.3", clipArg] = process.argv.slice(2);
 const KEEP = +keepArg;
-const CLIPS = new Set(["idle", "hold", "wait", "walk", "raise_hand"]); // 서기·걷기 (앉기 sit·sit_type 은 굽힘이 자세의 일부라 그대로)
+const CLIPS = new Set(clipArg ? clipArg.split(",") : ["idle", "hold", "wait", "walk", "raise_hand"]); // 서기·걷기 (앉기 sit·sit_type 은 굽힘이 자세의 일부라 그대로)
 const BONES = /(^|:)(Spine|Spine1|Spine2|Neck|Head)$/;
 
 const io = new NodeIO().registerExtensions(ALL_EXTENSIONS);

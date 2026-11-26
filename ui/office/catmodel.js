@@ -106,7 +106,7 @@ const CatModel = (() => {
     foldear: { file: 'cat_foldear.glb', sitDrop: 0.12, ear: 0.3, quad: true, gait: { walk: [1.0, 0.207], carry: [1.0, 0.211], walk4: [0.8, 0.199] } },
     longhair: { file: 'cat_longhair.glb', sitDrop: 0.10, ear: 1, quad: false, gait: { walk: [1.0, 0.187], carry: [1.0, 0.19], walk4: [0.8, 0.187] } },
     // ai: AI 로 만든 고양이(품종마다 파일·자체 텍스처, 힉스필드 리깅 사람형 뼈). 뼈 회전·크기·위치는 코드로 손대지 않고 동작만 재생한다. speed = 걷는 속도(m/s), 동작 이름은 AI_CLIP 으로 옮긴다
-    ai: { file: null, ai: true, sitDrop: -0.01, ear: 0, quad: false, speed: 0.6, gait: { walk: [1.0, 0.285], carry: [1.0, 0.285], walk4: [1.0, 0.285] } },
+    ai: { file: null, ai: true, sitDrop: 0.065, ear: 0, quad: false, gait: { walk: [1.0, 0.32], carry: [1.0, 0.32], walk4: [0.8, 0.31] } }, // 옛 동작을 옮겨 씀(scripts/retarget-old-anims.mjs): 앉기는 엉덩이를 그대로 두고 다리만 접으므로 모델째 내림, 보폭 = 옛 보폭 × 엉덩이 높이 비
     shortleg: { file: 'cat_shortleg.glb', sitDrop: 0.06, ear: 1, quad: false, legScale: 0.7, gait: { walk: [1.0, 0.15], carry: [1.0, 0.151], walk4: [0.8, 0.15] } },
   };
   /**

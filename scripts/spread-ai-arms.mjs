@@ -2,7 +2,7 @@
 // 서기·걷기 동작에서 위팔이 옆으로 벌어진 각(정면에서 본 아래 방향과의 각, 허리·어깨가 움직인 실제 자세 기준)이 최소 각보다 작으면,
 // 앞뒤 흔들기는 그대로 두고 몸 앞뒤 축을 중심으로 바깥으로 돌려 최소 각까지 벌린다. 아래팔(손이 배 앞으로 꺾여 들어감)은 최소 각의 80%까지.
 // 위로 든 팔(손들기)은 건드리지 않는다. 뼈대·다른 뼈·앉기 동작은 그대로. 이미 벌린 키는 다시 돌려도 그대로(여러 번 돌려도 같음).
-//   node scripts/spread-ai-arms.mjs <입력.glb> <출력.glb> [최소 각(도)=쉬는 자세(A자) 각]
+//   node scripts/spread-ai-arms.mjs <입력.glb> <출력.glb> [최소 각(도)=쉬는 자세(A자) 각] [동작,동작...]
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { createRequire } from "node:module";
@@ -12,8 +12,8 @@ const require = createRequire(path.join(root, "package.json"));
 const { NodeIO } = require("@gltf-transform/core");
 const { ALL_EXTENSIONS } = require("@gltf-transform/extensions");
 
-const [inp, out, minArg] = process.argv.slice(2);
-const CLIPS = new Set(["idle", "hold", "wait", "walk", "raise_hand"]); // 서기·걷기 (앉기 sit·sit_type 은 팔을 앞으로 뻗는 자세라 그대로)
+const [inp, out, minArg, clipArg] = process.argv.slice(2);
+const CLIPS = new Set(clipArg ? clipArg.split(",") : ["idle", "hold", "wait", "walk", "raise_hand"]); // 서기·걷기 (앉기 sit·sit_type 은 팔을 앞으로 뻗는 자세라 그대로)
 const io = new NodeIO().registerExtensions(ALL_EXTENSIONS);
 const doc = await io.read(inp);
 

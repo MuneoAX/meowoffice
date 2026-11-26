@@ -1,7 +1,7 @@
 // AI 리깅 서기·손들기 동작(사람형 프리셋)은 한쪽 발을 들거나 체중을 옮겨 짝다리를 짚는다(사용자 2026-11-25 "얌전히 서 있어도 되는데").
 // 서기 동작에서 다리 뼈(허벅지·무릎·발·발가락)를 쉬는 자세로 고정해 두 발을 바닥에 붙이고, 엉덩이의 좌우·앞뒤 이동·기울기도 줄인다.
 // 상체(허리·목·머리·팔)의 숨쉬기·흔들림은 그대로.
-//   node scripts/calm-ai-stand.mjs <입력.glb> <출력.glb>
+//   node scripts/calm-ai-stand.mjs <입력.glb> <출력.glb> [동작,동작...]
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { createRequire } from "node:module";
@@ -11,7 +11,8 @@ const require = createRequire(path.join(root, "package.json"));
 const { NodeIO } = require("@gltf-transform/core");
 const { ALL_EXTENSIONS } = require("@gltf-transform/extensions");
 
-const [inp, out] = process.argv.slice(2);
+const [inp, out, clipArg] = process.argv.slice(2);
+const only = clipArg ? new Set(clipArg.split(",")) : null; // 고른 동작만
 const CLIPS = new Set(["idle", "hold", "wait", "raise_hand"]); // 서기·손들기(손 흔들기 프리셋은 몸을 뒤로 젖히고 다리를 차서 다리·엉덩이를 고정)
 const PLACE = new Set(["walk"]); // 걷기: 다리는 그대로, 엉덩이의 앞뒤·좌우 위치만 제자리로(제자리 걷기인데 몸이 앞으로 밀려 있음)
 const LEGS = /(^|:)(Left|Right)(UpLeg|Leg|Foot|ToeBase)$/;
@@ -28,6 +29,7 @@ const slerp = (a, b, t) => {
 let n = 0;
 for (const anim of doc.getRoot().listAnimations()) {
   const name = anim.getName();
+  if (only && !only.has(name)) continue;
   if (PLACE.has(name)) {
     for (const ch of anim.listChannels()) {
       const node = ch.getTargetNode();
