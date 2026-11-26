@@ -147,7 +147,7 @@ function eyeFrame(eye) {
   return { st, inner };
 }
 // 2-1) 찾은 자리(원래 눈·예전에 칠한 눈) 둘레를 같은 방향 털색으로 지운다: 방향(30칸)마다 바깥 고리 평균색
-for (const eye of found) {
+for (const eye of process.env.MEOW_NO_ERASE ? [] : found) { // 품종 무늬를 옮긴 모델(ai-skin-transfer)은 눈 자리가 이미 털이라 지우지 않음
   const { st } = eyeFrame(eye);
   const NB = 30, acc = Array.from({ length: NB }, () => [0, 0, 0, 0]);
   const bin = (a, b) => ((Math.floor(((Math.atan2(b, a) + Math.PI) / (2 * Math.PI)) * NB) % NB) + NB) % NB;
@@ -161,6 +161,30 @@ for (const eye of found) {
     const diff = Math.hypot(px[i * 4] - fur[0], px[i * 4 + 1] - fur[1], px[i * 4 + 2] - fur[2]);
     const t = (1 - ss(FILL - 0.12, FILL, e)) * ss(4, 16, diff); // 흰 털 위 흰자 테두리처럼 비슷한 색도 덮음
     for (let k = 0; k < 3; k++) px[i * 4 + k] = Math.round(px[i * 4 + k] * (1 - t) + fur[k] * t);
+  }
+}
+// 2-1b) 눈 둘레 옆·뒤를 보는 면(눈구멍 안쪽 벽 등)에 남은 원래 눈알 조각(어두운 색)을 둘레 털 평균색으로 — 정면 면만 지우면 이 조각이 남음
+for (const eye of found) {
+  const R = eye.r * 1.35, c = [eye.c[0], eye.c[1] - eye.r * 0.15, eye.c[2]], nn = norm(eye.n);
+  const { st } = eyeFrame(eye);
+  let fm = [0, 0, 0], fc = 0;
+  for (const [i, [a, b]] of st) { const e = Math.hypot(a, b); if (e > RING[0] && e < RING[1]) { fm[0] += px[i * 4]; fm[1] += px[i * 4 + 1]; fm[2] += px[i * 4 + 2]; fc++; } }
+  if (!fc) continue;
+  fm = fm.map((v) => v / fc);
+  const side = new Uint8Array(ia.length / 3);
+  for (let f = 0; f < ia.length; f += 3) {
+    const A = ia[f], B = ia[f + 1], C = ia[f + 2];
+    const d = sub([0, 1, 2].map((k) => (pos[A][k] + pos[B][k] + pos[C][k]) / 3), c);
+    if (Math.hypot(...d) > R * 2.2) continue;
+    const fn = dot(nor[A], nn) + dot(nor[B], nn) + dot(nor[C], nn);
+    if (fn < 0.6 || Math.abs(dot(d, nn)) > R * 0.9) side[f / 3] = 1; // 정면(near)이 아닌 면
+  }
+  for (let i = 0; i < W * H; i++) {
+    const f = owner[i];
+    if (f < 0 || !side[f / 3] || st.has(i)) continue;
+    const l = 0.299 * px[i * 4] + 0.587 * px[i * 4 + 1] + 0.114 * px[i * 4 + 2];
+    if (l > 110 || px[i * 4] > px[i * 4 + 2] + 8) continue; // 갈색(수염 r > b)은 그대로, 남색·검정 눈알 조각만
+    for (let k = 0; k < 3; k++) px[i * 4 + k] = Math.round(fm[k]);
   }
 }
 // 2-2) 대칭 자리에 카툰 눈을 그린다

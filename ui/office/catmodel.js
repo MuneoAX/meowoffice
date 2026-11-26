@@ -115,23 +115,23 @@ const CatModel = (() => {
    * @type {Object<string, BreedInfo>}
    */
   const BREEDS = {
-    siamese: { body: 'standard' },
-    russian_blue: { body: 'standard' },
+    siamese: { body: 'ai', file: 'ai/korean_cheese.glb', skin: 'ai/skins/siamese.webp' }, // 옛 무늬를 AI 치즈 모델에 옮긴 그림(scripts/ai-skin-transfer.mjs)
+    russian_blue: { body: 'ai', file: 'ai/korean_cheese.glb', skin: 'ai/skins/russian_blue.webp' }, // 옛 무늬를 AI 치즈 모델에 옮긴 그림(scripts/ai-skin-transfer.mjs)
     persian: { body: 'ai', file: 'ai/persian.glb' }, // AI 장모형 기본 모델(Tripo 생성·리깅)
     scottish_fold: { body: 'ai', file: 'ai/scottish_fold.glb' }, // AI 접힌귀형 기본 모델
     munchkin: { body: 'ai', file: 'ai/munchkin.glb' }, // AI 짧은다리형 기본 모델
-    maine_coon: { body: 'longhair' },
-    bengal: { body: 'standard' },
-    sphynx: { body: 'standard', ears: 1.35 },
-    ragdoll: { body: 'longhair' },
-    norwegian_forest: { body: 'longhair' },
-    turkish_angora: { body: 'longhair' },
+    maine_coon: { body: 'ai', file: 'ai/persian.glb', skin: 'ai/skins/maine_coon.webp' }, // 옛 무늬를 AI 페르시안 모델에 옮긴 그림(scripts/ai-skin-transfer.mjs)
+    bengal: { body: 'ai', file: 'ai/korean_cheese.glb', skin: 'ai/skins/bengal.webp' }, // 옛 무늬를 AI 치즈 모델에 옮긴 그림(scripts/ai-skin-transfer.mjs)
+    sphynx: { body: 'ai', file: 'ai/korean_cheese.glb', skin: 'ai/skins/sphynx.webp' }, // 옛 무늬를 AI 치즈 모델에 옮긴 그림(scripts/ai-skin-transfer.mjs)
+    ragdoll: { body: 'ai', file: 'ai/persian.glb', skin: 'ai/skins/ragdoll.webp' }, // 옛 무늬를 AI 페르시안 모델에 옮긴 그림(scripts/ai-skin-transfer.mjs)
+    norwegian_forest: { body: 'ai', file: 'ai/persian.glb', skin: 'ai/skins/norwegian_forest.webp' }, // 옛 무늬를 AI 페르시안 모델에 옮긴 그림(scripts/ai-skin-transfer.mjs)
+    turkish_angora: { body: 'ai', file: 'ai/persian.glb', skin: 'ai/skins/turkish_angora.webp' }, // 옛 무늬를 AI 페르시안 모델에 옮긴 그림(scripts/ai-skin-transfer.mjs)
     korean_cheese: { body: 'ai', file: 'ai/korean_cheese.glb' },
-    korean_tabby: { body: 'standard' },
-    korean_calico: { body: 'standard' },
-    korean_tuxedo: { body: 'standard' },
-    american_shorthair: { body: 'standard' },
-    boss: { body: 'standard' },
+    korean_tabby: { body: 'ai', file: 'ai/korean_cheese.glb', skin: 'ai/skins/korean_tabby.webp' }, // 옛 무늬를 AI 치즈 모델에 옮긴 그림(scripts/ai-skin-transfer.mjs)
+    korean_calico: { body: 'ai', file: 'ai/korean_cheese.glb', skin: 'ai/skins/korean_calico.webp' }, // 옛 무늬를 AI 치즈 모델에 옮긴 그림(scripts/ai-skin-transfer.mjs)
+    korean_tuxedo: { body: 'ai', file: 'ai/korean_cheese.glb', skin: 'ai/skins/korean_tuxedo.webp' }, // 옛 무늬를 AI 치즈 모델에 옮긴 그림(scripts/ai-skin-transfer.mjs)
+    american_shorthair: { body: 'ai', file: 'ai/korean_cheese.glb', skin: 'ai/skins/american_shorthair.webp' }, // 옛 무늬를 AI 치즈 모델에 옮긴 그림(scripts/ai-skin-transfer.mjs)
+    boss: { body: 'ai', file: 'ai/korean_cheese.glb', skin: 'ai/skins/boss.webp' }, // 옛 무늬를 AI 치즈 모델에 옮긴 그림(scripts/ai-skin-transfer.mjs)
   };
   /**
    * 체형 키 → 불러온 glb 컨테이너 (불러오기에 실패한 체형은 없음).
@@ -144,7 +144,7 @@ const CatModel = (() => {
    * @param {string} [body] 체형 키 (없으면 품종이 정한 체형)
    * @returns {string}
    */
-  const ckey = (breed, body) => { const b = body || (BREEDS[breed] && BREEDS[breed].body); return b === 'ai' ? 'ai:' + (BREEDS[breed] && BREEDS[breed].file) : b; };
+  const ckey = (breed, body) => { const b = body || (BREEDS[breed] && BREEDS[breed].body); const r = BREEDS[breed] || {}; return b === 'ai' ? 'ai:' + r.file + (r.skin ? '#' + r.skin : '') : b; }; // 같은 모델에 무늬만 다른 품종은 따로
   /**
    * ai 체형 동작 이름 → 모델이 가진 동작 그룹 (pick 결과를 힉스필드 동작으로 옮김). 없는 것은 idle.
    * @type {Object<string, string>}
@@ -578,7 +578,7 @@ positionUpdated += normalUpdated * ${OUTLINE_W.toFixed(4)};
     const base = new Q();
     Q.FromUnitVectorsToRef(V3.Forward(), dir, base);
     root.rotationQuaternion = base.clone();
-    const len = f.mouth ? f.mouth.hw * 1.5 : f.ew * 0.62, wid = f.mouth ? f.mouth.hw * 1.05 : f.ew * 0.42; // 입을 모델링한 모델은 입 너비에 맞춤
+    const am = f.ai && f.mouth, len = am ? f.mouth.hw * 1.5 : f.ew * 0.62, wid = am ? f.mouth.hw * 1.05 : f.ew * 0.42; // 입을 모델링한 모델은 입 너비에 맞춤
     const tg = BABYLON.MeshBuilder.CreateSphere(`${cat.id}:tongue`, { segments: 10 }, scene);
     tg.scaling.set(wid, f.ew * 0.11, len);
     tg.position.z = len * 0.5;
@@ -639,9 +639,13 @@ positionUpdated += normalUpdated * ${OUTLINE_W.toFixed(4)};
     };
     return ToonPlugin;
   }
-  async function load(scene, body, key = body, file = BODIES[body].file) {
+  async function load(scene, body, key = body, file = BODIES[body].file, skin = null) {
     try {
       const c = await BABYLON.LoadAssetContainerAsync(DIR + file, scene);
+      if (skin) { // 품종 무늬: 기본 AI 모델(같은 모양·UV)의 기본색 텍스처만 바꿔 끼움 — 품종마다 모델 파일을 두지 않음(설치 크기·그래픽 메모리)
+        const tex = new BABYLON.Texture(DIR + skin, scene, false, false); // glTF UV 는 뒤집지 않음
+        for (const m of c.materials) if (m.albedoTexture) { tex.coordinatesIndex = m.albedoTexture.coordinatesIndex; const old = m.albedoTexture; m.albedoTexture = tex; old.dispose(); }
+      }
       if (BODIES[body].ai) { // 자체 텍스처·재질을 그대로 쓴다: 손질·추가 동작 없음. 재질은 고양이끼리 공유하므로 지울 때 같이 지우지 않게 표시
         const TP = toonPlugin();
         c.materials.forEach((m) => {
@@ -687,8 +691,9 @@ positionUpdated += normalUpdated * ${OUTLINE_W.toFixed(4)};
    */
   async function preload(scene) {
     if (containers.standard) return true;
-    const aiFiles = [...new Set(Object.values(BREEDS).filter((b) => b.body === 'ai').map((b) => b.file))];
-    await Promise.all(Object.keys(BODIES).filter((b) => !BODIES[b].ai).map((b) => load(scene, b)).concat(aiFiles.map((f) => load(scene, 'ai', 'ai:' + f, f))).concat([
+    const aiKeys = [...new Set(Object.keys(BREEDS).filter((k) => BREEDS[k].body === 'ai').map((k) => ckey(k)))];
+    const aiOf = (key) => { const k = Object.keys(BREEDS).find((b) => ckey(b) === key); return BREEDS[k]; };
+    await Promise.all(Object.keys(BODIES).filter((b) => !BODIES[b].ai).map((b) => load(scene, b)).concat(aiKeys.map((key) => load(scene, 'ai', key, aiOf(key).file, aiOf(key).skin))).concat([
       BABYLON.LoadAssetContainerAsync('models/props/skate.glb', scene).then((c) => { skateC = c; c.materials.forEach((m) => { m.metadata = { ...(m.metadata || {}), shared: true }; }); }, // 스케이트 재질은 모든 고양이가 함께 쓴다 — 고양이 하나 지울 때 같이 지우면 안 됨(cat.js remove)
         (e) => console.warn('스케이트 모델을 불러오지 못했습니다', e && e.message)),
     ]));
@@ -1017,22 +1022,45 @@ positionUpdated += normalUpdated * ${OUTLINE_W.toFixed(4)};
     return props;
   }
   /**
-   * 대표 고양이의 빨간 넥타이를 만들어 cat.root 에 붙이고 model.tie 로 둔다 (animate 가 서 있을 때만 보이게 켠다).
+   * 대표 고양이의 빨간 나비넥타이(사용자 2026-11-26 "보타이로")를 만들어 목 앞에 붙이고 model.tie 로 둔다 (animate 가 서 있을 때만 보이게 켠다).
+   * 양쪽 날개 = 매듭 쪽이 좁고 바깥이 넓은 납작한 사각뿔대, 가운데 매듭 = 작은 상자. AI 모델은 목 뼈를 따라 움직인다.
    * @param {BABYLON.Scene} scene 장면
    * @param {Cat} cat 대표 고양이
    * @param {CatModelInfo} model 모델 정보 (model.tie 가 채워짐)
    * @returns {void}
-   * @see box
    */
   function makeTie(scene, cat, model) {
-    const chest = model.nodes.chest;
     const t = new BABYLON.TransformNode('tie', scene);
     t.parent = cat.root;
-    t.position.set(0, 0.38, -0.2);
-    box(scene, 'tie1', 0.05, 0.12, 0.02, '#d4483b', t, 0, -0.04, 0);
-    box(scene, 'tie2', 0.06, 0.035, 0.025, '#d4483b', t, 0, 0.03, 0);
+    t.position.set(0, 0.4, -0.2);
+    const mt = new BABYLON.StandardMaterial('tie', scene);
+    mt.diffuseColor = BABYLON.Color3.FromHexString('#d63a32');
+    mt.specularColor = new BABYLON.Color3(0.18, 0.12, 0.12);
+    const KNOT = 0.016, WING = 0.042;
+    for (const s of [1, -1]) {
+      const w = BABYLON.MeshBuilder.CreateCylinder('tie:wing', { height: WING, diameterTop: 0.016, diameterBottom: 0.056, tessellation: 4 }, scene);
+      w.bakeTransformIntoVertices(BABYLON.Matrix.RotationY(Math.PI / 4)); // 마름모 → 네모(앞면이 평평하게)
+      w.rotation.z = s * Math.PI / 2; // 좁은 쪽(위)이 매듭 쪽으로
+      w.scaling.z = 0.42; // 앞뒤로 납작하게
+      w.position.set(s * (KNOT / 2 + WING / 2 - 0.002), 0, 0);
+      w.material = mt; w.parent = t; w.isPickable = false;
+    }
+    const k = BABYLON.MeshBuilder.CreateBox('tie:knot', { width: KNOT, height: 0.022, depth: 0.017 }, scene);
+    k.material = mt; k.parent = t; k.isPickable = false;
     model.tie = t;
-    if (!chest) return;
+    if (!model.cfg.ai) return;
+    // AI 모델: 목 앞면에 붙이고 목 뼈를 따라 움직이게
+    const neck = model.nodes.neck, me = model.meshes.find((x) => x.skeleton);
+    const pos = me && me.getVerticesData(BABYLON.VertexBuffer.PositionKind);
+    if (!neck || !pos) return;
+    const inv = BABYLON.Matrix.Invert(cat.root.computeWorldMatrix(true));
+    const ny = V3.TransformCoordinates(neck.getAbsolutePosition(), inv).y + 0.015;
+    const Wm = me.computeWorldMatrix(true).multiply(inv), v = new V3();
+    let front = -Infinity;
+    for (let i = 0; i < pos.length; i += 3) { V3.TransformCoordinatesFromFloatsToRef(pos[i], pos[i + 1], pos[i + 2], Wm, v); if (Math.abs(v.x) < 0.03 && Math.abs(v.y - ny) < 0.015) front = Math.max(front, -v.z); }
+    if (!isFinite(front)) return;
+    t.position.set(0, ny, -(front + 0.006));
+    t.setParent(neck);
   }
 
   /**
@@ -1603,8 +1631,8 @@ positionUpdated += normalUpdated * ${OUTLINE_W.toFixed(4)};
     const name = pick(cat);
     if (name !== m.anim) {
       const old = m.groups[m.anim];
-      if (old) old.stop();
       const g = m.groups[name] || m.groups.idle;
+      if (old && old !== g) old.stop(); // 같은 동작 그룹(ai 별칭)이면 멈추지 않음 — 멈춘 뒤 다시 시작하지 않으면 굳음
       if (g && g === old) { /* 같은 동작 그룹(ai 별칭): 다시 시작하지 않음 */ }
       else if (g) {
         g.speedRatio = 1;
@@ -1688,7 +1716,7 @@ positionUpdated += normalUpdated * ${OUTLINE_W.toFixed(4)};
       front.rotation.x = 0;
     }
     if (!(mouth && cat.prop === 'board')) { board.position.copyFrom(board.metadata.pos); board.rotation.x = board.metadata.rx; }
-    if (m.tie) m.tie.setEnabled(cat.pose !== 'loaf' && cat.pose !== 'walk');
+    if (m.tie) m.tie.setEnabled(cat.pose !== 'loaf' && (cat.pose !== 'walk' || m.cfg.ai)); // AI 모델은 목 뼈에 붙어 걸을 때도 따라감
     trackGear(cat, m);
 
     // 꼬리 좌우 흔들기(기본 패시브, 사용자 설명 2026-11-25): 평소엔 가만히 있다가 가끔 살랑살랑, 기분 좋으면(간식·발라당) 살랑살랑,
