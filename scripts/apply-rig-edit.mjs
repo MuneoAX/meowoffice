@@ -76,8 +76,19 @@ if (weightFile) {
   const map = new Map(list.map(([x, y, z, ws]) => [key([x, y, z]), ws]));
   const ji = new Map(joints.map((jn, i) => [jn.getName(), i]));
   let miss = 0;
+  // 반올림 경계에서 짝이 어긋나는 정점(예전엔 원래 가중치가 남아 등 털 한 올이 허벅지를 따라 솟음)은 2mm 안의 가장 가까운 자리로
+  const cell = (v) => Math.floor(v / 0.002), grid = new Map();
+  for (const it of list) { const k = it.slice(0, 3).map(cell).join(","); if (!grid.has(k)) grid.set(k, []); grid.get(k).push(it); }
+  const nearest = (p) => {
+    let best = null, bd = 0.002;
+    const c = p.map(cell);
+    for (let dx = -1; dx <= 1; dx++) for (let dy = -1; dy <= 1; dy++) for (let dz = -1; dz <= 1; dz++)
+      for (const it of grid.get([c[0] + dx, c[1] + dy, c[2] + dz].join(",")) || []) { const d = Math.hypot(it[0] - p[0], it[1] - p[1], it[2] - p[2]); if (d < bd) { bd = d; best = it[3]; } }
+    return best;
+  };
   for (let i = 0; i < P.getCount(); i++) {
-    const ws = map.get(key(P.getElement(i, [])));
+    const pi = P.getElement(i, []);
+    const ws = map.get(key(pi)) || nearest(pi);
     if (!ws) { miss++; continue; }
     const top = ws.filter(([nm, v]) => ji.has(nm) && v > 1e-4).sort((a, b) => b[1] - a[1]).slice(0, 4), tot = top.reduce((a, [, v]) => a + v, 0);
     if (!tot) { miss++; continue; }

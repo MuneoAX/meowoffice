@@ -119,6 +119,28 @@ for name in CATS:
         elif r in W and rep[i] != i:
             ws[i][3] = ws[r][3]
     print("AUTOW", name, "far verts", far, "passes", passes)
+    # 5) 튀는 가중치 바로잡기: 이웃(메시로 이어진 정점) 평균과 크게 다른 정점(등 털 한 올이 허벅지 뼈를 따라가 앉을 때 가시로 솟던 것)은
+    #    이웃 평균으로. 두 번 되풀이
+    fixed = 0
+    for _ in range(2):
+        cur = {}
+        for i in range(len(vs)):
+            r = rep[i]
+            if r not in cur: cur[r] = dict((n, w) for n, w in ws[i][3])
+        upd = {}
+        for r, ns in nb.items():
+            if not ns: continue
+            avg = {}
+            for q in ns:
+                for n, w in cur.get(q, {}).items(): avg[n] = avg.get(n, 0) + w / len(ns)
+            mine = cur.get(r, {})
+            l1 = sum(abs(mine.get(n, 0) - avg.get(n, 0)) for n in set(mine) | set(avg))
+            if l1 > 0.8:
+                g4 = sorted(avg.items(), key=lambda x: -x[1])[:4]; t = sum(w for _, w in g4) or 1
+                upd[r] = [[n, w / t] for n, w in g4]
+        for i in range(len(vs)):
+            if rep[i] in upd: ws[i][3] = upd[rep[i]]; fixed += 1
+    print("AUTOW", name, "outlier verts fixed", fixed)
     json.dump(ws, open(os.path.join(OUT, name + ".weights.json"), "w"))
     json.dump({b.name: [b.head_local.x, b.head_local.z, -b.head_local.y] for b in o.data.bones}, open(os.path.join(OUT, name + ".json"), "w"), indent=1)
     bpy.data.objects.remove(px, do_unlink=True)

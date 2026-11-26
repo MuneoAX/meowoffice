@@ -1,6 +1,6 @@
 // AI 고양이 텍스처의 사실적인 눈을 카툰 눈으로 다시 칠한다(사용자 2026-11-25 "2D 카툰처럼, 텍스처로 처리").
 // 카툰 눈(사용자 참고 그림): 흰자 동그라미 + 코 쪽 위로 치우친 검은 남색 눈동자 + 바깥 위 눈꺼풀 선 + 아래 반사 + 반짝임 하나.
-//   node scripts/paint-ai-eyes.mjs <입력.glb> <출력.glb> [텍스처 크기=2048] [눈 크기 배율=1] [눈 내림=0(키 1.0 기준)]
+//   node scripts/paint-ai-eyes.mjs <입력.glb> <출력.glb> [텍스처 크기=2048] [눈 크기 배율=1] [눈 내림=0(키 1.0 기준)] [안쪽으로=0(두 눈 사이를 좁힘, 키 1.0 기준)]
 // 배율 < 1 이면 칠한 눈을 줄이고, 그 바깥(원래 카툰 눈 자리)은 같은 방향 둘레 털색으로 덮는다 — 이미 칠한 모델에 다시 돌려도 된다.
 // 원본 텍스처(1024)에서는 눈이 30화소쯤이라 반짝임이 뭉개지므로 텍스처를 키운 뒤 칠한다. 이미 칠한 모델에 다시 돌리지 말 것(원본 눈에서).
 // 눈 자리는 scripts/ai-face-marks.mjs 가 적은 extras.meowFace.eyes(가운데·반지름·방향)를 쓴다.
@@ -16,8 +16,8 @@ const { NodeIO } = require("@gltf-transform/core");
 const { ALL_EXTENSIONS } = require("@gltf-transform/extensions");
 const sharp = require("sharp");
 
-const [inp, out, sizeArg = "2048", scaleArg = "1", dropArg = "0"] = process.argv.slice(2);
-const DROP = +dropArg; // 그리는 눈을 이만큼 아래로
+const [inp, out, sizeArg = "2048", scaleArg = "1", dropArg = "0", inArg = "0"] = process.argv.slice(2);
+const DROP = +dropArg, INW = +inArg; // 그리는 눈을 이만큼 아래로·안쪽으로
 const ES = +scaleArg; // 눈 크기 배율
 // 덮는 범위: 원래 크기 카툰 눈의 눈꺼풀 끝(~1.3)까지 남지 않게, 줄일 때는 더 바깥까지 덮고 털색도 더 바깥 고리에서
 const FILL = ES < 1 ? 1.45 : 1.32, RING = ES < 1 ? [1.5, 1.75] : [1.35, 1.6];
@@ -111,7 +111,7 @@ let cnt = 0;
 const found = mf.eyes.filter(Boolean);
 let draw = found;
 if (found.length === 2) {
-  const [a, b] = found, mx = (a.c[0] + b.c[0]) / 2, hx = Math.abs(a.c[0] - b.c[0]) / 2;
+  const [a, b] = found, mx = (a.c[0] + b.c[0]) / 2, hx = Math.abs(a.c[0] - b.c[0]) / 2 - INW;
   const cy = (a.c[1] + b.c[1]) / 2 - DROP, cz = (a.c[2] + b.c[2]) / 2, r = (a.r + b.r) / 2;
   const sa = Math.sign(a.c[0] - mx) || 1;
   const nAvg = norm([(Math.abs(a.n[0]) + Math.abs(b.n[0])) / 2, (a.n[1] + b.n[1]) / 2, (a.n[2] + b.n[2]) / 2]); // 바깥쪽 x 성분은 크기만 평균
