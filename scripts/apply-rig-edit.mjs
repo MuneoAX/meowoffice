@@ -86,14 +86,19 @@ if (weightFile) {
   }
   console.log(`  Blender 가중치 넣음 ${rew}정점, 짝 못 찾음 ${miss}정점(원래 가중치 유지)`);
 }
-for (const side of weightFile ? [] : ["Left", "Right"]) {
-  if (![side + "Arm", side + "ForeArm", side + "Hand"].some((k) => changed.has(k))) continue;
-  const A = J(side + "Arm"), F = J(side + "ForeArm"), H = J(side + "Hand");
-  const S = world(joints[A]).p, E = world(joints[F]).p, W = world(joints[H]).p, T = add(W, mul(sub(W, E), PAW / (len(sub(W, E)) || 1)));
+// 팔(위팔→아래팔→손)과 다리(허벅지→무릎→발): 관절이 바뀐 쪽만 살 가중치를 새 관절 선을 따라 다시 나눈다(발가락 뼈를 지웠으면 그 살도 발로)
+const LIMBS = [["Arm", "ForeArm", "Hand", PAW], ["UpLeg", "Leg", "Foot", 0.04]];
+for (const [side, limb] of weightFile ? [] : ["Left", "Right"].flatMap((sd) => LIMBS.map((lb) => [sd, lb]))) {
+  const [n1, n2, n3, tipLen] = limb;
+  if (![side + n1, side + n2, side + n3].some((k) => changed.has(k)) && !(n3 === "Foot" && removed.some((jn) => bare(jn) === side + "ToeBase"))) continue;
+  const A = J(side + n1), F = J(side + n2), H = J(side + n3);
+  if (A < 0 || F < 0 || H < 0) continue;
+  const S = world(joints[A]).p, E = world(joints[F]).p, W = world(joints[H]).p, T = add(W, mul(sub(W, E), tipLen / (len(sub(W, E)) || 1)));
   const segs = [[S, E], [E, W], [W, T]], L = segs.map(([a, b]) => len(sub(b, a))), cum = [0, L[0], L[0] + L[1]];
   const tS = 0, tE = L[0], tW = L[0] + L[1];
   const param = (p) => { let best = Infinity, tb = 0; segs.forEach(([a, b], k) => { const d = sub(b, a), u = Math.min(1, Math.max(0, dot(sub(p, a), d) / (dot(d, d) || 1))), q = add(a, mul(d, u)), dd = len(sub(p, q)); if (dd < best) { best = dd; tb = cum[k] + u * L[k]; } }); return tb; };
-  const set = new Set([A, F, H]), j = [], w = [];
+  const toe = J(side + "ToeBase");
+  const set = new Set([A, F, H, ...(n3 === "Foot" && toe >= 0 ? [toe] : [])]), j = [], w = [];
   for (let i = 0; i < P.getCount(); i++) {
     JA.getElement(i, j); WA.getElement(i, w);
     let s = 0; for (let k = 0; k < 4; k++) if (set.has(j[k])) s += w[k];
