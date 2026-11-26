@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="ui/meowffice-logo.svg" alt="" width="88">
+  <img src="assets/readme/logo.png" alt="" width="88">
 </p>
 <h1 align="center">Meowffice</h1>
 <p align="center"><b>Every AI coding session clocks in as a cat employee.</b></p>

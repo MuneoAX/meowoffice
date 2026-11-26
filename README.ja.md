@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="ui/meowffice-logo.svg" alt="" width="88">
+  <img src="assets/readme/logo.png" alt="" width="88">
 </p>
 <h1 align="center">Meowffice</h1>
 <p align="center"><b>AI コーディングのセッションが 1 つずつ、ネコの社員として出勤します。</b></p>

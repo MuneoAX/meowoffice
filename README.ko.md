@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="ui/meowffice-logo.svg" alt="" width="88">
+  <img src="assets/readme/logo.png" alt="" width="88">
 </p>
 <h1 align="center">Meowffice · 고양이사무실</h1>
 <p align="center"><b>AI 코딩 세션 하나하나가 고양이 직원으로 출근합니다.</b></p>
