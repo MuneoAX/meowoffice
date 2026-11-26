@@ -867,6 +867,13 @@ positionUpdated += normalUpdated * ${OUTLINE_W.toFixed(4)};
     }
     model.tailPivot = tailRingOffset(top, nodes, tailRing[body]); // 꼬리 첫 마디가 도는 중심을 뼈 위치 → 꼬리 뿌리 고리로 옮기는 벡터 (animate 에서 씀)
     // 소품: 결재판·상자는 몸 앞, 팻말은 오른손
+    // AI 고양이는 모델의 몸 중심이 품종마다 옆으로 비켜 있다(장모종 약 4.5cm) → 들고 드는 물건·팔 IK 목표를 두 어깨 가운데에 맞춘다
+    model.propX = 0;
+    if (ai && nodes['upper_arm.L'] && nodes['upper_arm.R']) {
+      const inv = BABYLON.Matrix.Invert(cat.root.computeWorldMatrix(true));
+      const sx = (n) => { const ch = []; for (let x = n; x; x = x.parent) ch.unshift(x); for (const x of ch) x.computeWorldMatrix(true); return V3.TransformCoordinates(n.getAbsolutePosition(), inv).x; };
+      model.propX = (sx(nodes['upper_arm.L']) + sx(nodes['upper_arm.R'])) / 2;
+    }
     model.props = makeProps(scene, cat, model);
     if (breed === 'boss') makeTie(scene, cat, model);
     model.ckey = key;
@@ -1425,8 +1432,9 @@ positionUpdated += normalUpdated * ${OUTLINE_W.toFixed(4)};
         const rootToModel = (x, y, z) => [x - top.position.x, y - top.position.y, -(z - top.position.z)];
         let tgt = null, pole = null;
         // 손 가운데를 물건 옆면보다 손 두께(약 2.5cm)만큼 바깥에 둔다(옆면에 맞추면 손이 물건 속에 반쯤 묻힘)
-        if (m.ikMode === 'box') { tgt = (s) => rootToModel(s * 0.19, 0.34, -0.3); pole = (s) => [s * 0.8, -1, -0.15]; }
-        else if (m.ikMode === 'board') { tgt = (s) => rootToModel(s * 0.125, 0.33, -0.24); pole = (s) => [s * 0.7, -1, -0.15]; }
+        const cx = m.propX || 0; // 몸 중심(두 어깨 가운데) — 물건도 여기에 있다
+        if (m.ikMode === 'box') { tgt = (s) => rootToModel(cx + s * 0.215, 0.34, -0.3); pole = (s) => [s * 0.5, -1, -0.15]; }
+        else if (m.ikMode === 'board') { tgt = (s) => rootToModel(cx + s * 0.165, 0.33, -0.24); pole = (s) => [s * 0.5, -1, -0.15]; }
         else if (m.ikMode === 'eat' && m.tongue) {
           m.tongue.root.computeWorldMatrix(true);
           const mt = m.tongue.root.getWorldMatrix().multiply(topInv).m, mo = [mt[12], mt[13], mt[14]];
@@ -1664,7 +1672,7 @@ positionUpdated += normalUpdated * ${OUTLINE_W.toFixed(4)};
         front.rotation.x = 0.35;
       }
     } else {
-      front.position.set(0, 0, 0);
+      front.position.set(m.propX || 0, 0, 0); // AI 고양이: 몸 중심(두 어깨 가운데)
       front.scaling.setAll(1);
       front.rotation.x = 0;
     }
