@@ -2,6 +2,8 @@
 
 **English** | [한국어](README.ko.md) | [日本語](README.ja.md)
 
+[![Downloads](https://img.shields.io/github/downloads/MuneoAX/meowoffice/total?label=downloads)](https://github.com/MuneoAX/meowoffice/releases) [![GitHub stars](https://img.shields.io/github/stars/MuneoAX/meowoffice?style=social)](https://github.com/MuneoAX/meowoffice/stargazers)
+
 A desktop office where every AI coding session clocks in as a **cat employee**.
 From the tray next to your clock, Meowffice shows the **usage limits** of Claude Code · Codex (ChatGPT) · Antigravity,
 and pops up **alert cards** when a session is waiting for a permission, an answer, or a review. In the 3D office window, each working session moves around as a cat.

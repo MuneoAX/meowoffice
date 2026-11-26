@@ -2,6 +2,8 @@
 
 [English](README.md) | [한국어](README.ko.md) | **日本語**
 
+[![Downloads](https://img.shields.io/github/downloads/MuneoAX/meowoffice/total?label=downloads)](https://github.com/MuneoAX/meowoffice/releases) [![GitHub stars](https://img.shields.io/github/stars/MuneoAX/meowoffice?style=social)](https://github.com/MuneoAX/meowoffice/stargazers)
+
 AI コーディングのセッションが 1 つずつ **ネコの社員** として出勤するデスクトップオフィスです。
 時計の横のトレイに Claude Code · Codex (ChatGPT) · Antigravity の **使用量の上限** を表示し、
 セッションが権限・回答・レビューを待っているときは **通知カード** をポップアップします。3D オフィスのウィンドウでは、作業中のセッションがネコになって動き回ります。

@@ -2,6 +2,8 @@
 
 [English](README.md) | **한국어** | [日本語](README.ja.md)
 
+[![Downloads](https://img.shields.io/github/downloads/MuneoAX/meowoffice/total?label=downloads)](https://github.com/MuneoAX/meowoffice/releases) [![GitHub stars](https://img.shields.io/github/stars/MuneoAX/meowoffice?style=social)](https://github.com/MuneoAX/meowoffice/stargazers)
+
 AI 코딩 세션 하나하나가 **고양이 직원**이 되어 출근하는 데스크톱 사무실입니다.
 시계 옆 트레이에서 Claude Code · Codex(ChatGPT) · Antigravity 의 **사용량 한도**를 보여 주고,
 세션이 권한·질문·검토를 기다리면 **알림 카드**를 띄웁니다. 3D 사무실 창에서는 일하는 세션이 고양이로 움직입니다.
