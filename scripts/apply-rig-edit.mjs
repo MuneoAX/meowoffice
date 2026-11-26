@@ -52,6 +52,23 @@ const P = prim.getAttribute("POSITION"), JA = prim.getAttribute("JOINTS_0"), WA 
 const names = joints.map(bare), J = (s) => names.indexOf(s);
 const ss = (e0, e1, x) => { const u = Math.min(1, Math.max(0, (x - e0) / (e1 - e0))); return u * u * (3 - 2 * u); };
 let rew = 0;
+// Blender 에서 지운 뼈(JSON 에 없는 관절): 그 뼈가 잡던 살을 남아 있는 가장 가까운 부모 뼈로 넘긴다(관절은 모델에 남지만 살을 잡지 않음)
+const removed = joints.filter((jn) => !(jn.getName() in want));
+if (removed.length) {
+  const idxOf = new Map(joints.map((jn, i) => [jn, i]));
+  const to = new Map();
+  for (const jn of removed) { let p = jn.getParentNode(); while (p && !(p.getName() in want)) p = p.getParentNode(); if (p && idxOf.has(p)) to.set(idxOf.get(jn), idxOf.get(p)); }
+  const j = [], w = []; let moved = 0;
+  for (let i = 0; i < P.getCount(); i++) {
+    JA.getElement(i, j); WA.getElement(i, w);
+    if (!j.some((x, k) => w[k] > 0 && to.has(x))) continue;
+    const mp = new Map(); for (let k = 0; k < 4; k++) if (w[k] > 0) { const x = to.get(j[k]) ?? j[k]; mp.set(x, (mp.get(x) || 0) + w[k]); }
+    const top = [...mp.entries()].sort((a, b) => b[1] - a[1]).slice(0, 4), tot = top.reduce((a, [, v]) => a + v, 0) || 1;
+    const jj = [0, 0, 0, 0], ww = [0, 0, 0, 0]; top.forEach(([k, v], x) => { jj[x] = k; ww[x] = v / tot; });
+    JA.setElement(i, jj); WA.setElement(i, ww); moved++;
+  }
+  console.log(`  지운 뼈 ${removed.map(bare).join(", ")} → 살 ${moved}정점을 부모 뼈로`);
+}
 if (weightFile) {
   // Blender 자동 가중치: 자리로 정점을 짝지어 넣는다
   const list = JSON.parse(fs.readFileSync(weightFile, "utf8"));
