@@ -406,6 +406,12 @@ fn local_session_event(app: &AppHandle, v: &serde_json::Value) {
                 updated_at: now.to_rfc3339_opts(SecondsFormat::Secs, true),
                 agent: agent.is_some(),
                 project: project.clone(),
+                // 원격 제어를 켠 세션이면 claude.ai 쪽 알림과 한 카드로 합치려고 그 세션 id 를 같이 둠(에이전트 알림은 합치지 않음).
+                bridge: if agent.is_none() {
+                    local::bridge_session_of(&config::claude_dir(&config::load().config), session).unwrap_or_default()
+                } else {
+                    String::new()
+                },
                 ..Default::default()
             };
             log::info!(

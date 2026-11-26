@@ -753,6 +753,35 @@ struct SessFile {
     /// 프로세스 시작 시각 (JSON 필드 `procStart`, Windows FILETIME 100ns 단위 문자열). pid 재사용 오판 방지용, 없으면 대조하지 않음.
     #[serde(rename = "procStart", default)]
     proc_start: serde_json::Value,
+    /// 이 세션에 연결된 claude.ai 원격 제어 세션 id (JSON 필드 `bridgeSessionId`, 원격 제어를 안 켰으면 빈 값)
+    #[serde(rename = "bridgeSessionId", default)]
+    bridge_session_id: String,
+}
+
+/// 로컬 세션에 연결된 claude.ai 원격 제어(bridge) 세션 id 를 찾는다.
+///
+/// `<claude_dir>/sessions/*.json` 중 `sessionId` 가 같은 파일의 `bridgeSessionId`. 같은 세션의 로컬 알림과 원격 제어 알림을 한 카드로 합치는 데 쓴다.
+///
+/// # 인자
+/// - `claude_dir`: Claude 설정 폴더
+/// - `session_id`: 로컬 세션 id
+///
+/// # 반환
+/// 원격 제어 세션 id. 원격 제어를 안 켰거나 파일이 없으면 None.
+pub fn bridge_session_of(claude_dir: &Path, session_id: &str) -> Option<String> {
+    let items = std::fs::read_dir(claude_dir.join("sessions")).ok()?;
+    for it in items.flatten() {
+        let p = it.path();
+        if p.extension().map(|e| e != "json").unwrap_or(true) {
+            continue;
+        }
+        let Ok(text) = std::fs::read_to_string(&p) else { continue };
+        let Ok(s) = serde_json::from_str::<SessFile>(&text) else { continue };
+        if s.session_id == session_id && !s.bridge_session_id.is_empty() {
+            return Some(s.bridge_session_id);
+        }
+    }
+    None
 }
 
 /// 실행 중인 세션을 읽는다.

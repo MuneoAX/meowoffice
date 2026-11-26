@@ -12,6 +12,8 @@
 //! 패널에서 읽은 카드는 내림 — 입력 대기(need_input) 카드만 처리하거나 직접 닫을 때까지 남김.
 //! 종류(KINDS): 알림 분류의 단일 정의. 설정 화면의 종류별 표시 체크·카드 뱃지가 모두 이 표를 씀.
 //! 끈 종류(muted)는 받지 않음 — 알림 창·기록·배지 모두 제외. 끄기 전에 받은 건은 창에서 숨기고 읽음 처리.
+//! 같은 세션의 두 알림: 원격 제어를 켠 로컬 세션은 훅 알림(로컬)과 claude.ai 목록 알림(bridge)이 같이 온다 —
+//! `same_session` 으로 짝을 찾아 카드·기록·숫자를 한 건으로 합친다(`merged`, 뱃지는 [로컬][원격 제어] 둘 다).
 
 use crate::i18n;
 use crate::oauth::CloudSession;
@@ -260,6 +262,56 @@ pub struct Alert {
     /// 서비스 id: "claude" | "chatgpt" | "antigravity" | "app"(서비스 무관 앱 알림) — 추가될 때 provider_of 로 채움.
     /// 저장 파일에는 넣지 않고 매번 판정하므로 예전 기록은 자동으로 같은 규칙을 따름.
     pub provider: &'static str,
+    /// 같은 세션의 다른 출처(env 값, 지금은 "bridge" 만) — 합친 카드에 뱃지를 더 붙임. 합치지 않은 알림은 빈 목록.
+    pub also: Vec<String>,
+    /// 합친 카드의 짝(원격 제어 알림) key — 웹 대화 열기(`open_alert`)에 씀. 합치지 않은 알림은 빈 값.
+    pub twin: String,
+    /// 로컬 알림 전용: 이 로컬 세션에 연결된 claude.ai 원격 제어 세션 id(sessions/<pid>.json 의 bridgeSessionId). 없으면 빈 값. 화면에는 보내지 않음.
+    #[serde(skip)]
+    pub bridge: String,
+}
+
+/// 세션 id 에서 종류 머리말("session_"·"cse_")을 뺀 부분. 같은 세션이 곳에 따라 다른 머리말로 적혀 있어 비교는 이것으로 한다.
+fn id_tail(id: &str) -> &str {
+    id.split_once('_').map_or(id, |(_, t)| t)
+}
+
+/// 로컬 알림 `l` 과 원격 제어 알림 `b` 가 같은 세션의 것인지 판정한다.
+///
+/// 로컬 쪽은 Claude Code 메인 세션 알림(local_done·local_input)만, 원격 쪽은 env 가 "bridge" 인 것만 대상.
+/// 로컬 세션이 자기 원격 제어 세션 id 를 알면(`Alert::bridge`) 그 id 로만 판정하고, 모르면(옛 Claude Code) 프로젝트와 제목이 둘 다 같을 때 같은 세션으로 본다.
+///
+/// # 참조
+/// `Alerts::twin_bridge`, `Alerts::twin_local` 이 호출.
+pub fn same_session(l: &Alert, b: &Alert) -> bool {
+    if l.env != "local" || b.env != "bridge" || !matches!(l.kind, "local_done" | "local_input") {
+        return false;
+    }
+    if !l.bridge.is_empty() {
+        return id_tail(&l.bridge) == id_tail(&b.id);
+    }
+    !l.project.is_empty() && l.project == b.project && !l.title.is_empty() && l.title == b.title
+}
+
+/// 같은 세션의 로컬 알림과 원격 제어 알림을 한 건으로 합친다.
+///
+/// key·id·종류·프로젝트·제목은 로컬 것(단추 동작은 로컬 기준), 상태·본문·시각은 둘 중 더 새 것(시각이 같으면 묻는 내용이 담긴 원격 것),
+/// 링크는 원격 것. `also` 에 "bridge", `twin` 에 원격 알림 key 를 담는다.
+///
+/// # 참조
+/// `Alerts::visible`, `Alerts::reconcile` 이 호출.
+pub fn merged(l: &Alert, b: &Alert) -> Alert {
+    let at = |a: &Alert| chrono::DateTime::parse_from_rfc3339(&a.updated_at).map(|d| d.timestamp_millis()).unwrap_or(0);
+    let newest = if at(b) >= at(l) { b } else { l };
+    Alert {
+        message: newest.message.clone(),
+        state: newest.state.clone(),
+        updated_at: newest.updated_at.clone(),
+        url: b.url.clone(),
+        also: vec![b.env.clone()],
+        twin: b.key.clone(),
+        ..l.clone()
+    }
 }
 
 /// 알림의 서비스 id(chatgpt·antigravity·gemini·app·claude)를 판정한다. 연결 상태 카드는 키 접두사, Codex·Antigravity 응답 완료는 종류, 업데이트는 앱, 나머지는 claude.
@@ -308,6 +360,9 @@ pub struct Entry {
     pub read: bool,
     /// 대기 상태가 풀림(사용자가 처리).
     pub resolved: bool,
+    /// 같은 세션의 로컬 알림 기록에 합쳐진 원격 제어 알림 — 목록·숫자에서 뺀다(화면에는 보내지 않음).
+    #[serde(skip)]
+    pub folded: bool,
 }
 
 /// 패널에서 읽어도 카드를 내리지 않는 알림인지 판정한다.
@@ -717,8 +772,28 @@ impl Alerts {
         for a in self.pending.iter().chain(&self.local).rev() {
             if !self.history.iter().any(|e| e.alert.key == a.key) {
                 let read = self.muted.contains(a.kind) || self.marks.get(&a.key).is_some_and(|m| m.read);
-                self.history.insert(0, Entry { alert: a.clone(), read, resolved: false });
+                self.history.insert(0, Entry { alert: a.clone(), read, resolved: false, folded: false });
                 changed = true;
+            }
+        }
+        // 같은 세션의 로컬·원격 제어 알림은 기록도 한 건으로: 원격 건은 접고(folded) 로컬 건에 합친 내용을 담음.
+        // 새로 접는 원격 건이 안 읽은 것이면 합친 건도 안 읽음으로(새 대기 내용이 온 것).
+        let pairs: Vec<(Alert, String)> = self.local.iter().filter_map(|l| self.twin_bridge(l).map(|b| (merged(l, b), b.key.clone()))).collect();
+        for (m, bkey) in pairs {
+            let mut unread_new = false;
+            if let Some(e) = self.history.iter_mut().find(|e| e.alert.key == bkey && !e.folded) {
+                e.folded = true;
+                unread_new = !e.read;
+                changed = true;
+            }
+            if let Some(e) = self.history.iter_mut().find(|e| e.alert.key == m.key) {
+                if unread_new && e.read {
+                    e.read = false;
+                }
+                if e.alert != m {
+                    e.alert = m;
+                    changed = true;
+                }
             }
         }
         self.history.truncate(HISTORY_MAX);
@@ -749,7 +824,52 @@ impl Alerts {
     /// # 참조
     /// `hidden` 호출.
     pub fn visible(&self) -> Vec<Alert> {
-        self.pending.iter().chain(&self.local).filter(|a| !self.muted.contains(a.kind) && !self.hidden(a)).cloned().collect()
+        let mut out = Vec::new();
+        for b in self.pending.iter().filter(|a| !self.muted.contains(a.kind)) {
+            // 같은 세션의 로컬 알림이 있으면 그 카드에 합쳐 보임. 합쳐졌던 건은 로컬 알림이 풀린 뒤(사용자가 그 세션으로 돌아감)에도 따로 띄우지 않음.
+            let folded = self.history.iter().any(|e| e.folded && e.alert.key == b.key);
+            if !folded && self.twin_local(b).is_none() && !self.hidden(b) {
+                out.push(b.clone());
+            }
+        }
+        for l in self.local.iter().filter(|a| !self.muted.contains(a.kind)) {
+            match self.twin_bridge(l) {
+                // 둘 중 하나라도 띄울 것이면 합친 카드(예: 로컬 '응답 완료'는 읽어서 내렸어도 원격 '입력 대기'는 남김).
+                Some(b) if !self.hidden(l) || !self.hidden(b) => out.push(merged(l, b)),
+                Some(_) => {}
+                None if !self.hidden(l) => out.push(l.clone()),
+                None => {}
+            }
+        }
+        out
+    }
+
+    /// 로컬 알림과 같은 세션의 살아 있는 원격 제어 알림을 찾는다(끈 종류 제외).
+    ///
+    /// # 참조
+    /// `same_session` 호출. `visible`, `reconcile`, `twin_key` 가 호출.
+    fn twin_bridge(&self, l: &Alert) -> Option<&Alert> {
+        self.pending.iter().find(|b| !self.muted.contains(b.kind) && same_session(l, b))
+    }
+
+    /// 원격 제어 알림과 같은 세션의 살아 있는 로컬 알림을 찾는다(끈 종류 제외).
+    ///
+    /// # 참조
+    /// `same_session` 호출. `visible`, `twin_key` 가 호출.
+    fn twin_local(&self, b: &Alert) -> Option<&Alert> {
+        self.local.iter().find(|l| !self.muted.contains(l.kind) && same_session(l, b))
+    }
+
+    /// key 의 알림과 한 카드로 합쳐진 짝 알림의 key 를 찾는다(닫기·숨김을 둘 다에 적용하려고).
+    ///
+    /// # 반환
+    /// 짝이 있으면 그 key, 없으면 None.
+    fn twin_key(&self, key: &str) -> Option<String> {
+        if let Some(l) = self.local.iter().find(|a| a.key == key) {
+            return self.twin_bridge(l).map(|b| b.key.clone());
+        }
+        let b = self.pending.iter().find(|a| a.key == key)?;
+        self.twin_local(b).map(|l| l.key.clone())
     }
 
     /// 끈 종류를 반영한다. 이미 받은 그 종류의 읽지 않은 알림은 읽음 처리.
@@ -808,9 +928,12 @@ impl Alerts {
     /// # 참조
     /// `mark_mut`, `touch`, `mark_read` 호출.
     pub fn dismiss(&mut self, key: &str) {
-        self.mark_mut(key).dismissed = true;
-        self.touch(key);
-        self.mark_read(Some(key));
+        // 합친 카드는 짝(같은 세션의 로컬·원격 제어 알림)도 같이 닫음.
+        for k in std::iter::once(key.to_string()).chain(self.twin_key(key)) {
+            self.mark_mut(&k).dismissed = true;
+            self.touch(&k);
+            self.mark_read(Some(&k));
+        }
     }
 
     /// 자동 숨김: 카드만 내리고 읽음 처리는 안 함.
@@ -821,8 +944,10 @@ impl Alerts {
     /// # 참조
     /// `mark_mut`, `touch` 호출.
     pub fn expire(&mut self, key: &str) {
-        self.mark_mut(key).expired = true;
-        self.touch(key);
+        for k in std::iter::once(key.to_string()).chain(self.twin_key(key)) {
+            self.mark_mut(&k).expired = true;
+            self.touch(&k);
+        }
     }
 
     /// key 하나(None 이면 전부)를 읽음 처리한다. 읽은 건은 기록(marks)에도 남겨 재시작 뒤에도 읽음·카드 내림이 유지됨.
@@ -900,7 +1025,7 @@ impl Alerts {
     /// # 반환
     /// history 에서 `read` 가 false 인 항목 수.
     pub fn unread(&self) -> usize {
-        self.history.iter().filter(|e| !e.read).count()
+        self.history.iter().filter(|e| !e.read && !e.folded).count()
     }
 
     /// 패널 알림 탭용 기록을 복사해 돌려준다.
@@ -908,7 +1033,7 @@ impl Alerts {
     /// # 반환
     /// 최신이 앞인 `Entry` 목록.
     pub fn history(&self) -> Vec<Entry> {
-        self.history.clone()
+        self.history.iter().filter(|e| !e.folded).cloned().collect()
     }
 
     /// key 로 살아 있는 알림을 찾는다.
@@ -1248,5 +1373,60 @@ mod tests {
         assert!(a.resolve_local_session("s", true));
         assert_eq!(a.visible().len(), 1);
         assert_eq!(a.visible()[0].id, "other#a2");
+    }
+
+    #[test]
+    fn local_and_bridge_alerts_of_one_session_merge() {
+        let bridge = |at: &str, text: &str| CloudSession {
+            env: "bridge".into(),
+            title: "제목".into(),
+            project: "proj".into(),
+            url: "https://claude.ai/code/x".into(),
+            ..asking("session_01AB", at, text)
+        };
+        let local = |key: &str, at: &str| Alert {
+            key: key.into(),
+            title: "다른 제목".into(),
+            project: "proj".into(),
+            updated_at: at.into(),
+            bridge: "cse_01AB".into(),
+            ..local_card(key, "L1", "done")
+        };
+        let mut a = Alerts::default();
+        a.update(&[bridge("2026-11-26T10:00:05Z", "b와 d 답변")]);
+        a.add_local(local("local:L1@1", "2026-11-26T10:00:00Z"));
+        // 카드·기록·숫자 모두 한 건, 뱃지는 둘 다, 내용은 더 새 것(원격), 단추 동작은 로컬 기준.
+        let v = a.visible();
+        assert_eq!(v.len(), 1);
+        assert_eq!((v[0].env.as_str(), v[0].also.clone(), v[0].state.as_str(), v[0].message.as_str()), ("local", vec!["bridge".to_string()], "need_input", "b와 d 답변"));
+        assert_eq!((v[0].key.as_str(), v[0].url.as_str(), v[0].twin.as_str()), ("local:L1@1", "https://claude.ai/code/x", "session_01AB@2026-11-26T10:00:05Z"));
+        assert_eq!((a.history().len(), a.unread()), (1, 1));
+        assert_eq!(a.history()[0].alert.also, vec!["bridge".to_string()]);
+        // 읽음: 로컬 '응답 완료'는 내려가도 원격 '입력 대기'가 남아 합친 카드는 유지.
+        assert!(a.mark_read(None));
+        assert_eq!((a.visible().len(), a.unread()), (1, 0));
+        // 다음 폴링에도 그대로 한 건.
+        a.update(&[bridge("2026-11-26T10:00:09Z", "b와 d 답변")]);
+        assert_eq!((a.visible().len(), a.history().len(), a.unread()), (1, 1, 0));
+        // 닫으면 둘 다 닫힘(어느 쪽 key 로 닫아도).
+        a.dismiss("session_01AB@2026-11-26T10:00:05Z");
+        assert!(a.visible().is_empty());
+        // 다음 턴: 로컬 알림이 새로 오면 다시 한 건(더 새 로컬 내용).
+        a.add_local(local("local:L1@2", "2026-11-26T10:05:00Z"));
+        let v = a.visible();
+        assert_eq!((v.len(), v[0].state.as_str(), a.unread()), (1, "done", 1));
+        // 사용자가 그 세션으로 돌아가면(로컬 알림 해소) 합쳐졌던 원격 건을 따로 띄우지 않음.
+        assert!(a.resolve_local("L1"));
+        assert!(a.visible().is_empty());
+        assert_eq!(a.unread(), 0);
+        // 다른 세션의 원격 제어 알림, 원격 제어 id 를 모르는 로컬 알림(제목이 다름)은 합치지 않음.
+        let mut a = Alerts::default();
+        a.update(&[bridge("2026-11-26T10:00:05Z", "q")]);
+        a.add_local(Alert { bridge: "session_ZZ".into(), ..local("local:L2@1", "2026-11-26T10:00:00Z") });
+        a.add_local(Alert { id: "L3".into(), bridge: String::new(), ..local("local:L3@1", "2026-11-26T10:00:00Z") });
+        assert_eq!((a.visible().len(), a.unread()), (3, 3));
+        // id 를 몰라도 프로젝트·제목이 같으면 합침.
+        a.add_local(Alert { id: "L4".into(), bridge: String::new(), title: "제목".into(), ..local("local:L4@1", "2026-11-26T10:00:00Z") });
+        assert_eq!((a.visible().len(), a.unread()), (3, 3));
     }
 }

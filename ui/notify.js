@@ -69,16 +69,28 @@ const buttonOf = (a) =>
         ? { act: "open", id: "status", key: "notify.btn.status_page" }
         : { act: "open", id: "details", key: "notify.btn.details" };
 /**
- * 알림 카드 하단 주 단추 HTML.
+ * 알림 카드 하단 단추 HTML.
  * buttonOf 결과의 act 를 data-act 속성으로, key 의 번역 문구를 글자로 쓴다.
+ * 로컬 알림에 같은 세션의 원격 제어 알림이 합쳐진 카드(twin + url)는 웹 대화를 여는 [자세히] 를 앞에 하나 더 둔다.
  * @param {Alert} a 알림
  * @returns {string} <button> HTML
  * @see buttonOf, render
  */
 const footButton = (a) => {
   const b = buttonOf(a);
-  return `<button class="btn btn-primary" data-act="${b.act}">${escapeHtml(t(b.key))}</button>`;
+  const remote = a.twin && a.url && b.id === "ok" ? `<button class="btn btn-soft" data-act="open-remote">${escapeHtml(t("notify.btn.details"))}</button>` : "";
+  return `${remote}<button class="btn btn-primary" data-act="${b.act}">${escapeHtml(t(b.key))}</button>`;
 };
+/**
+ * 카드 머리 둘째 줄(프로젝트 뱃지 + 경과 시간) HTML.
+ * 첫 줄은 상태 알약·출처 뱃지(·닫기)만 두고, 프로젝트 이름과 시간은 다음 줄에 같이 둔다.
+ * @param {string} project 프로젝트 이름
+ * @param {string} title 카드 제목(프로젝트와 같으면 뱃지 생략)
+ * @param {string} at 시각(ISO)
+ * @returns {string} HTML
+ * @see projectTag, fmtAgo
+ */
+const subLine = (project, title, at) => `<div class="a-sub">${projectTag(project, title)}<span class="a-ago">${fmtAgo(at)}</span></div>`;
 const NOTICE = { key: "notify.state.notice", cls: "pill-purple" };
 
 let alerts = [];
@@ -304,9 +316,8 @@ function permitCard(p) {
           ${svcBadge(p.provider)}
           <span class="pill sm ${f.cls}"><i class="dot"></i>${f.pill(p)}</span>
           ${sourceBadges({ env: "local" })}
-          ${projectTag(p.project)}
-          <span class="a-ago">${fmtAgo(p.created_at)}</span>
         </div>
+        ${subLine(p.project, "", p.created_at)}
         <div class="a-title">${escapeHtml(f.title(p))}</div>
         ${f.body(p)}
         <div class="a-foot two">
@@ -337,13 +348,12 @@ function render() {
           ${svcBadge(a.provider)}
           <span class="pill sm ${st.cls}"><i class="dot"></i>${escapeHtml(t(st.key))}</span>
           ${sourceBadges(a)}
-          ${projectTag(a.project, a.title)}
-          <span class="a-ago">${fmtAgo(a.updated_at)}</span>
           <button class="a-x" data-act="dismiss" title="${escapeHtml(t("notify.btn.close"))}">×</button>
         </div>
+        ${subLine(a.project, a.title, a.updated_at)}
         <div class="a-title" title="${escapeHtml(a.title)}">${escapeHtml(a.title)}</div>
         <div class="a-msg">${escapeHtml(a.message)}</div>
-        <div class="a-foot">${footButton(a)}</div>
+        <div class="a-foot two">${footButton(a)}</div>
       </div>`;
     })
     .join("");
@@ -395,7 +405,8 @@ function fit() {
 
 /**
  * 카드 단추 클릭 처리(이벤트 위임).
- * 권한 카드: 수락/거절 → answer_permit(실패하면 목록 재동기화 resync_notify). 알림 카드: install → install_update(실패 시 문구 복구), open → open_alert, 그 외 → dismiss_alert.
+ * 권한 카드: 수락/거절 → answer_permit(실패하면 목록 재동기화 resync_notify). 알림 카드: install → install_update(실패 시 문구 복구), open → open_alert,
+ * open-remote(합친 카드의 [자세히]) → 짝인 원격 제어 알림 key 로 open_alert(웹 대화를 열고 카드는 둘 다 닫힘), 그 외 → dismiss_alert.
  * @param {MouseEvent} e 클릭 이벤트
  * @returns {Promise<void>}
  * @see answer_permit, resync_notify, install_update, open_alert, dismiss_alert
@@ -433,7 +444,9 @@ listEl.addEventListener("click", async (e) => {
     return;
   }
   try {
-    await invoke(btn.dataset.act === "open" ? "open_alert" : "dismiss_alert", { key });
+    const twin = btn.dataset.act === "open-remote" && alerts.find((x) => x.key === key)?.twin;
+    if (twin) await invoke("open_alert", { key: twin });
+    else await invoke(btn.dataset.act === "open" ? "open_alert" : "dismiss_alert", { key });
   } catch (_) {
     // 이미 처리된 알림 등 — 카드만 닫음.
     invoke("dismiss_alert", { key });
@@ -517,7 +530,7 @@ function demo() {
       ] },
   ]);
   setAlerts([
-    { key: "s1@1", id: "s1", title: "laptop-quiet-otter", message: t("notify.demo.a1.msg"), state: "need_input", env: "bridge", provider: "claude", project: "shop-api", url: "", updated_at: new Date(Date.now() - 120e3).toISOString() },
+    { key: "s1@1", id: "s1", title: "laptop-quiet-otter", message: t("notify.demo.a1.msg"), state: "need_input", env: "local", also: ["bridge"], twin: "b1@1", provider: "claude", project: "shop-api", url: "https://claude.ai/code", updated_at: new Date(Date.now() - 120e3).toISOString() },
     { key: "s2@1", id: "s2", title: t("notify.demo.a2.title"), message: t("notify.demo.a2.msg"), state: "review_ready", env: "cloud", provider: "claude", url: "", updated_at: now() },
     { key: "l1@1", id: "l1#a1", title: t("notify.demo.a3.title"), message: t("notify.demo.a3.msg"), state: "done", env: "local", provider: "claude", project: "shop-api", agent: true, url: "", updated_at: now() },
     { key: "codex:1@1", id: "codex:1", title: t("notify.demo.a4.title"), message: t("notify.demo.a4.msg"), state: "done", env: "local", provider: "chatgpt", project: "shop-api", url: "", updated_at: now() },

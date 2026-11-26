@@ -19,6 +19,8 @@
  * @property {string} project 프로젝트 이름(모르면 빈 값)
  * @property {string} kind 종류 id (alerts.rs KINDS)
  * @property {"claude"|"chatgpt"|"antigravity"|"app"} provider 서비스 id (alerts.rs Alert)
+ * @property {string[]} [also] 같은 세션의 다른 출처(env 값) — 로컬 알림과 원격 제어 알림을 한 카드로 합쳤을 때 ["bridge"]
+ * @property {string} [twin] 합친 카드의 짝(원격 제어 알림) key — 웹 대화 열기에 씀
  */
 /**
  * @typedef {Object} Place
@@ -122,7 +124,8 @@ const projectTag = (name, title) =>
 /**
  * 카드 뱃지 HTML.
  * [에이전트] [로컬|원격 제어|클라우드], 앱 알림은 이름 텍스트. env 가 ORIGIN_BADGES 에 없으면 이름만, 있으면 에이전트 알림에 에이전트 뱃지를 앞에 붙인다.
- * @param {Alert|{env: string, agent?: boolean}} a 알림
+ * 같은 세션의 알림을 합친 카드(also)는 출처 뱃지를 이어 붙인다: [로컬] [원격 제어].
+ * @param {Alert|{env: string, agent?: boolean, also?: string[]}} a 알림
  * @returns {string} 뱃지 HTML
  * @see ORIGIN_BADGES, AGENT_BADGE, sourceName
  */
@@ -130,7 +133,8 @@ function sourceBadges(a) {
   const tag = (b) => `<span class="tag ${b.cls}">${b.label}</span>`;
   const origin = ORIGIN_BADGES[a.env];
   if (!origin) return `<span class="a-env">${escapeHtml(sourceName(a))}</span>`;
-  return (a.agent ? tag(AGENT_BADGE) : "") + tag(origin);
+  const also = (a.also || []).filter((e) => e !== a.env && ORIGIN_BADGES[e]).map((e) => tag(ORIGIN_BADGES[e]));
+  return (a.agent ? tag(AGENT_BADGE) : "") + tag(origin) + also.join("");
 }
 
 // ── 사무실 위치·시간대 (오피스 해·달·시각 기준). 이 PC 에만 저장(localStorage) ──────────
