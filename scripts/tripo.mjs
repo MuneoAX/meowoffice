@@ -121,6 +121,7 @@ if (cmd === "upload") {
   execFileSync(process.execPath, [path.join(here, "retarget-old-anims.mjs"), b, path.join(OLD, `anims_${oldBody}.glb`), b, "skate,roll", "--replace"], { stdio: "inherit" });
   execFileSync(process.execPath, [path.join(here, "tune-ai-anims.mjs"), b, b, "0.3", "idle,walk,carry,hold,raise_hand"], { stdio: "inherit" });
   execFileSync(process.execPath, [path.join(here, "spread-ai-arms.mjs"), b, b, "auto", "idle,walk,raise_hand"], { stdio: "inherit" });
+  execFileSync(process.execPath, [path.join(here, "spread-ai-arms.mjs"), b, b, "auto", "idle,wait", "hand=0.32"], { stdio: "inherit" }); // 서 있는 손목 높이를 품종끼리 같게(키 1.0 기준)
   execFileSync(process.execPath, [path.join(here, "calm-ai-stand.mjs"), b, b, "idle,hold,raise_hand,walk"], { stdio: "inherit" });
   console.log("완료", b, doc.getRoot().listAnimations().map((x) => x.getName()).join(","));
 } else {

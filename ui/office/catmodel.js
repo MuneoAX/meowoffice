@@ -873,7 +873,7 @@ positionUpdated += normalUpdated * ${OUTLINE_W.toFixed(4)};
       const inv = BABYLON.Matrix.Invert(cat.root.computeWorldMatrix(true));
       const sx = (n) => { const ch = []; for (let x = n; x; x = x.parent) ch.unshift(x); for (const x of ch) x.computeWorldMatrix(true); return V3.TransformCoordinates(n.getAbsolutePosition(), inv).x; };
       model.propX = (sx(nodes['upper_arm.L']) + sx(nodes['upper_arm.R'])) / 2;
-      // 물건 드는 자리(사용자 2026-11-26 "팔꿈치가 아래로 꺾여야"): 위팔은 몸 옆으로 내리고 팔꿈치를 접어 아래팔을 앞으로 → 높이 = 어깨 - 위팔 0.95, 앞 = 어깨 + 아래팔 0.7
+      // 물건 드는 자리(사용자 2026-11-26 "팔꿈치가 아래로 꺾여야"): 위팔은 몸 옆으로 곧게 내리고 팔꿈치를 90° 접어 아래팔을 수평 앞으로(사용자 그림) → 높이 = 어깨 - 위팔, 앞 = 어깨 + 아래팔 0.95
       // (옛 고양이 자리 그대로면 새 고양이는 팔을 다 펴야 닿아 팔꿈치가 위로 볼록해진다). 배에 닿지 않게 배 앞면 + 상자 깊이 절반보다 앞
       const mp = (n) => { const ch = []; for (let x = n; x; x = x.parent) ch.unshift(x); for (const x of ch) x.computeWorldMatrix(true); return V3.TransformCoordinates(n.getAbsolutePosition(), BABYLON.Matrix.Invert(cat.root.computeWorldMatrix(true))); };
       const S = mp(nodes['upper_arm.L']), E = mp(nodes['forearm.L']), H = mp(nodes['hand.L']);
@@ -881,8 +881,8 @@ positionUpdated += normalUpdated * ${OUTLINE_W.toFixed(4)};
       let belly = -Infinity; // 고양이 자리 좌표(앞 = -Z)에서 배 앞면
       const me = meshes.find((x) => x.skeleton), pos = me && me.getVerticesData(BABYLON.VertexBuffer.PositionKind);
       if (pos) { const Wm = me.computeWorldMatrix(true).multiply(BABYLON.Matrix.Invert(cat.root.computeWorldMatrix(true))); const v = new V3(); for (let i = 0; i < pos.length; i += 3) { V3.TransformCoordinatesFromFloatsToRef(pos[i], pos[i + 1], pos[i + 2], Wm, v); if (Math.abs(v.x - model.propX) < 0.06 && Math.abs(v.y - (S.y - L1 * 0.9)) < 0.05) belly = Math.max(belly, -v.z); } }
-      model.propY = S.y - L1 * 0.95;
-      model.propZ = -Math.max(-S.z + L2 * 0.7, (isFinite(belly) ? belly : 0.1) + 0.13); // 상자 가운데(고양이 자리 z, 앞 = 음수)
+      model.propY = S.y - L1 * 1.02; // 팔꿈치 높이(위팔을 몸 옆으로 곧게 내림)
+      model.propZ = -Math.max(-S.z + L2 * 0.95, (isFinite(belly) ? belly : 0.1) + 0.13); // 상자 가운데(고양이 자리 z, 앞 = 음수): 팔꿈치에서 아래팔을 수평으로 거의 다 편 곳
     }
     model.props = makeProps(scene, cat, model);
     if (breed === 'boss') makeTie(scene, cat, model);
@@ -1444,8 +1444,8 @@ positionUpdated += normalUpdated * ${OUTLINE_W.toFixed(4)};
         // 손 가운데를 물건 옆면보다 손 두께(약 2.5cm)만큼 바깥에 둔다(옆면에 맞추면 손이 물건 속에 반쯤 묻힘)
         const cx = m.propX || 0; // 몸 중심(두 어깨 가운데) — 물건도 여기에 있다
         const py = m.propY != null ? m.propY : 0.36, pz = m.propZ != null ? m.propZ : -0.3; // 상자 가운데(고양이 자리)
-        if (m.ikMode === 'box') { tgt = (s) => rootToModel(cx + s * 0.215, py - 0.02, pz); pole = (s) => [s * 0.3, -1, -0.6]; } // 팔꿈치는 아래·뒤(몸 옆)로
-        else if (m.ikMode === 'board') { tgt = (s) => rootToModel(cx + s * 0.165, py - 0.03, pz + 0.06); pole = (s) => [s * 0.3, -1, -0.6]; }
+        if (m.ikMode === 'box') { tgt = (s) => rootToModel(cx + s * 0.215, py, pz); pole = (s) => [s * 0.1, -1, 0]; } // 팔꿈치는 곧게 아래로
+        else if (m.ikMode === 'board') { tgt = (s) => rootToModel(cx + s * 0.165, py, pz + 0.06); pole = (s) => [s * 0.1, -1, 0]; }
         else if (m.ikMode === 'eat' && m.tongue) {
           m.tongue.root.computeWorldMatrix(true);
           const mt = m.tongue.root.getWorldMatrix().multiply(topInv).m, mo = [mt[12], mt[13], mt[14]];
