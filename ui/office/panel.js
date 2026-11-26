@@ -241,7 +241,7 @@ const OfficePanel = (() => {
       const en = e.target.closest('[data-ended]');
       if (en) { const x = (lastData && lastData.ended || [])[+en.dataset.ended]; if (x) onOpen(x.open); return; }
       const alr = e.target.closest('[data-al]');
-      if (alr) { const a = (lastData && lastData.alerts || [])[+alr.dataset.al]; if (a) onOpen({ kind: 'alert', url: a.url || '', project: a.project || '' }); return; }
+      if (alr) { const a = shownAlerts[+alr.dataset.al]; if (a) onOpen({ kind: 'alert', url: a.url || '', project: a.project || '' }); return; }
       const row = e.target.closest('[data-cat]');
       if (row) { select(row.dataset.cat); onFocus(row.dataset.cat); }
       if (e.target.closest('[data-usage]')) onUsage(overTab); // 지금 고른 서비스 탭으로 상세를 연다
@@ -839,6 +839,8 @@ const OfficePanel = (() => {
   const sevColor = (p) => (p >= 85 ? '#e5534b' : p >= 60 ? '#e3a43a' : '#8b6dff'); // 여유 = 기본 색(문어AI)
 
   let lastOver = '', lastCats = '', lastAlerts = '', lastSel = '';
+  /** 최근 알림 카드에 지금 그려진 알림(행 순서 그대로 — 행 클릭이 이 목록에서 찾는다). */
+  let shownAlerts = [];
   /**
    * 마지막으로 받은 패널 데이터(탭 전환 등 다시 그릴 때 재사용).
    * @type {PanelData|null}
@@ -936,14 +938,20 @@ const OfficePanel = (() => {
     if (catsHtml !== lastCats) { wCats.querySelector('.wg-b').innerHTML = catsHtml; lastCats = catsHtml; }
     wCats.querySelector('.wg-n').textContent = cats.length || '';
     // 최근 알림
-    const al = (data.alerts || []).slice(0, 8);
+    // 아직 안 끝난(처리 전) 알림을 먼저, 그다음 끝난 알림을 최근 순으로 8줄까지. 안 끝난 알림은 8줄을 넘어도 모두 보인다 —
+    // 예전엔 최근 8건만 그려서, 오래 대기 중인 알림이 끝난 알림 8건에 밀리면 숫자에는 세는데 목록에는 없었다(펼쳐도 볼 수 없는 알림).
+    const allAl = data.alerts || [];
+    const openAl = allAl.filter((e) => !e.resolved);
+    const al = openAl.concat(allAl.filter((e) => e.resolved)).slice(0, Math.max(8, openAl.length));
+    shownAlerts = al;
     const alHtml = al.length ? al.map((e, i) => `<div class="al-row link ${e.resolved || e.read ? 'seen' : 'unread'}" data-al="${i}" title="${t('panel.al.open')}"><span class="al-svc" title="${esc((PROVIDER[e.provider] || [e.provider === 'app' ? 'Meowffice' : 'Claude'])[0])}">${logo(e.provider)}</span><span class="row-open al-open">${OPEN_IC}</span>
         <div class="al-t">${esc(e.title)}</div><div class="al-m">${esc(e.message)}</div>
         <div class="al-s">${esc(e.resolved ? t('panel.state.resolved') : t(STATE_KEY[e.state] || 'panel.state.other'))}${e.project ? ' · ' + esc(e.project) : ''} · ${esc(agoText(e.updated_at))}</div></div>`).join('')
       : `<div class="wg-empty">${t('panel.al.none')}</div>`;
     if (alHtml !== lastAlerts) { wAlerts.querySelector('.wg-b').innerHTML = alHtml; lastAlerts = alHtml; }
-    // 숫자는 안 읽은 알림 수 — 카드를 펼쳐 확인하면(mark_alerts_read) 사라짐. 끝난(resolved) 건은 읽음으로 침
-    const openN = (data.alerts || []).filter((e) => !e.resolved && !e.read).length;
+    // 숫자는 안 읽은 알림 수 — 카드를 펼쳐 확인하면(mark_alerts_read) 사라짐. 끝난(resolved) 건은 읽음으로 침.
+    // 세는 알림(안 끝남 + 안 읽음)은 위에서 모두 목록에 그려지므로, 펼쳐서 볼 수 있는 것과 숫자가 어긋나지 않는다
+    const openN = allAl.filter((e) => !e.resolved && !e.read).length;
     wAlerts.querySelector('.wg-n').textContent = openN || '';
     const b = bellBtn.querySelector('.bad'); b.hidden = !openN; b.textContent = openN;
     // 고른 고양이 상세

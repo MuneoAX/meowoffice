@@ -371,12 +371,14 @@ const OfficeApp = (() => {
     /**
      * 알림 읽음 처리.
      * 사무실 창이 앞에 있고 최근 알림 카드가 펼쳐져 있으며 안 읽은 알림이 있을 때만 mark_alerts_read 를 불러 트레이 숫자 배지를 푼다.
+     * 사용자가 카드를 직접 펼친 때(byUser)는 창 포커스를 따지지 않는다 — 펼친 것 자체가 확인이고, 웹뷰가 포커스를 아직 못 받은 채 눌린 경우에도 숫자가 남지 않게.
      * @param {AlertEntry[]} list 알림 기록
+     * @param {boolean} [byUser] 사용자가 방금 카드를 펼쳤는지
      * @returns {void}
      * @see mark_alerts_read
      */
-    const onAlerts = (list) => {
-      if (invoke && document.hasFocus() && o.alertsVisible && o.alertsVisible() && (list || []).some((e) => !e.read)) invoke('mark_alerts_read').catch(() => {});
+    const onAlerts = (list, byUser) => {
+      if (invoke && (byUser === true || document.hasFocus()) && o.alertsVisible && o.alertsVisible() && (list || []).some((e) => !e.read)) invoke('mark_alerts_read').catch(() => {});
     };
     window.addEventListener('focus', () => o.lastAlerts && onAlerts(o.lastAlerts()));
 
@@ -402,7 +404,7 @@ const OfficeApp = (() => {
      * @returns {{onAlertsShown: function(): void, onPlan: function(PlanSnap): void, onAlerts: function(AlertEntry[]): void}}
      * @see showLogin, onAlerts
      */
-    return { onAlertsShown: () => o.lastAlerts && onAlerts(o.lastAlerts()), onPlan: (snap) => snap && (snap.plan ? showLogin(null) : showLogin(snap.error_kind)), onAlerts };
+    return { onAlertsShown: () => o.lastAlerts && onAlerts(o.lastAlerts(), true), onPlan: (snap) => snap && (snap.plan ? showLogin(null) : showLogin(snap.error_kind)), onAlerts };
   }
   /**
    * 모듈 공개 API.
