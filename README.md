@@ -1,8 +1,17 @@
-# Meowffice
-
-**English** | [한국어](README.ko.md) | [日本語](README.ja.md)
-
-[![Downloads](https://img.shields.io/github/downloads/MuneoAX/meowoffice/total?label=downloads)](https://github.com/MuneoAX/meowoffice/releases) [![GitHub stars](https://img.shields.io/github/stars/MuneoAX/meowoffice?style=social)](https://github.com/MuneoAX/meowoffice/stargazers)
+<p align="center">
+  <img src="ui/meowffice-logo.svg" alt="" width="88">
+</p>
+<h1 align="center">Meowffice</h1>
+<p align="center"><b>Every AI coding session clocks in as a cat employee.</b></p>
+<p align="center">
+  <b>English</b> | <a href="README.ko.md">한국어</a> | <a href="README.ja.md">日本語</a>
+</p>
+<p align="center">
+  <a href="https://github.com/MuneoAX/meowoffice/releases/latest"><img src="https://img.shields.io/github/v/release/MuneoAX/meowoffice?color=8b6dff&label=release" alt="Latest release"></a>
+  <a href="https://github.com/MuneoAX/meowoffice/releases"><img src="https://img.shields.io/github/downloads/MuneoAX/meowoffice/total?color=5b8cff&label=downloads" alt="Downloads"></a>
+  <img src="https://img.shields.io/badge/Windows%20%7C%20macOS-555?logo=tauri&logoColor=white" alt="Windows | macOS">
+  <a href="https://github.com/MuneoAX/meowoffice/stargazers"><img src="https://img.shields.io/github/stars/MuneoAX/meowoffice?style=social" alt="GitHub stars"></a>
+</p>
 
 A desktop office where every AI coding session clocks in as a **cat employee**.
 From the tray next to your clock, Meowffice shows the **usage limits** of Claude Code · Codex (ChatGPT) · Antigravity,
@@ -11,7 +20,7 @@ and pops up **alert cards** when a session is waiting for a permission, an answe
 Windows 10/11 · macOS (Rust + Tauri v2, vanilla HTML·CSS·JS, Babylon.js)
 
 <p align="center">
-  <img src="assets/readme/demo.gif" alt="Meowffice demo: AI sessions working as cats in a 3D office" width="860">
+  <img src="assets/readme/demo-en.gif" alt="Meowffice demo: AI sessions working as cats in a 3D office" width="860">
 </p>
 
 <!-- download:start — scripts/release.mjs updates the version on each release -->
@@ -38,13 +47,21 @@ Other versions: [all releases](https://github.com/MuneoAX/meowoffice/releases). 
 - **Chat**: talk to Claude Code · Codex sessions inside the office (uses the CLIs you already have installed)
 - **Languages**: Korean, English, and Japanese (follows your system language; change it in Settings)
 
+## Meet the cats
+
+17 breeds, from Siamese to Korean tabbies. Each session gets its own cat, and the boss (that's you) wears a red bow tie.
+
+<p align="center">
+  <img src="assets/readme/lineup-en.png" alt="The 17 cat breeds of Meowffice" width="860">
+</p>
+
 <table>
 <tr>
 <td width="50%"><img src="assets/readme/office-en.png" alt="Cat office"><br><sub><b>Cat office</b></sub></td>
 <td width="50%"><img src="assets/readme/usage-en.png" alt="Usage details"><br><sub><b>Usage details</b></sub></td>
 </tr>
 <tr>
-<td colspan="2" align="center"><img src="assets/readme/notify-en.png" alt="Alert cards" width="320"><br><sub><b>Alert cards</b></sub></td>
+<td colspan="2" align="center"><img src="assets/readme/notify-en.png" alt="Alert cards" width="380"><br><sub><b>Alert cards</b></sub></td>
 </tr>
 </table>
 
@@ -104,7 +121,7 @@ Please report bugs and ideas in [Issues](https://github.com/MuneoAX/meowoffice/i
 
 - Code: [MIT](LICENSE) © 2026 Muneo AI Co., Ltd.
 - 3D models, sounds, and other third-party assets: each source's license (mostly CC0) — [assets/licenses/](assets/licenses/)
-- Cat 3D model: **Generated with Hi3D** (refined in Blender)
+- Cat 3D models: generated with **Tripo** from our own concept art, then rigged and refined in Blender
 - Bundled Babylon.js: Apache-2.0 — [ui/vendor/babylon/license.md](ui/vendor/babylon/license.md)
 - Bundled Noto Sans JP (Japanese UI font): SIL OFL 1.1 — [ui/vendor/noto-sans-jp/LICENSE](ui/vendor/noto-sans-jp/LICENSE)
 - Service names and logos: trademarks of their owners — [NOTICE.md](NOTICE.md)

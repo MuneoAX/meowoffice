@@ -1,8 +1,17 @@
-# Meowffice
-
-[English](README.md) | [한국어](README.ko.md) | **日本語**
-
-[![Downloads](https://img.shields.io/github/downloads/MuneoAX/meowoffice/total?label=downloads)](https://github.com/MuneoAX/meowoffice/releases) [![GitHub stars](https://img.shields.io/github/stars/MuneoAX/meowoffice?style=social)](https://github.com/MuneoAX/meowoffice/stargazers)
+<p align="center">
+  <img src="ui/meowffice-logo.svg" alt="" width="88">
+</p>
+<h1 align="center">Meowffice</h1>
+<p align="center"><b>AI コーディングのセッションが 1 つずつ、ネコの社員として出勤します。</b></p>
+<p align="center">
+  <a href="README.md">English</a> | <a href="README.ko.md">한국어</a> | <b>日本語</b>
+</p>
+<p align="center">
+  <a href="https://github.com/MuneoAX/meowoffice/releases/latest"><img src="https://img.shields.io/github/v/release/MuneoAX/meowoffice?color=8b6dff&label=release" alt="Latest release"></a>
+  <a href="https://github.com/MuneoAX/meowoffice/releases"><img src="https://img.shields.io/github/downloads/MuneoAX/meowoffice/total?color=5b8cff&label=downloads" alt="Downloads"></a>
+  <img src="https://img.shields.io/badge/Windows%20%7C%20macOS-555?logo=tauri&logoColor=white" alt="Windows | macOS">
+  <a href="https://github.com/MuneoAX/meowoffice/stargazers"><img src="https://img.shields.io/github/stars/MuneoAX/meowoffice?style=social" alt="GitHub stars"></a>
+</p>
 
 AI コーディングのセッションが 1 つずつ **ネコの社員** として出勤するデスクトップオフィスです。
 時計の横のトレイに Claude Code · Codex (ChatGPT) · Antigravity の **使用量の上限** を表示し、
@@ -11,7 +20,7 @@ AI コーディングのセッションが 1 つずつ **ネコの社員** と�
 Windows 10/11 · macOS (Rust + Tauri v2、素の HTML·CSS·JS、Babylon.js)
 
 <p align="center">
-  <img src="assets/readme/demo.gif" alt="Meowffice のデモ: AI セッションがネコの社員として働く 3D オフィス" width="860">
+  <img src="assets/readme/demo-ja.gif" alt="Meowffice のデモ: AI セッションがネコの社員として働く 3D オフィス" width="860">
 </p>
 
 <!-- download:start — scripts/release.mjs updates the version on each release -->
@@ -38,13 +47,21 @@ Windows 10/11 · macOS (Rust + Tauri v2、素の HTML·CSS·JS、Babylon.js)
 - **チャット**: オフィス内で Claude Code · Codex のセッションと会話できます (インストール済みの CLI をそのまま利用)
 - **言語**: 韓国語・英語・日本語 (システムの言語に合わせます。設定で変更できます)
 
+## ネコの社員たち
+
+シャムからコリアンタビーまで 17 品種。セッションごとにネコが 1 匹担当し、社長 (あなた) は赤い蝶ネクタイをしています。
+
+<p align="center">
+  <img src="assets/readme/lineup-ja.png" alt="Meowffice のネコ 17 品種" width="860">
+</p>
+
 <table>
 <tr>
 <td width="50%"><img src="assets/readme/office-ja.png" alt="ネコのオフィス"><br><sub><b>ネコのオフィス</b></sub></td>
 <td width="50%"><img src="assets/readme/usage-ja.png" alt="使用量の詳細"><br><sub><b>使用量の詳細</b></sub></td>
 </tr>
 <tr>
-<td colspan="2" align="center"><img src="assets/readme/notify-ja.png" alt="通知カード" width="320"><br><sub><b>通知カード</b></sub></td>
+<td colspan="2" align="center"><img src="assets/readme/notify-ja.png" alt="通知カード" width="380"><br><sub><b>通知カード</b></sub></td>
 </tr>
 </table>
 
@@ -103,7 +120,7 @@ npm run build                      # インストーラー (src-tauri/target/rel
 
 - コード: [MIT](LICENSE) © 2026 Muneo AI Co., Ltd.
 - 3D モデル、サウンドなどのサードパーティ素材: 各提供元のライセンス (ほとんどが CC0) — [assets/licenses/](assets/licenses/)
-- ネコの 3D モデル: **Generated with Hi3D** (Blender で調整)
+- ネコの 3D モデル: オリジナルのコンセプトアートから **Tripo** で生成し、Blender でリギング・調整
 - 同梱の Babylon.js: Apache-2.0 — [ui/vendor/babylon/license.md](ui/vendor/babylon/license.md)
 - 同梱の Noto Sans JP (日本語 UI フォント): SIL OFL 1.1 — [ui/vendor/noto-sans-jp/LICENSE](ui/vendor/noto-sans-jp/LICENSE)
 - サービス名とロゴ: 各所有者の商標 — [NOTICE.md](NOTICE.md)

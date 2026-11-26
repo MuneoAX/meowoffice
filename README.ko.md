@@ -1,8 +1,17 @@
-# Meowffice · 고양이사무실
-
-[English](README.md) | **한국어** | [日本語](README.ja.md)
-
-[![Downloads](https://img.shields.io/github/downloads/MuneoAX/meowoffice/total?label=downloads)](https://github.com/MuneoAX/meowoffice/releases) [![GitHub stars](https://img.shields.io/github/stars/MuneoAX/meowoffice?style=social)](https://github.com/MuneoAX/meowoffice/stargazers)
+<p align="center">
+  <img src="ui/meowffice-logo.svg" alt="" width="88">
+</p>
+<h1 align="center">Meowffice · 고양이사무실</h1>
+<p align="center"><b>AI 코딩 세션 하나하나가 고양이 직원으로 출근합니다.</b></p>
+<p align="center">
+  <a href="README.md">English</a> | <b>한국어</b> | <a href="README.ja.md">日本語</a>
+</p>
+<p align="center">
+  <a href="https://github.com/MuneoAX/meowoffice/releases/latest"><img src="https://img.shields.io/github/v/release/MuneoAX/meowoffice?color=8b6dff&label=release" alt="Latest release"></a>
+  <a href="https://github.com/MuneoAX/meowoffice/releases"><img src="https://img.shields.io/github/downloads/MuneoAX/meowoffice/total?color=5b8cff&label=downloads" alt="Downloads"></a>
+  <img src="https://img.shields.io/badge/Windows%20%7C%20macOS-555?logo=tauri&logoColor=white" alt="Windows | macOS">
+  <a href="https://github.com/MuneoAX/meowoffice/stargazers"><img src="https://img.shields.io/github/stars/MuneoAX/meowoffice?style=social" alt="GitHub stars"></a>
+</p>
 
 AI 코딩 세션 하나하나가 **고양이 직원**이 되어 출근하는 데스크톱 사무실입니다.
 시계 옆 트레이에서 Claude Code · Codex(ChatGPT) · Antigravity 의 **사용량 한도**를 보여 주고,
@@ -11,7 +20,7 @@ AI 코딩 세션 하나하나가 **고양이 직원**이 되어 출근하는 데
 Windows 10/11 · macOS (Rust + Tauri v2, 바닐라 HTML·CSS·JS, Babylon.js)
 
 <p align="center">
-  <img src="assets/readme/demo.gif" alt="Meowffice 시연: AI 세션이 고양이 직원으로 일하는 3D 사무실" width="860">
+  <img src="assets/readme/demo-ko.gif" alt="Meowffice 시연: AI 세션이 고양이 직원으로 일하는 3D 사무실" width="860">
 </p>
 
 <!-- download:start — 버전은 scripts/release.mjs 가 릴리스 때 바꾼다 -->
@@ -38,13 +47,21 @@ Windows 10/11 · macOS (Rust + Tauri v2, 바닐라 HTML·CSS·JS, Babylon.js)
 - **채팅**: 사무실 안에서 Claude Code · Codex 세션과 대화(설치된 CLI 를 그대로 사용)
 - **언어**: 한국어·영어·일본어(시스템 언어를 따르고, 설정에서 바꿀 수 있음)
 
+## 고양이 직원들
+
+샴부터 코리안 고등어까지 17품종. 세션마다 고양이 한 마리가 맡고, 대표(바로 당신)는 빨간 나비넥타이를 맵니다.
+
+<p align="center">
+  <img src="assets/readme/lineup-ko.png" alt="Meowffice 의 고양이 17품종" width="860">
+</p>
+
 <table>
 <tr>
 <td width="50%"><img src="assets/readme/office-ko.png" alt="고양이 사무실"><br><sub><b>고양이 사무실</b></sub></td>
 <td width="50%"><img src="assets/readme/usage-ko.png" alt="사용량 상세"><br><sub><b>사용량 상세</b></sub></td>
 </tr>
 <tr>
-<td colspan="2" align="center"><img src="assets/readme/notify-ko.png" alt="알림 카드" width="320"><br><sub><b>알림 카드</b></sub></td>
+<td colspan="2" align="center"><img src="assets/readme/notify-ko.png" alt="알림 카드" width="380"><br><sub><b>알림 카드</b></sub></td>
 </tr>
 </table>
 
@@ -104,7 +121,7 @@ npm run build                      # 설치 파일 (src-tauri/target/release/bun
 
 - 코드: [MIT](LICENSE) © 2026 Muneo AI Co., Ltd. (주식회사 문어AI)
 - 3D 모델·소리 등 외부 자산: 각 출처의 라이선스(대부분 CC0) — [assets/licenses/](assets/licenses/)
-- 고양이 3D 모델: **Generated with Hi3D** (이후 Blender 로 다듬음)
+- 고양이 3D 모델: 자체 시안으로 **Tripo** 에서 생성한 뒤 Blender 로 리깅·다듬음
 - 번들된 Babylon.js: Apache-2.0 — [ui/vendor/babylon/license.md](ui/vendor/babylon/license.md)
 - 번들된 Noto Sans JP(일본어 화면 글꼴): SIL OFL 1.1 — [ui/vendor/noto-sans-jp/LICENSE](ui/vendor/noto-sans-jp/LICENSE)
 - 서비스 이름·로고: 각 회사의 상표 — [NOTICE.md](NOTICE.md)
