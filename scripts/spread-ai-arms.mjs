@@ -13,7 +13,7 @@ const { NodeIO } = require("@gltf-transform/core");
 const { ALL_EXTENSIONS } = require("@gltf-transform/extensions");
 
 const [inp, out, minArg, clipArg, handArg] = process.argv.slice(2);
-const HAND_Y = handArg ? +handArg.replace(/^hand=/, "") : null; // 손목 높이(모델 좌표) — 이보다 낮으면 팔을 더 벌려 올린다(품종끼리 서 있는 손 높이를 맞춤)
+const HAND_Y = handArg ? +handArg.replace(/^hand=/, "") : null; // 앞발 가운데 높이(모델 좌표) — 이보다 낮으면 팔을 더 벌려 올린다(품종끼리 서 있는 손 높이를 맞춤)
 const CLIPS = new Set(clipArg ? clipArg.split(",") : ["idle", "hold", "wait", "walk", "raise_hand"]); // 서기·걷기 (앉기 sit·sit_type 은 팔을 앞으로 뻗는 자세라 그대로)
 const io = new NodeIO().registerExtensions(ALL_EXTENSIONS);
 const doc = await io.read(inp);
@@ -49,7 +49,15 @@ for (const side of ["Left", "Right"]) {
   const ab = (q) => { const d = rot(q, bone); return Math.atan2(dot(d, L), dot(d, D)); }; // 정면에서 본 벌어진 각(아래 0, 옆 90°)
   const restAb = ab(arm.getRotation());
   const hand = byName(new RegExp(`(^|:)${side}Hand$`));
-  arms.push({ arm, fore, side, restAb, bone, sx, handNode: hand, hand: norm(hand ? hand.getTranslation() : bone) });
+  // 앞발 가운데(손 뼈 가중치 > 0.5 정점의 중심)를 손 뼈 좌표로 — 손 높이는 손목 관절이 아니라 보이는 앞발로 잰다
+  let pawOff = [0, 0, 0];
+  if (hand) {
+    const pr = doc.getRoot().listMeshes()[0].listPrimitives()[0], PP = pr.getAttribute("POSITION"), PJ = pr.getAttribute("JOINTS_0"), PW = pr.getAttribute("WEIGHTS_0");
+    const hi = doc.getRoot().listSkins()[0].listJoints().indexOf(hand), jj = [], ww = []; const c = [0, 0, 0]; let k = 0;
+    for (let i = 0; i < PP.getCount(); i++) { PJ.getElement(i, jj); PW.getElement(i, ww); let t = 0; for (let q = 0; q < 4; q++) if (jj[q] === hi) t += ww[q]; if (t > 0.5) { const v = PP.getElement(i, []); c[0] += v[0]; c[1] += v[1]; c[2] += v[2]; k++; } }
+    if (k) { const hw = worldRot(hand), hp = worldPos(hand); pawOff = rot(qinv(hw), [c[0] / k - hp[0], c[1] / k - hp[1], c[2] / k - hp[2]]); }
+  }
+  arms.push({ arm, fore, side, restAb, bone, sx, handNode: hand, pawOff, hand: norm(hand ? hand.getTranslation() : bone) });
 }
 // 최소 각 "auto": 체형마다 몸통 두께에서 구한다 — 곧게 편 팔(어깨→팔꿈치→손목)과 앞발이 몸통 옆면에 닿지 않는 가장 작은 벌림 각 + 4°,
 // 좌우 중 큰 값을 양쪽에 같이 쓴다(대칭). 통통한 체형일수록 크게 벌어진다.
@@ -118,7 +126,7 @@ for (const anim of doc.getRoot().listAnimations()) {
       }
       c.acc.setArray(c.v); n++;
     }
-    // 손목 높이 맞추기: 위팔을 바깥으로 더 돌려 손목이 HAND_Y 에 오게(낮을 때만 올림)
+    // 앞발 높이 맞추기: 위팔을 바깥·안쪽으로 돌려 앞발 가운데가 HAND_Y 에 오게
     if (HAND_Y != null && rch.get(a.arm) && a.handNode) {
       const c = rch.get(a.arm);
       const posAt = (node, t) => { const ch = []; for (let x = node; x; x = x.getParentNode()) ch.unshift(x); let q = [0, 0, 0, 1], p = [0, 0, 0]; for (const x of ch) { const tc = tch.get(x); const tr = tc ? tc(t) : x.getTranslation(); const r = rot(q, tr); p = [p[0] + r[0], p[1] + r[1], p[2] + r[2]]; q = qmul(q, at(x, t)); } return { p, q }; };
@@ -126,14 +134,18 @@ for (const anim of doc.getRoot().listAnimations()) {
         const t = c.t[i / 4];
         const pa = posAt(a.arm.getParentNode(), t), A = [pa.p[0] + rot(pa.q, a.arm.getTranslation())[0], pa.p[1] + rot(pa.q, a.arm.getTranslation())[1], pa.p[2] + rot(pa.q, a.arm.getTranslation())[2]];
         const qf = at(a.fore, t), fT = a.fore.getTranslation(), hT = a.handNode.getTranslation();
-        const handY = (qa) => { const qw = qmul(pa.q, qa); const e = rot(qw, fT), h = rot(qmul(qw, qf), hT); return A[1] + e[1] + h[1]; };
+        const qh = at(a.handNode, t);
+        const handY = (qa) => { const qw = qmul(pa.q, qa), qwf = qmul(qw, qf); const e = rot(qw, fT), h = rot(qwf, hT), pw = rot(qmul(qwf, qh), a.pawOff); return A[1] + e[1] + h[1] + pw[1]; }; // 앞발 가운데 높이
         const q0 = c.v.slice(i, i + 4);
-        if (handY(q0) >= HAND_Y) continue;
+        if (Math.abs(handY(q0) - HAND_Y) < 0.002) continue;
         const F = rot(qinv(pa.q), [0, 0, 1]);
-        const out = (d) => { const q1 = qmul(axisAngle(F, d), q0), q2 = qmul(axisAngle(F, -d), q0); return handY(q1) > handY(q2) ? q1 : q2; };
-        let lo = 0, hi = 1.2;
-        for (let k = 0; k < 18; k++) { const mid = (lo + hi) / 2; if (handY(out(mid)) < HAND_Y) lo = mid; else hi = mid; }
-        c.v.set(norm(out(hi)), i); fixed++;
+        const sgn = handY(qmul(axisAngle(F, 0.05), q0)) > handY(qmul(axisAngle(F, -0.05), q0)) ? 1 : -1; // 바깥으로 돌리는 쪽(손이 올라감)
+        const turn = (d) => qmul(axisAngle(F, sgn * d), q0);
+        // 높으면 안쪽으로 조금(최대 9°, 몸통에 닿지 않게) 내리고, 낮으면 바깥으로 올린다 — 좌우·품종끼리 앞발 높이를 같게
+        let lo = -0.16, hi = 1.2;
+        if (handY(turn(lo)) > HAND_Y) { c.v.set(norm(turn(lo)), i); fixed++; continue; }
+        for (let k = 0; k < 20; k++) { const mid = (lo + hi) / 2; if (handY(turn(mid)) < HAND_Y) lo = mid; else hi = mid; }
+        c.v.set(norm(turn(hi)), i); fixed++;
       }
       c.acc.setArray(c.v);
     }
