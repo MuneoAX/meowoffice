@@ -61,7 +61,32 @@ for (const side of ["Left", "Right"]) {
 }
 // 최소 각 "auto": 체형마다 몸통 두께에서 구한다 — 곧게 편 팔(어깨→팔꿈치→손목)과 앞발이 몸통 옆면에 닿지 않는 가장 작은 벌림 각 + 4°,
 // 좌우 중 큰 값을 양쪽에 같이 쓴다(대칭). 통통한 체형일수록 크게 벌어진다.
-let MIN = minArg != null && minArg !== "auto" ? (+minArg * Math.PI) / 180 : null;
+const CLEAR = minArg === "clear";
+let MIN = minArg != null && minArg !== "auto" && !CLEAR ? (+minArg * Math.PI) / 180 : CLEAR ? -Math.PI : null; // clear: 각도 제한 없이 몸통 뚫기만 막음
+// 몸통 단면(쉬는 자세, 1cm 높이마다 타원): 몸통 뼈(엉덩이·척추) 가중치 > 0.6 정점의 좌우·앞뒤 범위
+const HIPS_NODE = byName(/(^|:)Hips$/), HIPS_REST = { p: worldPos(HIPS_NODE), q: worldRot(HIPS_NODE) };
+const SLICES = new Map();
+if (CLEAR) {
+  const pr = doc.getRoot().listMeshes()[0].listPrimitives()[0], PP = pr.getAttribute("POSITION"), PJ = pr.getAttribute("JOINTS_0"), PW = pr.getAttribute("WEIGHTS_0");
+  const sj = doc.getRoot().listSkins()[0].listJoints(), TORSO = new Set(sj.map((j, i) => (/(^|:)(Hips|Spine|Spine1|Spine2)$/.test(j.getName()) ? i : -1)).filter((i) => i >= 0));
+  const jj = [], ww = [];
+  for (let i = 0; i < PP.getCount(); i++) {
+    PJ.getElement(i, jj); PW.getElement(i, ww); let t = 0; for (let k = 0; k < 4; k++) if (TORSO.has(jj[k])) t += ww[k];
+    if (t < 0.6) continue;
+    const v = PP.getElement(i, []), b = Math.round(v[1] / 0.01);
+    const s = SLICES.get(b) || { x0: 9, x1: -9, z0: 9, z1: -9 };
+    s.x0 = Math.min(s.x0, v[0]); s.x1 = Math.max(s.x1, v[0]); s.z0 = Math.min(s.z0, v[2]); s.z1 = Math.max(s.z1, v[2]);
+    SLICES.set(b, s);
+  }
+}
+// 점이 몸통 안이면 양수(얼마나 깊은지), 밖이면 0 — 팔 굵기만큼(2.2cm) 여유
+function insideTorso(p) {
+  const s = SLICES.get(Math.round(p[1] / 0.01));
+  if (!s) return 0;
+  const R = 0.022, cx = (s.x0 + s.x1) / 2, cz = (s.z0 + s.z1) / 2, rx = (s.x1 - s.x0) / 2 + R, rz = (s.z1 - s.z0) / 2 + R;
+  const e = ((p[0] - cx) / rx) ** 2 + ((p[2] - cz) / rz) ** 2;
+  return e < 1 ? 1 - e : 0;
+}
 if (minArg === "auto") {
   const prim = doc.getRoot().listMeshes()[0].listPrimitives()[0];
   const P = prim.getAttribute("POSITION"), JA = prim.getAttribute("JOINTS_0"), WA = prim.getAttribute("WEIGHTS_0");
@@ -125,6 +150,38 @@ for (const anim of doc.getRoot().listAnimations()) {
         if (r) { c.v.set(r, i); fixed++; }
       }
       c.acc.setArray(c.v); n++;
+    }
+    // 몸통 뚫기 막기(minArg "clear"): 팔꿈치·아래팔·손목·앞발이 몸통 단면 안이면 위팔을 바깥으로 돌려 밀어낸다(사용자 "손이 뱃속으로 사라진다")
+    if (CLEAR && rch.get(a.arm) && a.handNode) {
+      const c = rch.get(a.arm);
+      const posAt2 = (node, t) => { const ch = []; for (let x = node; x; x = x.getParentNode()) ch.unshift(x); let q = [0, 0, 0, 1], p = [0, 0, 0]; for (const x of ch) { const tc = tch.get(x); const tr = tc ? tc(t) : x.getTranslation(); const r = rot(q, tr); p = [p[0] + r[0], p[1] + r[1], p[2] + r[2]]; q = qmul(q, at(x, t)); } return { p, q }; };
+      for (let i = 0; i < c.v.length; i += 4) {
+        const t = c.t[i / 4];
+        const pa = posAt2(a.arm.getParentNode(), t), A = [0, 1, 2].map((k) => pa.p[k] + rot(pa.q, a.arm.getTranslation())[k]);
+        // 몸통 자세(엉덩이 회전·위치)를 따라 단면을 옮겨 잰다: 몸통 좌표로 바꿔 쉬는 자세 단면과 비교
+        const hp = posAt2(HIPS_NODE, t), hq = hp.q, hqi = qinv(hq), hr = HIPS_REST;
+        const toRest = (p) => { const l = rot(hqi, [p[0] - hp.p[0], p[1] - hp.p[1], p[2] - hp.p[2]]); const w = rot(hr.q, l); return [w[0] + hr.p[0], w[1] + hr.p[1], w[2] + hr.p[2]]; };
+        const qf = at(a.fore, t), qh = at(a.handNode, t), fT = a.fore.getTranslation(), hT = a.handNode.getTranslation();
+        const pts = (qa) => { const qw = qmul(pa.q, qa), qwf = qmul(qw, qf); const E = [0, 1, 2].map((k) => A[k] + rot(qw, fT)[k]), Wr = [0, 1, 2].map((k) => E[k] + rot(qwf, hT)[k]), Pw = [0, 1, 2].map((k) => Wr[k] + rot(qmul(qwf, qh), a.pawOff)[k]); return [E, E.map((v, k) => (v + Wr[k]) / 2), Wr, Pw]; };
+        const inside = (qa) => pts(qa).reduce((m, p) => Math.max(m, insideTorso(toRest(p))), 0);
+        const q0 = c.v.slice(i, i + 4);
+        if (inside(q0) <= 0) continue;
+        // 두 방향 중 덜 돌려도 빠져나오는 쪽: 옆(바깥, 몸 앞뒤 축으로) 또는 앞(팔을 앞으로 들기, 몸 좌우 축으로)
+        const F = rot(qinv(pa.q), [0, 0, 1]), Lx = rot(qinv(pa.q), [1, 0, 0]);
+        const options = [];
+        for (const [ax, test] of [[F, (e0, e1) => (e1[0] - e0[0]) * a.sx], [Lx, (e0, e1) => e1[2] - e0[2]]]) {
+          const e0 = pts(q0)[2], e1 = pts(qmul(axisAngle(ax, 0.05), q0))[2];
+          const sg = test(e0, e1) > 0 ? 1 : -1; // 바깥(옆) / 앞으로 가는 쪽
+          const turn = (d) => qmul(axisAngle(ax, sg * d), q0);
+          if (inside(turn(1.2)) > 0) { options.push([1.3, turn(1.2)]); continue; }
+          let lo = 0, hi = 1.2;
+          for (let k = 0; k < 16; k++) { const mid = (lo + hi) / 2; if (inside(turn(mid)) > 0) lo = mid; else hi = mid; }
+          options.push([hi, turn(hi)]);
+        }
+        options.sort((x, y) => x[0] - y[0]);
+        c.v.set(norm(options[0][1]), i); fixed++;
+      }
+      c.acc.setArray(c.v);
     }
     // 앞발 높이 맞추기: 위팔을 바깥·안쪽으로 돌려 앞발 가운데가 HAND_Y 에 오게
     if (HAND_Y != null && rch.get(a.arm) && a.handNode) {

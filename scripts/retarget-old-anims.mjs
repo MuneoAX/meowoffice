@@ -97,6 +97,14 @@ function sampler(ch) {
   };
 }
 
+// 팔다리 IK 설정: 위 마디 → { 아래 마디, 끝, 옛 [아래 마디, 끝, 기준(다리 = 엉덩이, 팔 = 가슴)] } (좌우 짝은 위에서 정한 SRC2TGT 를 따름)
+const LIMB = {}, LIMB_END = {};
+for (const [u, m, e] of [["UpLeg", "Leg", "Foot"], ["Arm", "ForeArm", "Hand"]]) for (const side of ["Left", "Right"]) {
+  const up = side + u, mid = side + m, end = side + e;
+  if (!tNodes.has(up) || !tNodes.has(mid) || !tNodes.has(end) || !TGT2SRC[up] || !TGT2SRC[mid] || !TGT2SRC[end]) continue;
+  LIMB[up] = { mid, end, src: [TGT2SRC[mid], TGT2SRC[end], u === "UpLeg" ? "hips" : "chest"] };
+  LIMB_END[mid] = end;
+}
 // 새 모델 노드를 부모 먼저 순서로
 const order = [];
 const visit = (n) => { order.push(n); n.listChildren().forEach(visit); };
@@ -126,6 +134,7 @@ for (const sa of sdoc.getRoot().listAnimations()) {
     const sm = new Map(), sl = sLocal(t);
     const tLocal = new Map(); // 이번 시각의 새 모델 국소 [t, r]
     const tm = new Map();
+    const ikMid = new Map(); // 팔다리 IK: 아래 마디 이름 → 끝(손목·발목) 목표 자리
     const lf = (n) => tLocal.get(n) || [n.getTranslation(), n.getRotation()];
     for (const n of tBones) {
       const nm = bare(n), src = TGT2SRC[nm];
@@ -136,7 +145,31 @@ for (const sa of sdoc.getRoot().listAnimations()) {
         const sNow = sw(src, sm, sl), sR = sw(src, sRest, restLocal), tR = fk(n, restLocal, tRest);
         let W = qnorm(qmul(qmul(sNow.q, qinv(sR.q)), tR.q)); // 회전 변화량을 새 쉬는 자세에
         const aim = AIM[nm], srcChild = aim && TGT2SRC[aim];
-        if (aim && srcChild && sNodes.has(srcChild) && tNodes.has(aim)) {
+        const limb = LIMB[nm], midGoal = ikMid.get(nm);
+        if (limb) {
+          // 팔다리: 손·발 자리로 옮긴다(사용자 2026-11-26 "걸을 때 발끼리 겹침, 손이 뱃속으로, 한쪽 다리만 걸쳐 앉음").
+          // 옛 손·발이 엉덩이(다리)·가슴(팔) 기준으로 쉬는 자세에서 움직인 만큼을 팔다리 길이 비율로 옮기고, 새 고양이의 쉬는 자세 간격은 그대로 → 두 마디 IK
+          const [sMid, sEnd, anchor] = limb.src, mid = tNodes.get(limb.mid), end = tNodes.get(limb.end);
+          const U = add(pw.p, rot(pw.q, n.getTranslation()));
+          const sU = sNow.p, sK = sw(sMid, sm, sl).p, sE = sw(sEnd, sm, sl).p, sUr = sR.p, sKr = sw(sMid, sRest, restLocal).p, sEr = sw(sEnd, sRest, restLocal).p;
+          const aNow = sw(anchor, sm, sl).q, aRest = sw(anchor, sRest, restLocal).q, D = qnorm(qmul(aNow, qinv(aRest))), Di = qinv(D);
+          const tUr = tR.p, tKr = fk(mid, restLocal, tRest).p, tEr = fk(end, restLocal, tRest).p;
+          const L1 = Math.hypot(...sub(tKr, tUr)), L2 = Math.hypot(...sub(tEr, tKr));
+          const k = (L1 + L2) / (Math.hypot(...sub(sKr, sUr)) + Math.hypot(...sub(sEr, sKr)) || 1);
+          const place = (tr, s, sr) => add(U, rot(D, add(sub(tr, tUr), mul(sub(rot(Di, sub(s, sU)), sub(sr, sUr)), k))));
+          const T = place(tEr, sE, sEr), Kh = place(tKr, sK, sKr);
+          let d = Math.hypot(...sub(T, U)); const dir = norm(sub(T, U));
+          d = Math.min(L1 + L2 - 1e-4, Math.max(Math.abs(L1 - L2) + 1e-4, d));
+          const a = (L1 * L1 - L2 * L2 + d * d) / (2 * d), h = Math.sqrt(Math.max(0, L1 * L1 - a * a));
+          let pv = sub(Kh, U); pv = sub(pv, mul(dir, dot(pv, dir))); pv = Math.hypot(...pv) < 1e-6 ? [0, 0, 1] : norm(pv);
+          const M = add(add(U, mul(dir, a)), mul(pv, h));
+          W = qnorm(qmul(fromTo(norm(rot(W, mid.getTranslation())), norm(sub(M, U))), W));
+          ikMid.set(limb.mid, add(U, mul(dir, d))); // 아래 마디가 닿을 끝 자리
+        } else if (midGoal) {
+          const P = add(pw.p, rot(pw.q, n.getTranslation())), endN = tNodes.get(LIMB_END[nm]);
+          W = qnorm(qmul(fromTo(norm(rot(W, endN.getTranslation())), norm(sub(midGoal, P))), W));
+          ikMid.delete(nm);
+        } else if (aim && srcChild && sNodes.has(srcChild) && tNodes.has(aim)) {
           const want = norm(sub(sw(srcChild, sm, sl).p, sNow.p));
           const cur = norm(rot(W, tNodes.get(aim).getTranslation()));
           W = qnorm(qmul(fromTo(cur, want), W)); // 가리키는 방향을 옛 뼈와 같게
