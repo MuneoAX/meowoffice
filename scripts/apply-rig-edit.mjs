@@ -1,5 +1,6 @@
 // Blender 에서 옮긴 관절 자리(JSON)를 AI 고양이 모델에 넣는다(사용자 2026-11-26 "조절 가능하게 해 줘").
-//   node scripts/apply-rig-edit.mjs <모델.glb> <관절.json> [출력.glb=모델]
+//   node scripts/apply-rig-edit.mjs <모델.glb> <관절.json> [출력.glb=모델] [가중치.json]
+// 가중치.json(있으면) = [[x, y, z, [[관절 이름, 무게], ...]], ...] — Blender '자동 가중치로 다시 심기' 결과. 같은 자리(0.1mm) 정점에 그대로 넣고 팔 가중치 다시 나누기는 건너뜀.
 // 관절.json = { "<관절 이름>": [x, y, z] } — glTF 월드 좌표(앞 +Z, 위 +Y). design/blender-rig.py 가 Blender 편집 모드의 뼈 머리 자리를 적는다.
 // 바뀐 관절(0.5mm 넘게)만 옮기고(회전은 그대로), 팔 관절이 바뀌면 팔 가중치를 새 어깨→팔꿈치→손목 선을 따라 다시 나누고, 역바인드 행렬을 다시 구한다.
 // 이 뒤에 scripts/ai-cat-anims.mjs 로 동작을 다시 옮길 것.
@@ -13,8 +14,8 @@ const require = createRequire(path.join(root, "package.json"));
 const { NodeIO } = require("@gltf-transform/core");
 const { ALL_EXTENSIONS } = require("@gltf-transform/extensions");
 
-const [inp, jsonFile, outArg] = process.argv.slice(2);
-const out = outArg || inp;
+const [inp, jsonFile, outArg, weightFile] = process.argv.slice(2);
+const out = outArg && outArg !== "-" ? outArg : inp;
 const want = JSON.parse(fs.readFileSync(jsonFile, "utf8"));
 const PAW = 0.055, B = 0.015;
 const io = new NodeIO().registerExtensions(ALL_EXTENSIONS);
@@ -51,7 +52,24 @@ const P = prim.getAttribute("POSITION"), JA = prim.getAttribute("JOINTS_0"), WA 
 const names = joints.map(bare), J = (s) => names.indexOf(s);
 const ss = (e0, e1, x) => { const u = Math.min(1, Math.max(0, (x - e0) / (e1 - e0))); return u * u * (3 - 2 * u); };
 let rew = 0;
-for (const side of ["Left", "Right"]) {
+if (weightFile) {
+  // Blender 자동 가중치: 자리로 정점을 짝지어 넣는다
+  const list = JSON.parse(fs.readFileSync(weightFile, "utf8"));
+  const key = (p) => p.map((v) => Math.round(v * 1e4)).join(",");
+  const map = new Map(list.map(([x, y, z, ws]) => [key([x, y, z]), ws]));
+  const ji = new Map(joints.map((jn, i) => [jn.getName(), i]));
+  let miss = 0;
+  for (let i = 0; i < P.getCount(); i++) {
+    const ws = map.get(key(P.getElement(i, [])));
+    if (!ws) { miss++; continue; }
+    const top = ws.filter(([nm, v]) => ji.has(nm) && v > 1e-4).sort((a, b) => b[1] - a[1]).slice(0, 4), tot = top.reduce((a, [, v]) => a + v, 0);
+    if (!tot) { miss++; continue; }
+    const jj = [0, 0, 0, 0], ww = [0, 0, 0, 0]; top.forEach(([nm, v], x) => { jj[x] = ji.get(nm); ww[x] = v / tot; });
+    JA.setElement(i, jj); WA.setElement(i, ww); rew++;
+  }
+  console.log(`  Blender 가중치 넣음 ${rew}정점, 짝 못 찾음 ${miss}정점(원래 가중치 유지)`);
+}
+for (const side of weightFile ? [] : ["Left", "Right"]) {
   if (![side + "Arm", side + "ForeArm", side + "Hand"].some((k) => changed.has(k))) continue;
   const A = J(side + "Arm"), F = J(side + "ForeArm"), H = J(side + "Hand");
   const S = world(joints[A]).p, E = world(joints[F]).p, W = world(joints[H]).p, T = add(W, mul(sub(W, E), PAW / (len(sub(W, E)) || 1)));
