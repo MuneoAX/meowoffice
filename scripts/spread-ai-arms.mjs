@@ -50,7 +50,35 @@ for (const side of ["Left", "Right"]) {
   const hand = byName(new RegExp(`(^|:)${side}Hand$`));
   arms.push({ arm, fore, side, restAb, bone, sx, hand: norm(hand ? hand.getTranslation() : bone) });
 }
-const MIN = minArg != null ? (+minArg * Math.PI) / 180 : null;
+// 최소 각 "auto": 체형마다 몸통 두께에서 구한다 — 곧게 편 팔(어깨→팔꿈치→손목)과 앞발이 몸통 옆면에 닿지 않는 가장 작은 벌림 각 + 4°,
+// 좌우 중 큰 값을 양쪽에 같이 쓴다(대칭). 통통한 체형일수록 크게 벌어진다.
+let MIN = minArg != null && minArg !== "auto" ? (+minArg * Math.PI) / 180 : null;
+if (minArg === "auto") {
+  const prim = doc.getRoot().listMeshes()[0].listPrimitives()[0];
+  const P = prim.getAttribute("POSITION"), JA = prim.getAttribute("JOINTS_0"), WA = prim.getAttribute("WEIGHTS_0");
+  const skinJ = doc.getRoot().listSkins()[0].listJoints();
+  const TORSO = new Set(skinJ.map((j, i) => (/(^|:)(Hips|Spine|Spine1|Spine2)$/.test(j.getName()) ? i : -1)).filter((i) => i >= 0));
+  const torso = [], jj = [], ww = [];
+  for (let i = 0; i < P.getCount(); i++) { JA.getElement(i, jj); WA.getElement(i, ww); let t = 0; for (let k = 0; k < 4; k++) if (TORSO.has(jj[k])) t += ww[k]; if (t > 0.6) torso.push(P.getElement(i, [])); }
+  const mid = [0, 1, 2].map((k) => (worldPos(arms[0].arm)[k] + worldPos(arms[1].arm)[k]) / 2);
+  let need = 0;
+  for (const a of arms) {
+    const S = worldPos(a.arm), E = worldPos(a.fore), Hd = worldPos(byName(new RegExp(`(^|:)${a.side}Hand$`)));
+    const L1 = Math.hypot(...[0, 1, 2].map((k) => E[k] - S[k])), L2 = Math.hypot(...[0, 1, 2].map((k) => Hd[k] - E[k]));
+    const R = 0.035; // 팔·앞발 굵기 절반
+    // 높이 y 에서 몸통이 이 쪽으로 나온 거리(중심선 기준)
+    const halfW = (y, z) => { let m = 0; for (const p of torso) if (Math.abs(p[1] - y) < 0.015 && Math.abs(p[2] - z) < 0.06) m = Math.max(m, (p[0] - mid[0]) * a.sx); return m; };
+    let th = 10;
+    for (; th < 85; th += 1) {
+      const r = (th * Math.PI) / 180, d = [Math.sin(r), -Math.cos(r)];
+      const pts = [0.5, 1, 1.5, 2].map((u) => { const l = u <= 1 ? L1 * u : L1 + L2 * (u - 1); return [S[0] + a.sx * d[0] * l, S[1] + d[1] * l, S[2]]; });
+      if (pts.every((p) => (p[0] - mid[0]) * a.sx >= halfW(p[1], p[2]) + R)) break;
+    }
+    need = Math.max(need, th + 4);
+    console.log(`  ${a.side}: 몸통에 닿지 않는 벌림 ${th}°`);
+  }
+  MIN = (need * Math.PI) / 180;
+}
 // 벌린 각을 최소 각까지: 회전 키 q 를 몸 앞뒤 축(부모 좌표 F)으로 바깥으로 돌린다
 const spread = (ab, q, F, min) => {
   const cur = ab(q);
@@ -91,4 +119,4 @@ for (const anim of doc.getRoot().listAnimations()) {
   }
 }
 await io.write(out, doc);
-console.log(`${path.basename(inp)}: 팔 채널 ${n}개, 고친 키 ${fixed}개 (쉬는 자세 각 ${arms.map((a) => a.side + " " + Math.round((a.restAb * 180) / Math.PI) + "°").join(", ")}, 최소 ${MIN != null ? minArg + "°" : "쉬는 자세 각"}) → ${out}`);
+console.log(`${path.basename(inp)}: 팔 채널 ${n}개, 고친 키 ${fixed}개 (쉬는 자세 각 ${arms.map((a) => a.side + " " + Math.round((a.restAb * 180) / Math.PI) + "°").join(", ")}, 최소 ${MIN != null ? Math.round((MIN * 180) / Math.PI) + "°" + (minArg === "auto" ? "(체형)" : "") : "쉬는 자세 각"}) → ${out}`);
