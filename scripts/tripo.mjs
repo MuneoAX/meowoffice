@@ -61,9 +61,10 @@ if (cmd === "upload") {
   }
   console.error("시간 초과"); process.exit(1);
 } else if (cmd === "cat") {
-  // 한 번에: 업로드 → 리깅(v1.0 biped, mixamo 이름) → 동작 7개(5개·2개 두 번, 제자리; 환호 cheer 는 팔이 머리에 파묻혀 뺌) → 합치기 → 앱 동작 이름으로 → 출력
-  //   node scripts/tripo.mjs cat <줄인.glb> <출력.glb>
+  // 한 번에: 업로드 → 리깅(v1.0 biped, mixamo 이름) → 기다리기 동작 1개(제자리) + 옛 고양이 동작 15개 옮기기 → 합치기 → 앱 동작 이름으로 → 출력
+  //   node scripts/tripo.mjs cat <줄인.glb> <출력.glb> [옛 체형=standard|foldear|longhair|shortleg — 동작을 옮겨 올 옛 모델]
   const { execFileSync } = await import("node:child_process");
+  const oldBody = c || "standard";
   const tmp = path.join((await import("node:os")).tmpdir(), "meow_tripo_" + path.basename(b, ".glb")); // 앱 폴더 밖(중간 파일)
   fs.mkdirSync(tmp, { recursive: true });
   const until = async (id) => {
@@ -81,7 +82,7 @@ if (cmd === "upload") {
   const rig = (await call("POST", "/animations/rig", { input: tok, rig_type: "biped", model: "v1.0-20240301", spec: "mixamo", out_format: "glb" })).task_id;
   await until(rig);
   console.log("리깅 완료", rig);
-  const SETS = [["idle", "walk", "sit", "play_video_game", "wave_goodbye_01"], ["standing_relax", "wait"]];
+  const SETS = [["wait"]]; // 나머지 동작은 옛 고양이 동작을 옮겨 쓴다(아래 retarget-old-anims) — 옛 동작에 없는 기다리기만 Tripo 에서
   const files = [];
   for (const [i, set] of SETS.entries()) {
     const id = (await call("POST", "/animations/retarget", { input: rig, animations: set.map((s) => "preset:biped:" + s), out_format: "glb", animate_in_place: true })).task_id;
@@ -112,6 +113,14 @@ if (cmd === "upload") {
   for (const s of ["ai-face-marks.mjs", "smooth-ai-eyes.mjs", "ai-face-marks.mjs", "paint-ai-eyes.mjs"]) execFileSync(process.execPath, [path.join(here, s), b, b], { stdio: "inherit" });
   // 입: ω 입 선을 따라 갈라 위·아래 입술 + 아래턱이 내려가는 모양 변형(하품·말하기·먹기)
   execFileSync(process.execPath, [path.join(here, "mouth-ai.mjs"), b, b], { stdio: "inherit" });
+  // 꼬리 뼈 4마디(앱이 기분·신호별로 흔듦) + 옛 고양이 동작 15개를 옮겨 씀(Tripo 프리셋엔 마시기·자기·그루밍·상자 나르기가 없음) → 보정
+  execFileSync(process.execPath, [path.join(here, "add-ai-tail.mjs"), b, b], { stdio: "inherit" });
+  const OLD = path.join(here, "..", "ui", "office", "models", "cats");
+  execFileSync(process.execPath, [path.join(here, "retarget-old-anims.mjs"), b, path.join(OLD, `cat_${oldBody}.glb`), b, "--replace"], { stdio: "inherit" });
+  execFileSync(process.execPath, [path.join(here, "retarget-old-anims.mjs"), b, path.join(OLD, `anims_${oldBody}.glb`), b, "skate,roll", "--replace"], { stdio: "inherit" });
+  execFileSync(process.execPath, [path.join(here, "tune-ai-anims.mjs"), b, b, "0.3", "idle,walk,carry,hold,raise_hand"], { stdio: "inherit" });
+  execFileSync(process.execPath, [path.join(here, "spread-ai-arms.mjs"), b, b, "45", "idle,walk,raise_hand"], { stdio: "inherit" });
+  execFileSync(process.execPath, [path.join(here, "calm-ai-stand.mjs"), b, b, "idle,hold,raise_hand,walk"], { stdio: "inherit" });
   console.log("완료", b, doc.getRoot().listAnimations().map((x) => x.getName()).join(","));
 } else {
   console.error("명령: upload | rigcheck | rig | retarget | wait | task | cat"); process.exit(1);

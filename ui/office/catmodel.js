@@ -805,7 +805,7 @@ positionUpdated += normalUpdated * ${OUTLINE_W.toFixed(4)};
       for (const [a, b] of Object.entries(AI_ALIAS)) if (low[b]) nodes[a] = low[b];
     }
     const rest = {};
-    for (const k of ['tail_01', 'tail_02', 'tail_03', 'tail_04', 'ear.L', 'ear.R']) {
+    for (const k of ['tail_root', 'tail_01', 'tail_02', 'tail_03', 'tail_04', 'ear.L', 'ear.R']) {
       const n = nodes[k];
       if (n) rest[k] = (n.rotationQuaternion || Q.FromEulerVector(n.rotation)).clone();
     }
@@ -1635,7 +1635,25 @@ positionUpdated += normalUpdated * ${OUTLINE_W.toFixed(4)};
      * @param {number} i 마디 번호 0~3
      * @returns {void}
      */
-    tailKeys.forEach((k, i) => {
+    if (m.cfg.ai) {
+      // AI 고양이(scripts/add-ai-tail.mjs 로 넣은 꼬리 뼈): 모델에 조형된 꼬리 모양을 그대로 두고 좌우 흔들기·처짐만 더한다
+      // (옛 고양이용 방향각으로 크게 꺾으면 털 많은 꼬리 살이 납작하게 찌그러짐). 꼬리 뿌리는 엉덩이를 반쯤만 따라가 몸을 숙여도 꼬리가 솟지 않게
+      const tr = m.nodes.tail_root, tr0 = m.rest.tail_root;
+      if (tr && tr0 && tr.parent) {
+        tr.parent.computeWorldMatrix(true);
+        const H = Q.FromRotationMatrix(tr.parent.getWorldMatrix().getRotationMatrix());
+        const T = Q.FromRotationMatrix(m.top.getWorldMatrix().getRotationMatrix());
+        const follow = H.multiply(tr0), want = Q.Slerp(follow, T, held ? 0 : 0.3);
+        tr.rotationQuaternion = Q.Inverse(H).multiply(want);
+      }
+      tailKeys.forEach((k, i) => {
+        const n = m.nodes[k], r = m.rest[k];
+        if (!n || !r) return;
+        const sway = Q.RotationAxis(V3.Forward(), Math.sin(t * spd - i * 0.6) * amp * (0.45 + i * 0.3));
+        const droop = Q.RotationAxis(V3.Right(), (i === 0 ? 1 : 0.4) * (low * 0.25 + (held ? 0.35 : 0)) - (err ? 0.15 : 0)); // 기분 낮으면·들리면 처지고, 오류면 꼿꼿이
+        n.rotationQuaternion = r.multiply(droop).multiply(sway);
+      });
+    } else tailKeys.forEach((k, i) => {
       const n = m.nodes[k], r = m.rest[k];
       if (!n || !r) return;
       if (!m.tailPos) m.tailPos = {};
