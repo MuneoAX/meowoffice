@@ -10,7 +10,7 @@
   <a href="https://github.com/MuneoAX/meowoffice/releases/latest"><img src="https://img.shields.io/github/v/release/MuneoAX/meowoffice?color=8b6dff&label=release" alt="Latest release"></a>
   <a href="https://github.com/MuneoAX/meowoffice/releases"><img src="https://img.shields.io/github/downloads/MuneoAX/meowoffice/total?color=5b8cff&label=downloads" alt="Downloads"></a>
   <img src="https://img.shields.io/badge/Windows%20%7C%20macOS-555?logo=tauri&logoColor=white" alt="Windows | macOS">
-  <a href="https://github.com/MuneoAX/meowoffice/stargazers"><img src="https://img.shields.io/github/stars/MuneoAX/meowoffice?style=social" alt="GitHub stars"></a>
+  <a href="https://github.com/MuneoAX/meowoffice"><img src="https://img.shields.io/github/stars/MuneoAX/meowoffice?style=social" alt="GitHub stars"></a>
 </p>
 
 AI コーディングのセッションが 1 つずつ **ネコの社員** として出勤するデスクトップオフィスです。
