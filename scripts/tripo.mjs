@@ -117,13 +117,7 @@ if (cmd === "upload") {
   execFileSync(process.execPath, [path.join(here, "add-ai-tail.mjs"), b, b], { stdio: "inherit" });
   execFileSync(process.execPath, [path.join(here, "sym-ai-rig.mjs"), b, b], { stdio: "inherit" }); // 자동 리깅의 좌우 관절 자리를 거울 대칭으로
   execFileSync(process.execPath, [path.join(here, "fit-ai-arms.mjs"), b, b], { stdio: "inherit" }); // 팔 관절(어깨·팔꿈치·손목)을 팔 메시 중심선에서 다시 잡고 팔 가중치 다시
-  const OLD = path.join(here, "..", "ui", "office", "models", "cats");
-  execFileSync(process.execPath, [path.join(here, "retarget-old-anims.mjs"), b, path.join(OLD, `cat_${oldBody}.glb`), b, "--replace"], { stdio: "inherit" });
-  execFileSync(process.execPath, [path.join(here, "retarget-old-anims.mjs"), b, path.join(OLD, `anims_${oldBody}.glb`), b, "skate,roll", "--replace"], { stdio: "inherit" });
-  execFileSync(process.execPath, [path.join(here, "tune-ai-anims.mjs"), b, b, "0.3", "idle,walk,carry,hold,raise_hand"], { stdio: "inherit" });
-  execFileSync(process.execPath, [path.join(here, "spread-ai-arms.mjs"), b, b, "auto", "idle,walk,raise_hand"], { stdio: "inherit" });
-  execFileSync(process.execPath, [path.join(here, "spread-ai-arms.mjs"), b, b, "auto", "idle,wait", "hand=0.27"], { stdio: "inherit" }); // 서 있는 앞발 높이를 좌우·품종끼리 같게(키 1.0 기준)
-  execFileSync(process.execPath, [path.join(here, "calm-ai-stand.mjs"), b, b, "idle,hold,raise_hand,walk"], { stdio: "inherit" });
+  execFileSync(process.execPath, [path.join(here, "ai-cat-anims.mjs"), b, oldBody], { stdio: "inherit" }); // 옛 동작 옮기기·굽힘·팔 벌림·두 발·앞발 높이
   console.log("완료", b, doc.getRoot().listAnimations().map((x) => x.getName()).join(","));
 } else {
   console.error("명령: upload | rigcheck | rig | retarget | wait | task | cat"); process.exit(1);
