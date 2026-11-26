@@ -31,6 +31,25 @@ for name in CATS:
     px.select_set(True); bpy.context.view_layer.objects.active = px
     rm = px.modifiers.new("remesh", "REMESH"); rm.mode = "VOXEL"; rm.voxel_size = VOXEL
     bpy.ops.object.modifier_apply(modifier=rm.name)
+    # 털 많은 품종은 리메시해도 털 끝이 따로 떨어진 작은 조각으로 남는데, bone heat 가 그런 조각에 엉뚱한 뼈(뒤통수 털 → 팔)를 준다.
+    # 가장 큰 조각(몸)만 남기고 지운다. 떨어진 털의 원래 정점은 아래 4)에서 메시를 따라 뿌리 쪽 가중치를 이어받는다.
+    import bmesh
+    bm = bmesh.new(); bm.from_mesh(px.data); bm.verts.ensure_lookup_table()
+    left, isles = set(bm.verts), []
+    while left:
+        st = [left.pop()]; isl = set(st)
+        while st:
+            v = st.pop()
+            for e in v.link_edges:
+                w = e.other_vert(v)
+                if w in left:
+                    left.discard(w); isl.add(w); st.append(w)
+        isles.append(isl)
+    isles.sort(key=len, reverse=True)
+    drop = [v for isl in isles[1:] for v in isl]
+    bmesh.ops.delete(bm, geom=drop, context="VERTS")
+    bm.to_mesh(px.data); bm.free()
+    print("AUTOW", name, "proxy islands", len(isles), "dropped verts", len(drop))
     # 2) 대리 메시에 자동 가중치
     bpy.ops.object.select_all(action="DESELECT")
     px.select_set(True); o.select_set(True); bpy.context.view_layer.objects.active = o
@@ -43,10 +62,11 @@ for name in CATS:
     verts = [Mp @ v.co for v in px.data.vertices]
     polys = [list(p.vertices) for p in px.data.polygons]
     bvh = BVHTree.FromPolygons(verts, polys)
-    ws, empty = [], 0
+    ws, empty, dist = [], 0, []
     for v in me.data.vertices:
         wp = Mo @ v.co
         hit = bvh.find_nearest(wp)
+        dist.append(hit[3] if hit[3] is not None else 1e9)
         acc = {}
         if hit[2] is not None:
             vs = polys[hit[2]]
@@ -59,6 +79,46 @@ for name in CATS:
         if not g:
             empty += 1
         ws.append([v.co.x, v.co.z, -v.co.y, [[n, w] for n, w in g]])  # 메시 좌표(Z 위) → glTF(Y 위)
+    # 4) 털 끝처럼 대리 메시(몸 겉면)에서 멀리 뻗은 정점은 가장 가까운 대리 면이 엉뚱한 부위(볼 털 끝 → 손 등)일 수 있어
+    #    가시처럼 솟는다. 겉면 가까이(복셀 크기 안) 정점만 믿고, 먼 정점은 메시를 따라 뿌리 쪽 이웃의 가중치를 이어받게 한다.
+    vs = me.data.vertices
+    rep, seen = [], {}
+    for v in vs:  # 같은 자리 정점(무늬 이음새)은 한 몸
+        k = (round(v.co.x, 5), round(v.co.y, 5), round(v.co.z, 5))
+        rep.append(seen.setdefault(k, v.index))
+    nb = {}
+    for e in me.data.edges:
+        a, c = rep[e.vertices[0]], rep[e.vertices[1]]
+        if a != c:
+            nb.setdefault(a, set()).add(c); nb.setdefault(c, set()).add(a)
+    TRUST = VOXEL * 1.0
+    known = {rep[i] for i in range(len(vs)) if dist[i] <= TRUST}
+    W = {r: dict((n, w) for n, w in ws[r][3]) for r in known}
+    frontier = [r for r in known]
+    passes = 0
+    while frontier:
+        nxt = {}
+        for r in frontier:
+            for q in nb.get(r, ()):
+                if q not in W:
+                    nxt.setdefault(q, []).append(r)
+        for q, srcs in nxt.items():
+            acc = {}
+            for r in srcs:
+                for n, w in W[r].items():
+                    acc[n] = acc.get(n, 0) + w / len(srcs)
+            W[q] = acc
+        frontier = list(nxt); passes += 1
+    far = 0
+    for i in range(len(vs)):
+        r = rep[i]
+        if r in W and dist[i] > TRUST:
+            g = sorted(W[r].items(), key=lambda x: -x[1])[:4]
+            t = sum(w for _, w in g) or 1
+            ws[i][3] = [[n, w / t] for n, w in g]; far += 1
+        elif r in W and rep[i] != i:
+            ws[i][3] = ws[r][3]
+    print("AUTOW", name, "far verts", far, "passes", passes)
     json.dump(ws, open(os.path.join(OUT, name + ".weights.json"), "w"))
     json.dump({b.name: [b.head_local.x, b.head_local.z, -b.head_local.y] for b in o.data.bones}, open(os.path.join(OUT, name + ".json"), "w"), indent=1)
     bpy.data.objects.remove(px, do_unlink=True)

@@ -1,6 +1,7 @@
 // AI 고양이 텍스처의 사실적인 눈을 카툰 눈으로 다시 칠한다(사용자 2026-11-25 "2D 카툰처럼, 텍스처로 처리").
 // 카툰 눈(사용자 참고 그림): 흰자 동그라미 + 코 쪽 위로 치우친 검은 남색 눈동자 + 바깥 위 눈꺼풀 선 + 아래 반사 + 반짝임 하나.
-//   node scripts/paint-ai-eyes.mjs <입력.glb> <출력.glb> [텍스처 크기=2048]
+//   node scripts/paint-ai-eyes.mjs <입력.glb> <출력.glb> [텍스처 크기=2048] [눈 크기 배율=1] [눈 내림=0(키 1.0 기준)]
+// 배율 < 1 이면 칠한 눈을 줄이고, 그 바깥(원래 카툰 눈 자리)은 같은 방향 둘레 털색으로 덮는다 — 이미 칠한 모델에 다시 돌려도 된다.
 // 원본 텍스처(1024)에서는 눈이 30화소쯤이라 반짝임이 뭉개지므로 텍스처를 키운 뒤 칠한다. 이미 칠한 모델에 다시 돌리지 말 것(원본 눈에서).
 // 눈 자리는 scripts/ai-face-marks.mjs 가 적은 extras.meowFace.eyes(가운데·반지름·방향)를 쓴다.
 // 텍스처는 조각(UV 섬)으로 나뉘어 눈이 이음새에 걸치므로, 눈 근처 삼각형의 텍스처 화소마다 3D 위치를 구해
@@ -15,7 +16,11 @@ const { NodeIO } = require("@gltf-transform/core");
 const { ALL_EXTENSIONS } = require("@gltf-transform/extensions");
 const sharp = require("sharp");
 
-const [inp, out, sizeArg = "2048"] = process.argv.slice(2);
+const [inp, out, sizeArg = "2048", scaleArg = "1", dropArg = "0"] = process.argv.slice(2);
+const DROP = +dropArg; // 그리는 눈을 이만큼 아래로
+const ES = +scaleArg; // 눈 크기 배율
+// 덮는 범위: 원래 크기 카툰 눈의 눈꺼풀 끝(~1.3)까지 남지 않게, 줄일 때는 더 바깥까지 덮고 털색도 더 바깥 고리에서
+const FILL = ES < 1 ? 1.45 : 1.32, RING = ES < 1 ? [1.5, 1.75] : [1.35, 1.6];
 const io = new NodeIO().registerExtensions(ALL_EXTENSIONS);
 const doc = await io.read(inp);
 const R0 = doc.getRoot();
@@ -99,9 +104,21 @@ for (let f = 0; f < ia.length; f += 3) {
   }
 }
 // 2) 눈 근처 삼각형의 자기 화소를 칠한다
+// 찾은 눈 자리는 좌우 높이가 1~2cm 어긋나 있어(사용자 2026-11-26 "좌우 눈 평행이 안 맞아") 그리는 눈은 좌우 대칭으로 맞춘다:
+// 높이·앞뒤·크기·방향은 두 눈 평균, 좌우는 두 눈 가운데 기준 거울 자리. 먼저 찾은 자리(원래 눈) 둘레를 털색으로 지우고, 대칭 자리에 새로 그린다.
 const painted = new Uint8Array(W * H);
 let cnt = 0;
-for (const eye of mf.eyes.filter(Boolean)) {
+const found = mf.eyes.filter(Boolean);
+let draw = found;
+if (found.length === 2) {
+  const [a, b] = found, mx = (a.c[0] + b.c[0]) / 2, hx = Math.abs(a.c[0] - b.c[0]) / 2;
+  const cy = (a.c[1] + b.c[1]) / 2 - DROP, cz = (a.c[2] + b.c[2]) / 2, r = (a.r + b.r) / 2;
+  const sa = Math.sign(a.c[0] - mx) || 1;
+  const nAvg = norm([(Math.abs(a.n[0]) + Math.abs(b.n[0])) / 2, (a.n[1] + b.n[1]) / 2, (a.n[2] + b.n[2]) / 2]); // 바깥쪽 x 성분은 크기만 평균
+  draw = [a, b].map((e) => { const sg = Math.sign(e.c[0] - mx) || -sa; return { c: [mx + sg * hx, cy, cz], r, n: [sg * nAvg[0], nAvg[1], nAvg[2]] }; });
+}
+/** 눈 하나의 평면 좌표계와 그 눈 근처 화소의 좌표(s, t: 흰자 반지름 1) */
+function eyeFrame(eye) {
   // 그림 눈은 아래쪽 밝은 홍채까지 있어 어두운 부분(찾은 자리)보다 크고 아래로 내려와 있다 → 조금 아래·크게
   const R = eye.r * 1.35;
   const c = [eye.c[0], eye.c[1] - eye.r * 0.15, eye.c[2]];
@@ -114,11 +131,10 @@ for (const eye of mf.eyes.filter(Boolean)) {
   for (let f = 0; f < ia.length; f += 3) {
     const A = ia[f], B = ia[f + 1], C = ia[f + 2];
     const d = sub([0, 1, 2].map((k) => (pos[A][k] + pos[B][k] + pos[C][k]) / 3), c);
-    if (Math.hypot(dot(d, right), dot(d, up)) > R * 1.6 || Math.abs(dot(d, nn)) > R * 0.9) continue; // 눈 앞쪽 가까운 면만
+    if (Math.hypot(dot(d, right), dot(d, up)) > R * Math.max(1.6, RING[1] * SX) || Math.abs(dot(d, nn)) > R * 0.9) continue; // 눈 앞쪽 가까운 면만
     if (dot(nor[A], nn) + dot(nor[B], nn) + dot(nor[C], nn) < 0) continue; // 눈과 같은 쪽을 보는 면(눈 안의 작은 주름 면까지)
     near[f / 3] = 1;
   }
-  // 화소마다 눈 평면 좌표
   const st = new Map();
   for (let i = 0; i < W * H; i++) {
     const f = owner[i];
@@ -128,23 +144,31 @@ for (const eye of mf.eyes.filter(Boolean)) {
     const q = sub([0, 1, 2].map((k) => pos[A][k] * w[0] + pos[B][k] * w[1] + pos[C][k] * w[2]), c);
     st.set(i, [dot(q, right) / (R * SX), dot(q, up) / R]);
   }
-  // 둘레 털색: 방향(30칸)마다 카툰 눈 바깥 1.35~1.6 고리의 평균색 — 원래 눈이 카툰 눈보다 큰 곳(1.0~1.32)을 같은 방향 털색으로 덮는다
+  return { st, inner };
+}
+// 2-1) 찾은 자리(원래 눈·예전에 칠한 눈) 둘레를 같은 방향 털색으로 지운다: 방향(30칸)마다 바깥 고리 평균색
+for (const eye of found) {
+  const { st } = eyeFrame(eye);
   const NB = 30, acc = Array.from({ length: NB }, () => [0, 0, 0, 0]);
   const bin = (a, b) => ((Math.floor(((Math.atan2(b, a) + Math.PI) / (2 * Math.PI)) * NB) % NB) + NB) % NB;
-  for (const [i, [a, b]] of st) { const e = Math.hypot(a, b); if (e > 1.35 && e < 1.6) { const k = acc[bin(a, b)]; k[0] += px[i * 4]; k[1] += px[i * 4 + 1]; k[2] += px[i * 4 + 2]; k[3]++; } }
+  for (const [i, [a, b]] of st) { const e = Math.hypot(a, b); if (e > RING[0] && e < RING[1]) { const k = acc[bin(a, b)]; k[0] += px[i * 4]; k[1] += px[i * 4 + 1]; k[2] += px[i * 4 + 2]; k[3]++; } }
   const furAt = (a, b) => { for (let o = 0; o < NB / 2; o++) for (const sg of [1, -1]) { const k = acc[(bin(a, b) + sg * o + NB) % NB]; if (k[3] > 3) return [k[0] / k[3], k[1] / k[3], k[2] / k[3]]; } return null; };
   for (const [i, [es, et]] of st) {
-    const r = eyeAt(es, et, inner);
-    if (!r) {
-      // 카툰 눈보다 큰 원래 눈의 남은 테두리(어두운 갈색·호박색)를 같은 방향 털색으로 덮는다
-      const e = Math.hypot(es, et), fur = e < 1.32 ? furAt(es, et) : null;
-      if (fur) {
-        const diff = Math.hypot(px[i * 4] - fur[0], px[i * 4 + 1] - fur[1], px[i * 4 + 2] - fur[2]);
-        const t = (1 - ss(1.2, 1.32, e)) * ss(25, 60, diff);
-        for (let k = 0; k < 3; k++) px[i * 4 + k] = Math.round(px[i * 4 + k] * (1 - t) + fur[k] * t);
-      }
-      continue;
-    }
+    const e = Math.hypot(es, et);
+    if (e >= FILL) continue;
+    const fur = furAt(es, et);
+    if (!fur) continue;
+    const diff = Math.hypot(px[i * 4] - fur[0], px[i * 4 + 1] - fur[1], px[i * 4 + 2] - fur[2]);
+    const t = (1 - ss(FILL - 0.12, FILL, e)) * ss(4, 16, diff); // 흰 털 위 흰자 테두리처럼 비슷한 색도 덮음
+    for (let k = 0; k < 3; k++) px[i * 4 + k] = Math.round(px[i * 4 + k] * (1 - t) + fur[k] * t);
+  }
+}
+// 2-2) 대칭 자리에 카툰 눈을 그린다
+for (const eye of draw) {
+  const { st, inner } = eyeFrame(eye);
+  for (const [i, [es, et]] of st) {
+    const r = eyeAt(es / ES, et / ES, inner);
+    if (!r) continue;
     const [col, a] = r;
     for (let k = 0; k < 3; k++) px[i * 4 + k] = Math.round(px[i * 4 + k] * (1 - a) + col[k] * a);
     painted[i] = 1; cnt++;
@@ -173,4 +197,4 @@ const img = sharp(px, { raw: { width: W, height: H, channels: 4 } });
 const buf = mime === "image/webp" ? await img.webp({ quality: 92 }).toBuffer() : mime === "image/jpeg" ? await img.jpeg({ quality: 92 }).toBuffer() : await img.png().toBuffer();
 tex.setImage(new Uint8Array(buf));
 await io.write(out, doc);
-console.log(`${path.basename(inp)}: 카툰 눈 ${mf.eyes.filter(Boolean).length}개, 칠한 화소 ${cnt} → ${out}`);
+console.log(`${path.basename(inp)}: 카툰 눈 ${draw.length}개(좌우 대칭 ${draw.map((e) => e.c.map((v) => v.toFixed(3)).join(',')).join(' / ')}), 칠한 화소 ${cnt} → ${out}`);
