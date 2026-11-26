@@ -1379,6 +1379,88 @@ positionUpdated += normalUpdated * ${OUTLINE_W.toFixed(4)};
    */
   let uprightHooked = null;
   /**
+   * AI 고양이 팔 IK 를 쓰는 고양이 목록(m.ikK > 0 인 동안). 동작 계산 직후 위팔·아래팔 회전을 손이 목표 자리에 닿게 덮어쓴다.
+   * @type {Set<Cat>}
+   */
+  const ARM_IK = new Set();
+  let armIKHooked = null;
+  /** 사원수·벡터(열 벡터, [x,y,z,w]) — Babylon 행렬(행 벡터)에서 모델 공간 회전을 뽑아 계산하고 국소 회전으로 돌려 넣는다 */
+  const qm = (a, b) => [a[3] * b[0] + a[0] * b[3] + a[1] * b[2] - a[2] * b[1], a[3] * b[1] - a[0] * b[2] + a[1] * b[3] + a[2] * b[0], a[3] * b[2] + a[0] * b[1] - a[1] * b[0] + a[2] * b[3], a[3] * b[3] - a[0] * b[0] - a[1] * b[1] - a[2] * b[2]];
+  const qi = (q) => [-q[0], -q[1], -q[2], q[3]];
+  const qrot = (q, v) => { const r = qm(qm(q, [v[0], v[1], v[2], 0]), qi(q)); return [r[0], r[1], r[2]]; };
+  const vsub = (a, b) => [a[0] - b[0], a[1] - b[1], a[2] - b[2]], vadd = (a, b) => [a[0] + b[0], a[1] + b[1], a[2] + b[2]], vmul = (a, k) => [a[0] * k, a[1] * k, a[2] * k];
+  const vdot = (a, b) => a[0] * b[0] + a[1] * b[1] + a[2] * b[2], vlen = (a) => Math.hypot(a[0], a[1], a[2]), vnorm = (a) => vmul(a, 1 / (vlen(a) || 1));
+  const vcross = (a, b) => [a[1] * b[2] - a[2] * b[1], a[2] * b[0] - a[0] * b[2], a[0] * b[1] - a[1] * b[0]];
+  const qFromTo = (a, b) => { a = vnorm(a); b = vnorm(b); const d = vdot(a, b); if (d < -0.9999) { let ax = vcross([1, 0, 0], a); if (vlen(ax) < 1e-4) ax = vcross([0, 1, 0], a); ax = vnorm(ax); return [ax[0], ax[1], ax[2], 0]; } const c = vcross(a, b), q = [c[0], c[1], c[2], 1 + d], l = Math.hypot(...q); return q.map((v) => v / l); };
+  const qFromRows = (m) => { // Babylon 행렬 앞 3행(= 기저 x,y,z 의 상) → 사원수
+    const x = [m[0], m[1], m[2]], y = [m[4], m[5], m[6]], z = [m[8], m[9], m[10]];
+    const sx = vlen(x) || 1, sy = vlen(y) || 1, sz = vlen(z) || 1;
+    const X = vmul(x, 1 / sx), Y = vmul(y, 1 / sy), Z = vmul(z, 1 / sz), tr = X[0] + Y[1] + Z[2];
+    let q;
+    if (tr > 0) { const t = Math.sqrt(tr + 1) * 2; q = [(Y[2] - Z[1]) / t, (Z[0] - X[2]) / t, (X[1] - Y[0]) / t, 0.25 * t]; }
+    else if (X[0] > Y[1] && X[0] > Z[2]) { const t = Math.sqrt(1 + X[0] - Y[1] - Z[2]) * 2; q = [0.25 * t, (Y[0] + X[1]) / t, (Z[0] + X[2]) / t, (Y[2] - Z[1]) / t]; }
+    else if (Y[1] > Z[2]) { const t = Math.sqrt(1 + Y[1] - X[0] - Z[2]) * 2; q = [(Y[0] + X[1]) / t, 0.25 * t, (Z[1] + Y[2]) / t, (Z[0] - X[2]) / t]; }
+    else { const t = Math.sqrt(1 + Z[2] - X[0] - Y[1]) * 2; q = [(Z[0] + X[2]) / t, (Z[1] + Y[2]) / t, 0.25 * t, (X[1] - Y[0]) / t]; }
+    const l = Math.hypot(...q); return q.map((v) => v / l);
+  };
+  /**
+   * 장면의 동작 계산 직후에 ARM_IK 고양이마다 두 팔을 두 마디 IK 로 목표 자리에 보낸다(한 번만 건다).
+   * 목표(모델 공간): 상자 = 양옆면, 결재판 = 양옆, 간식 = 입 앞. 팔꿈치 굽는 쪽: 상자·결재판은 바깥 아래, 간식은 아래.
+   * @param {BABYLON.Scene} scene 장면
+   * @returns {void}
+   */
+  function hookArmIK(scene) {
+    if (armIKHooked === scene) return;
+    armIKHooked = scene;
+    scene.onAfterAnimationsObservable.add(() => {
+      for (const cat of ARM_IK) {
+        const m = cat.model;
+        if (!m || !(m.ikK > 0) || m.top.isDisposed()) { ARM_IK.delete(cat); continue; }
+        const w = m.ikK * m.ikK * (3 - 2 * m.ikK);
+        const top = m.top;
+        top.computeWorldMatrix(true);
+        const topInv = BABYLON.Matrix.Invert(top.getWorldMatrix());
+        const msp = (node) => node.getWorldMatrix().multiply(topInv).m; // 모델 공간 행렬
+        // 목표 자리(모델 공간): 소품은 고양이 자리(root) 기준 → 모델 공간은 top 의 역(배율 z -1)
+        const rootToModel = (x, y, z) => [x - top.position.x, y - top.position.y, -(z - top.position.z)];
+        let tgt = null, pole = null;
+        // 손 가운데를 물건 옆면보다 손 두께(약 2.5cm)만큼 바깥에 둔다(옆면에 맞추면 손이 물건 속에 반쯤 묻힘)
+        if (m.ikMode === 'box') { tgt = (s) => rootToModel(s * 0.19, 0.34, -0.3); pole = (s) => [s * 0.8, -1, -0.15]; }
+        else if (m.ikMode === 'board') { tgt = (s) => rootToModel(s * 0.125, 0.33, -0.24); pole = (s) => [s * 0.7, -1, -0.15]; }
+        else if (m.ikMode === 'eat' && m.tongue) {
+          m.tongue.root.computeWorldMatrix(true);
+          const mt = m.tongue.root.getWorldMatrix().multiply(topInv).m, mo = [mt[12], mt[13], mt[14]];
+          tgt = (s) => [mo[0] + s * 0.035, mo[1] - 0.045, mo[2] + 0.045]; pole = (s) => [s * 0.35, -1, 0.1];
+        }
+        if (!tgt) continue;
+        for (const [side, s] of [['L', 1], ['R', -1]]) {
+          const ua = m.nodes['upper_arm.' + side], fa = m.nodes['forearm.' + side], hd = m.nodes['hand.' + side];
+          if (!ua || !fa || !hd || !ua.parent) continue;
+          const chain = []; for (let n = hd; n && n !== top; n = n.parent) chain.unshift(n);
+          for (const n of chain) n.computeWorldMatrix(true);
+          const MA = msp(ua), MB = msp(fa), MC = msp(hd), MP = msp(ua.parent);
+          const A = [MA[12], MA[13], MA[14]], B = [MB[12], MB[13], MB[14]], C = [MC[12], MC[13], MC[14]];
+          const L1 = vlen(vsub(B, A)), L2 = vlen(vsub(C, B));
+          const T = tgt(s);
+          let d = vlen(vsub(T, A));
+          const dir = vnorm(vsub(T, A));
+          d = Math.min(L1 + L2 - 1e-4, Math.max(Math.abs(L1 - L2) + 1e-4, d));
+          const a = (L1 * L1 - L2 * L2 + d * d) / (2 * d), h = Math.sqrt(Math.max(0, L1 * L1 - a * a));
+          let pv = pole(s); pv = vsub(pv, vmul(dir, vdot(pv, dir))); pv = vnorm(pv);
+          const B2 = vadd(vadd(A, vmul(dir, a)), vmul(pv, h)), T2 = vadd(A, vmul(dir, d));
+          const QA = qFromRows(MA), QB = qFromRows(MB), QP = qFromRows(MP);
+          const RA = qFromTo(vsub(B, A), vsub(B2, A));
+          const QA2 = qm(RA, QA);
+          const C1 = vadd(B2, qrot(RA, vsub(C, B)));
+          const QB2 = qm(qFromTo(vsub(C1, B2), vsub(T2, B2)), qm(RA, QB));
+          const la = qm(qi(QP), QA2), lf = qm(qi(QA2), QB2);
+          const blend = (node, q) => { const cur = node.rotationQuaternion || Q.FromEulerVector(node.rotation); node.rotationQuaternion = Q.Slerp(cur, new Q(q[0], q[1], q[2], q[3]), w); };
+          blend(ua, la); blend(fa, lf);
+        }
+      }
+    });
+  }
+  /**
    * 장면의 동작 계산 직후에 UPRIGHT 고양이마다 등 펴기 회전을 곱하는 콜백을 한 번만 건다.
    * 각 관절 회전에 X 축 회전(UPRIGHT_DEG[뼈] × uprightK 도)을 곱한다. uprightK 가 0 이면 UPRIGHT 에서 뺀다.
    * @param {BABYLON.Scene} scene 장면
@@ -1707,6 +1789,14 @@ positionUpdated += normalUpdated * ${OUTLINE_W.toFixed(4)};
     const uk = cat.uprightK || 0;
     cat.uprightK = upGoal > uk ? Math.min(1, uk + dt * 4) : Math.max(0, uk - dt * 4);
     if (cat.uprightK > 0) { hookUpright(cat.root.getScene()); UPRIGHT.add(cat); }
+    // AI 고양이 팔 IK: 상자·결재판은 양옆을 잡고, 간식은 입 앞으로 든다(옮긴 옛 동작은 몸·팔 비율이 달라 손끝이 물건에 안 맞음). 관절 덮어쓰기는 afterAnimations 에서
+    if (m.cfg.ai) {
+      const ikMode = cat.held ? null : (cat.prop === 'box' || cat.prop === 'board') && (cat.pose === 'walk' || cat.pose === 'stand') ? cat.prop : cat.act === 'eat' && !cat.prop && cat.pose !== 'walk' ? 'eat' : null;
+      if (ikMode) m.ikMode = ikMode;
+      const ik = m.ikK || 0;
+      m.ikK = ikMode ? Math.min(1, ik + dt * 5) : Math.max(0, ik - dt * 5);
+      if (m.ikK > 0) { hookArmIK(cat.root.getScene()); ARM_IK.add(cat); }
+    }
     // 낚시 중(낚시 자리에 앉음): 낚싯대를 잡는 팔 자세를 부드럽게 넣고 뺀다 (관절 덮어쓰기는 afterAnimations 에서)
     const fishGoal = cat.fishing && cat.pose === 'sit' && !cat.held && !m.cfg.ai ? 1 : 0;
     const fk = cat.fishK || 0;
