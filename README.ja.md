@@ -47,14 +47,6 @@ Windows 10/11 · macOS (Rust + Tauri v2、素の HTML·CSS·JS、Babylon.js)
 - **チャット**: オフィス内で Claude Code · Codex のセッションと会話できます (インストール済みの CLI をそのまま利用)
 - **言語**: 韓国語・英語・日本語 (システムの言語に合わせます。設定で変更できます)
 
-## ネコの社員たち
-
-シャムからコリアンタビーまで 17 品種。セッションごとにネコが 1 匹担当し、社長 (あなた) は赤い蝶ネクタイをしています。
-
-<p align="center">
-  <img src="assets/readme/lineup-ja.png" alt="Meowffice のネコ 17 品種" width="860">
-</p>
-
 <table>
 <tr>
 <td width="50%"><img src="assets/readme/office-ja.png" alt="ネコのオフィス"><br><sub><b>ネコのオフィス</b></sub></td>

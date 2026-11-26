@@ -47,14 +47,6 @@ Windows 10/11 · macOS (Rust + Tauri v2, 바닐라 HTML·CSS·JS, Babylon.js)
 - **채팅**: 사무실 안에서 Claude Code · Codex 세션과 대화(설치된 CLI 를 그대로 사용)
 - **언어**: 한국어·영어·일본어(시스템 언어를 따르고, 설정에서 바꿀 수 있음)
 
-## 고양이 직원들
-
-샴부터 코리안 고등어까지 17품종. 세션마다 고양이 한 마리가 맡고, 대표(바로 당신)는 빨간 나비넥타이를 맵니다.
-
-<p align="center">
-  <img src="assets/readme/lineup-ko.png" alt="Meowffice 의 고양이 17품종" width="860">
-</p>
-
 <table>
 <tr>
 <td width="50%"><img src="assets/readme/office-ko.png" alt="고양이 사무실"><br><sub><b>고양이 사무실</b></sub></td>

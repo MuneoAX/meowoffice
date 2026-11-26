@@ -47,14 +47,6 @@ Other versions: [all releases](https://github.com/MuneoAX/meowoffice/releases). 
 - **Chat**: talk to Claude Code · Codex sessions inside the office (uses the CLIs you already have installed)
 - **Languages**: Korean, English, and Japanese (follows your system language; change it in Settings)
 
-## Meet the cats
-
-17 breeds, from Siamese to Korean tabbies. Each session gets its own cat, and the boss (that's you) wears a red bow tie.
-
-<p align="center">
-  <img src="assets/readme/lineup-en.png" alt="The 17 cat breeds of Meowffice" width="860">
-</p>
-
 <table>
 <tr>
 <td width="50%"><img src="assets/readme/office-en.png" alt="Cat office"><br><sub><b>Cat office</b></sub></td>
