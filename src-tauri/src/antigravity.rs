@@ -13,6 +13,7 @@
 //! 사용 한도·요금제는 Antigravity 가 켜져 있을 때만 알 수 있다. 비밀값(CSRF·토큰)은 어디에도 출력·저장하지 않는다.
 
 use crate::i18n;
+use crate::local::pid_alive;
 use crate::providers::{project_of, Limit, PSession, Snapshot};
 use crate::ptokens::{Meta, Rec};
 use chrono::{DateTime, Duration as CDuration, TimeZone, Utc};
@@ -167,42 +168,6 @@ struct Hub {
     port: u16,
     /// 요청 헤더 x-codeium-csrf-token 값 (비밀값)
     csrf: String,
-}
-
-/// 프로세스가 살아 있는지 확인한다 (hub 파일은 비정상 종료 시 남을 수 있음).
-///
-/// Windows 에서는 `OpenProcess`(제한 조회) 후 종료 코드가 STILL_ACTIVE(259) 인지 본다. 다른 OS 는 항상 false.
-///
-/// # 인자
-/// - `pid`: 프로세스 id
-///
-/// # 반환
-/// 살아 있으면 true.
-///
-/// # 참조
-/// `find_hubs` 가 `parse_hub` 의 판정 함수로 넘긴다.
-fn pid_alive(pid: u32) -> bool {
-    #[cfg(windows)]
-    {
-        use windows_sys::Win32::Foundation::CloseHandle;
-        use windows_sys::Win32::System::Threading::{GetExitCodeProcess, OpenProcess, PROCESS_QUERY_LIMITED_INFORMATION};
-        // SAFETY: 핸들을 열고 바로 닫는 단순 조회
-        unsafe {
-            let h = OpenProcess(PROCESS_QUERY_LIMITED_INFORMATION, 0, pid);
-            if h.is_null() {
-                return false;
-            }
-            let mut code = 0u32;
-            let ok = GetExitCodeProcess(h, &mut code) != 0;
-            CloseHandle(h);
-            ok && code == 259 // STILL_ACTIVE
-        }
-    }
-    #[cfg(not(windows))]
-    {
-        let _ = pid;
-        false
-    }
 }
 
 /// daemon/hub_*.json 에서 살아 있는 언어 서버 접속 정보를 모은다.
@@ -1592,6 +1557,13 @@ mod tests {
         assert!(parse_hub(j, |_| true).is_some());
         assert!(parse_hub(j, |_| false).is_none());
         assert!(parse_hub("{}", |_| true).is_none());
+    }
+
+    /// 살아 있는 프로세스(자기 자신)는 true, pid 0 은 false — 모든 OS 에서(예전엔 Windows 밖에서 항상 false 라 macOS 에서 hub 를 못 찾음).
+    #[test]
+    fn pid_alive_detects_self() {
+        assert!(pid_alive(std::process::id()));
+        assert!(!pid_alive(0));
     }
 
     #[test]
