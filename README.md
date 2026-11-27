@@ -8,7 +8,7 @@
 </p>
 <p align="center">
   <a href="https://github.com/MuneoAX/meowoffice/releases/latest"><img src="https://badgen.net/github/release/MuneoAX/meowoffice?label=release&color=8b6dff&cache=3600" alt="Latest release"></a>
-  <a href="https://github.com/MuneoAX/meowoffice/releases"><img src="https://img.shields.io/github/downloads/MuneoAX/meowoffice/total?color=5b8cff&label=downloads" alt="Downloads"></a>
+  <a href="https://github.com/MuneoAX/meowoffice/releases"><img src="https://badgen.net/github/assets-dl/MuneoAX/meowoffice?label=latest%20downloads&color=5b8cff&cache=3600" alt="Downloads"></a>
   <img src="https://img.shields.io/badge/Windows%20%7C%20macOS-555?logo=tauri&logoColor=white" alt="Windows | macOS">
   <a href="https://github.com/MuneoAX/meowoffice"><img src="https://badgen.net/github/stars/MuneoAX/meowoffice?icon=github&label=stars&color=555&cache=3600" alt="GitHub stars"></a>
 </p>
