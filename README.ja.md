@@ -7,10 +7,10 @@
   <a href="README.md">English</a> | <a href="README.ko.md">한국어</a> | <b>日本語</b>
 </p>
 <p align="center">
-  <a href="https://github.com/MuneoAX/meowoffice/releases/latest"><img src="https://img.shields.io/github/v/release/MuneoAX/meowoffice?color=8b6dff&label=release&cacheSeconds=3600" alt="Latest release"></a>
+  <a href="https://github.com/MuneoAX/meowoffice/releases/latest"><img src="https://badgen.net/github/release/MuneoAX/meowoffice?label=release&color=8b6dff&cache=3600" alt="Latest release"></a>
   <a href="https://github.com/MuneoAX/meowoffice/releases"><img src="https://img.shields.io/github/downloads/MuneoAX/meowoffice/total?color=5b8cff&label=downloads&cacheSeconds=3600" alt="Downloads"></a>
   <img src="https://img.shields.io/badge/Windows%20%7C%20macOS-555?logo=tauri&logoColor=white" alt="Windows | macOS">
-  <a href="https://github.com/MuneoAX/meowoffice"><img src="https://img.shields.io/github/stars/MuneoAX/meowoffice?style=social&cacheSeconds=3600" alt="GitHub stars"></a>
+  <a href="https://github.com/MuneoAX/meowoffice"><img src="https://badgen.net/github/stars/MuneoAX/meowoffice?icon=github&label=stars&color=555&cache=3600" alt="GitHub stars"></a>
 </p>
 
 AI コーディングのセッションが 1 つずつ **ネコの社員** として出勤するデスクトップオフィスです。
