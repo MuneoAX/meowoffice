@@ -919,7 +919,7 @@ fn proc_start_matches(_pid: u32, _proc_start: &serde_json::Value) -> bool {
 /// # 반환
 /// 살아 있으면 true.
 #[cfg(windows)]
-fn pid_alive(pid: u32) -> bool {
+pub(crate) fn pid_alive(pid: u32) -> bool {
     use windows_sys::Win32::Foundation::{CloseHandle, STILL_ACTIVE};
     use windows_sys::Win32::System::Threading::{GetExitCodeProcess, OpenProcess, PROCESS_QUERY_LIMITED_INFORMATION};
     if pid == 0 {
@@ -947,7 +947,7 @@ fn pid_alive(pid: u32) -> bool {
 /// # 반환
 /// 살아 있으면 true.
 #[cfg(unix)]
-fn pid_alive(pid: u32) -> bool {
+pub(crate) fn pid_alive(pid: u32) -> bool {
     // 시그널 0: 존재 확인만. EPERM 은 다른 사용자의 살아 있는 프로세스.
     pid != 0 && (unsafe { libc::kill(pid as libc::pid_t, 0) } == 0 || std::io::Error::last_os_error().raw_os_error() == Some(libc::EPERM))
 }
