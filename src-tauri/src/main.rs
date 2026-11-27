@@ -3774,8 +3774,16 @@ fn main() {
         .expect("tauri 실행 실패")
         .run(|app, event| {
             // 앱 종료 때 채팅 자식 프로세스(claude·codex app-server)를 정리한다(Job Object 가 비정상 종료까지 보강).
-            if let tauri::RunEvent::Exit = event {
-                app.state::<AppState>().runner.shutdown();
+            match event {
+                tauri::RunEvent::Exit => app.state::<AppState>().runner.shutdown(),
+                // macOS: 실행 중인 앱을 Finder·Dock·`open` 으로 다시 열면 새 프로세스 없이 Reopen 만 온다(single-instance 콜백이 안 불림).
+                // single-instance 와 같이 오피스를 띄운다 — 메인 스레드에서 웹뷰 창을 만들지 않게 스레드로.
+                #[cfg(target_os = "macos")]
+                tauri::RunEvent::Reopen { .. } => {
+                    let app = app.clone();
+                    std::thread::spawn(move || show_panel(&app));
+                }
+                _ => {}
             }
         });
 }
