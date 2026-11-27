@@ -41,7 +41,8 @@ pub struct Available {
 /// # 반환
 /// 새 버전이 있으면 `Some(Available)`, 최신이면 None. 업데이터 생성·조회 실패 시 오류 문자열.
 pub async fn check(app: &AppHandle) -> Result<Option<Available>, String> {
-    let update = app.updater().map_err(|e| e.to_string())?.check().await.map_err(|e| e.to_string())?;
+    // 시간 제한(플러그인 기본은 없음): 서버가 응답을 물고 있으면 업데이트 확인이 끝나지 않던 것
+    let update = app.updater_builder().timeout(Duration::from_secs(30)).build().map_err(|e| e.to_string())?.check().await.map_err(|e| e.to_string())?;
     Ok(update.map(|u| Available { version: u.version, notes: u.body.unwrap_or_default() }))
 }
 
@@ -60,7 +61,8 @@ pub async fn check(app: &AppHandle) -> Result<Option<Available>, String> {
 /// # 참조
 /// `save_notes` 호출. 파일: `update-notes.json` 쓰기.
 pub async fn install(app: &AppHandle) -> Result<(), String> {
-    let update = app.updater().map_err(|e| e.to_string())?.check().await.map_err(|e| e.to_string())?.ok_or(crate::i18n::t("update.up_to_date"))?;
+    // 내려받기까지 같은 제한을 쓰므로 넉넉히(느린 회선의 설치 파일 내려받기)
+    let update = app.updater_builder().timeout(Duration::from_secs(600)).build().map_err(|e| e.to_string())?.check().await.map_err(|e| e.to_string())?.ok_or(crate::i18n::t("update.up_to_date"))?;
     log::info!("업데이트 내려받기 시작: {} → {}", update.current_version, update.version);
     save_notes(&Available { version: update.version.clone(), notes: update.body.clone().unwrap_or_default() });
     let mut got = 0usize;

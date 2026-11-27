@@ -1690,7 +1690,7 @@ fn mark_alerts_read(app: AppHandle) {
 ///
 /// # 참조
 /// `open_url`, `desktop_session_for`, `open_link`, `dismiss_alert`. UI 의 `invoke('open_alert')`(notify.js) 가 호출.
-#[tauri::command]
+#[tauri::command(async)] // 메인 스레드 밖에서(외부 프로세스·파일 읽기 대기로 창이 멈추지 않게)
 fn open_alert(app: AppHandle, key: String) -> Result<(), String> {
     // 미리보기 카드: 링크 열기 동작 확인용으로 최근 클라우드 세션(없으면 Claude Code 홈) 열기.
     if key.starts_with("preview-") {
@@ -2430,7 +2430,7 @@ async fn get_provider_image(name: String, id: String) -> Option<String> {
 ///
 /// # 참조
 /// `codex::spawn_login`, `open_link`. UI 의 `invoke('provider_login')`(office/usage.js, settings.js) 가 호출.
-#[tauri::command]
+#[tauri::command(async)] // 메인 스레드 밖에서(외부 프로세스·파일 읽기 대기로 창이 멈추지 않게)
 fn provider_login(name: String) -> Result<&'static str, String> {
     if !provider_on(&name) {
         return Err(i18n::t("err.integration_off").into());
@@ -2566,6 +2566,12 @@ fn get_config(app: AppHandle) -> Cfg {
 /// # 참조
 /// `get_config`
 fn os_name() -> String {
+    // 한 번만 알아내 둔다(get_config 가 자주 불리는데, 매번 cmd /C ver 를 기다리면 메인 스레드가 멈칫함)
+    static OS: std::sync::OnceLock<String> = std::sync::OnceLock::new();
+    OS.get_or_init(os_name_uncached).clone()
+}
+
+fn os_name_uncached() -> String {
     #[cfg(windows)]
     {
         use std::os::windows::process::CommandExt;
@@ -3022,7 +3028,7 @@ fn open_link(target: &str) -> Result<(), String> {
 ///
 /// # 참조
 /// `desktop_session_for`, `open_link`. UI 의 `invoke('open_local_session')`(office/office.js) 가 호출.
-#[tauri::command]
+#[tauri::command(async)] // 메인 스레드 밖에서(외부 프로세스·파일 읽기 대기로 창이 멈추지 않게)
 fn open_local_session(id: String, cwd: String, active: bool) -> Result<&'static str, String> {
     if id.is_empty() || !id.chars().all(|c| c.is_ascii_alphanumeric() || c == '-') {
         return Err(i18n::t("err.bad_session_id").into());
@@ -3494,7 +3500,11 @@ fn main() {
 
     tauri::Builder::default()
         // 중복 실행 방지: 두 번째 실행 → 기존 패널 표시.
-        .plugin(tauri_plugin_single_instance::init(|app, _args, _cwd| show_panel(app)))
+        .plugin(tauri_plugin_single_instance::init(|app, _args, _cwd| {
+            // 이 콜백은 다른 프로세스의 SendMessage 처리 중(메인 스레드)에 불린다 — 그 안에서 웹뷰 창을 만들지 않게 스레드로
+            let app = app.clone();
+            std::thread::spawn(move || show_panel(&app));
+        }))
         .manage(AppState {
             plan: Mutex::new(None),
             alerts: Mutex::new({
