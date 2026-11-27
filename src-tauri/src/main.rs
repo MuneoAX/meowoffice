@@ -1175,6 +1175,8 @@ fn notify_list(app: &AppHandle) -> Vec<alerts::Alert> {
 /// sync_notify 직렬화 — 여러 스레드(폴링·훅 서버·업데이트·상태 확인·IPC)가 동시에 부르면
 /// 읽기→판단→표시/숨김이 엇갈려 카드가 있는데 창이 숨는 일이 생김.
 static SYNC_NOTIFY: Mutex<()> = Mutex::new(());
+/// 메인(이벤트 루프) 스레드 id — `main` 시작 때 기록. `sync_notify` 가 메인 스레드에서 불렸는지 가린다.
+static MAIN_THREAD: std::sync::OnceLock<std::thread::ThreadId> = std::sync::OnceLock::new();
 
 /// 오피스 창 "항상 위" 설정(config.panel_on_top) — sync_notify 가 자주 불려 파일 대신 여기서 읽음.
 /// (예전 트레이 관리 창 → 오피스 창으로 옮김. 아래 PANEL_* 은 오피스 창이 앞에 있는지 판단용)
@@ -1261,6 +1263,13 @@ fn sync_notify_async(app: &AppHandle) {
 /// `notify_list`, `panel_in_front`, `place`. 이벤트 `alerts`·`permits`·`notify_visible`(notify 창), `permits`(오피스 창).
 /// `alerts_changed`·`PermitHost::changed`·`answer_permit`·`resync_notify`·`save_config` 등에서 호출.
 fn sync_notify(app: &AppHandle) {
+    // 메인 스레드(동기 IPC 명령·창 이벤트)에서 불리면 다른 스레드로 넘긴다: 메인 스레드가 SYNC_NOTIFY 를 기다리는 사이
+    // 그 자물쇠를 쥔 스레드가 창 상태(is_visible 등)를 메인 루프에 물으면 서로 기다려 앱 전체가 멈춘다
+    // (0.6.9: '최근 알림' 읽음 처리 mark_alerts_read → alerts_changed → 여기서 멈춤)
+    if MAIN_THREAD.get().is_some_and(|id| *id == std::thread::current().id()) {
+        sync_notify_async(app);
+        return;
+    }
     let _guard = SYNC_NOTIFY.lock().unwrap_or_else(|e| e.into_inner());
     let Some(nw) = app.get_webview_window("notify") else {
         return;
@@ -3380,6 +3389,7 @@ fn set_lang(app: AppHandle, choice: String, lang: String) {
 /// `relay::run`, `applog::init`, `config::load`, `hook::apply`, `provider_hook::apply`, `mcpreg::remove_legacy`, `update::first_run_after_update`,
 /// `show_panel`, `toggle_panel`, `refresh_plan`, `permit::serve`, `refresh_update`, `poll_status`, `poll_providers`, `poll_alerts`.
 fn main() {
+    let _ = MAIN_THREAD.set(std::thread::current().id());
     // `--hook <codex|agy> <이벤트>`: Codex·Antigravity 훅이 실행하는 중계 모드 — 창·트레이·로그 초기화 없이 바로 처리하고 종료.
     let args: Vec<String> = std::env::args().skip(1).collect();
     if args.first().map(String::as_str) == Some("--hook") {
