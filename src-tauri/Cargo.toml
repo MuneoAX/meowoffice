@@ -1,6 +1,6 @@
 [package]
 name = "muneo-claude-usage-tray"
-version = "0.6.10"
+version = "0.6.11"
 edition = "2021"
 description = "Meowffice: AI 코딩 세션이 고양이 직원으로 출근하는 데스크톱 사무실 — 사용 한도·세션·알림 (Tauri)"
 license = "MIT"

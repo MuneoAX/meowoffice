@@ -24,12 +24,12 @@ Windows 10/11 · macOS (Rust + Tauri v2、素の HTML·CSS·JS、Babylon.js)
 </p>
 
 <!-- download:start — scripts/release.mjs updates the version on each release -->
-### ⬇ 最新バージョン v0.6.10 をダウンロード
+### ⬇ 最新バージョン v0.6.11 をダウンロード
 
 | OS | ファイル |
 |---|---|
-| Windows 10/11 | [Meowffice_0.6.10_x64-setup.exe](https://github.com/MuneoAX/meowoffice/releases/download/v0.6.10/Meowffice_0.6.10_x64-setup.exe) |
-| macOS (Intel · Apple Silicon) | [Meowffice_0.6.10_universal.dmg](https://github.com/MuneoAX/meowoffice/releases/download/v0.6.10/Meowffice_0.6.10_universal.dmg) |
+| Windows 10/11 | [Meowffice_0.6.11_x64-setup.exe](https://github.com/MuneoAX/meowoffice/releases/download/v0.6.11/Meowffice_0.6.11_x64-setup.exe) |
+| macOS (Intel · Apple Silicon) | [Meowffice_0.6.11_universal.dmg](https://github.com/MuneoAX/meowoffice/releases/download/v0.6.11/Meowffice_0.6.11_universal.dmg) |
 
 他のバージョンは [すべてのリリース](https://github.com/MuneoAX/meowoffice/releases) から。セットアップの注意点は [インストール](#インストール) をご覧ください。
 <!-- download:end -->

@@ -24,12 +24,12 @@ Windows 10/11 · macOS (Rust + Tauri v2, vanilla HTML·CSS·JS, Babylon.js)
 </p>
 
 <!-- download:start — scripts/release.mjs updates the version on each release -->
-### ⬇ Download the latest version v0.6.10
+### ⬇ Download the latest version v0.6.11
 
 | OS | File |
 |---|---|
-| Windows 10/11 | [Meowffice_0.6.10_x64-setup.exe](https://github.com/MuneoAX/meowoffice/releases/download/v0.6.10/Meowffice_0.6.10_x64-setup.exe) |
-| macOS (Intel · Apple Silicon) | [Meowffice_0.6.10_universal.dmg](https://github.com/MuneoAX/meowoffice/releases/download/v0.6.10/Meowffice_0.6.10_universal.dmg) |
+| Windows 10/11 | [Meowffice_0.6.11_x64-setup.exe](https://github.com/MuneoAX/meowoffice/releases/download/v0.6.11/Meowffice_0.6.11_x64-setup.exe) |
+| macOS (Intel · Apple Silicon) | [Meowffice_0.6.11_universal.dmg](https://github.com/MuneoAX/meowoffice/releases/download/v0.6.11/Meowffice_0.6.11_universal.dmg) |
 
 Other versions: [all releases](https://github.com/MuneoAX/meowoffice/releases). See [Install](#install) for setup notes.
 <!-- download:end -->
