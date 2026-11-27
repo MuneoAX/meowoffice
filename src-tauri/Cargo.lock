@@ -2248,7 +2248,7 @@ dependencies = [
 
 [[package]]
 name = "muneo-claude-usage-tray"
-version = "0.6.9"
+version = "0.6.10"
 dependencies = [
  "base64 0.22.1",
  "chrono",
