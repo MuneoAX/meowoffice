@@ -439,8 +439,16 @@ fn credits_cached(cred: &Cred, org: &str) -> Option<Credits> {
             c
         }
         Err(e) => {
-            log::debug!("사용 크레딧 조회 실패(이전 값 유지): {e}");
-            last.and_then(|(_, _, c)| c)
+            let prev = last.and_then(|(_, _, c)| c);
+            if matches!(e, ApiError::Auth) {
+                // 같은 토큰으로 프로필·한도는 받았으니 여기서의 401·403 은 대개 요금제가 이 기능을 지원하지 않는 경우다
+                // (403 permission_error "only available for Pro, Max, and Ultra plans"). 새로고침마다 다시 묻지 않게 실패도 TTL 동안 캐시한다.
+                log::debug!("사용 크레딧 조회 거절(이 요금제에서 지원하지 않을 수 있음), {}초 동안 다시 묻지 않음: {e}", CREDITS_TTL.as_secs());
+                *CREDITS.lock().unwrap() = Some((org.to_string(), Instant::now(), prev.clone()));
+            } else {
+                log::debug!("사용 크레딧 조회 실패(이전 값 유지): {e}");
+            }
+            prev
         }
     }
 }
