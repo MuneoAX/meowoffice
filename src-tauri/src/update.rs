@@ -61,8 +61,8 @@ pub async fn check(app: &AppHandle) -> Result<Option<Available>, String> {
 /// # 참조
 /// `save_notes` 호출. 파일: `update-notes.json` 쓰기.
 pub async fn install(app: &AppHandle) -> Result<(), String> {
-    // 내려받기까지 같은 제한을 쓰므로 넉넉히(느린 회선의 설치 파일 내려받기)
-    let update = app.updater_builder().timeout(Duration::from_secs(600)).build().map_err(|e| e.to_string())?.check().await.map_err(|e| e.to_string())?.ok_or(crate::i18n::t("update.up_to_date"))?;
+    // 확인(latest.json) 요청에만 걸리는 시간 제한 — 설치 파일 내려받기는 제한 없음(플러그인 2.14: Update.timeout 은 None), 느린 회선에서도 끊기지 않게 그대로 둠
+    let update = app.updater_builder().timeout(Duration::from_secs(30)).build().map_err(|e| e.to_string())?.check().await.map_err(|e| e.to_string())?.ok_or(crate::i18n::t("update.up_to_date"))?;
     log::info!("업데이트 내려받기 시작: {} → {}", update.current_version, update.version);
     save_notes(&Available { version: update.version.clone(), notes: update.body.clone().unwrap_or_default() });
     let mut got = 0usize;
